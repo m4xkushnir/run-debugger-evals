@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0012613599999999998,
+  "created_at": "2026-10-29T11:29:04+00:00",
+  "duration_api_ms": 11989,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "5a0a36ce9b70a7491ef63333",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Wrong decomposition (time-horizon split). The Run needed to span a 7-day wait and then continue with steps 6–11, but a single Run can't hold that state. It completed at message [5] with the promise \"I'll check back in 7 days,\" and nothing in the Run scheduled that return.\n\n**Where it went wrong:** Step 5 of the AOP (\"Wait 7 days for the signed bank letter\"). The Agent reached the wait and ended the Run instead of handing off to anything that would resume it. Steps 6–11, including activation in SAP, the 7-day chase in step 7, and the 30-day review, could only run after the wait, so none of them happened. This matches the user's report of \"nothing happened after day 1.\"\n\n**Evidence:**\n- [5] \"Agent: Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n- Run status: `completed`. The Run finished, but the onboarding was only partly done.\n\n**Two further observations from the transcript:**\n- The transcript has no tool call that sends the bank-confirmation request (step 4). Message [5] says it was requested, but nothing in the transcript shows it was sent. Check whether the email went out; the Agent may have reported an action it didn't take.\n- No Gmail read appears before the VIES check (step 1). The source of the VAT number and vendor name is therefore not visible here. If the form was read elsewhere, that's fine, but it isn't shown.\n\n**Fix:** Split the AOP into two Agents connected by a queue or `request_handover`:\n- **Agent A (steps 1–4):** read the form, validate VAT in VIES, create the vendor in SAP, and send the bank-confirmation request. It hands off the vendor ID (100977) and the supplier's details to Agent B.\n- **Agent B (steps 5–11):** starts from the handover. It waits for the signed bank letter, with a 7-day timeout that triggers the chase (step 7). On receipt it activates payments, sends the welcome pack, adds the Coupa catalogue entry, notifies purchasing, and schedules the 30-day review.\n\n**Next step:** Confirm the split, then I can hand both halves to `aop-writer` to draft the two AOPs. Separately, check the supplier's inbox to see whether the bank-confirmation request was actually sent. Vendor 100977 may need a manual activation in the meantime.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8366,
+    "input_tokens": 2,
+    "output_tokens": 2355,
+    "thinking_tokens": 1524
+  },
+  "variant": "main",
+  "wall_ms": 15046
+}

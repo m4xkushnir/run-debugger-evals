@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0008533,
+  "created_at": "2026-10-29T11:26:45+00:00",
+  "duration_api_ms": 8686,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "b0042a9196f004c4bf76971a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing data. The AOP needed Setup input `safety_stock_days`, the Run found it unset, and the Agent silently used 0 instead of stopping.\n\n**Where it went wrong:** Transcript [3]–[4]. The Agent noticed the input was missing, chose a default of 0, computed the order, and submitted it at [5]. Step 2 of the AOP has no branch for an unset input, so the Agent improvised one.\n\n**Evidence:**\n- \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n\nThe order of 34 units is less than one day of demand (42/day). With the safety buffer missing, the order barely replenishes the store, which fits the Thursday stockout. For example, a 3-day buffer would have produced 294 + 126 − 260 = 160 units.\n\n**Fix:** Set `safety_stock_days` in Setup to the value the replenishment team intends, and mark it required so the Agent cannot start without it. This is a Setup change, not an AOP rewrite.\n\n**Secondary observation (not the cause):** Step 2 says \"forecast weekly demand,\" but the transcript uses 294, which is simply 7 × the daily demand. The AOP never defines how to forecast, so the Agent filled that gap too. If you want the forecast method pinned down, that is a separate AOP change for `aop-writer`.\n\n**Next step:**\n1. Set `safety_stock_days` in Setup.\n2. Ask the replenishment team to review or amend order **RP-99120**. It was submitted for 34 units and is likely short. I can't amend it from here.\n3. Optionally, have `aop-writer` add a rule to Step 2: if `safety_stock_days` is unset, stop and request human input instead of defaulting. This keeps the Agent from submitting an order on a guessed value.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8360,
+    "input_tokens": 2,
+    "output_tokens": 1539,
+    "thinking_tokens": 862
+  },
+  "variant": "main",
+  "wall_ms": 11689
+}

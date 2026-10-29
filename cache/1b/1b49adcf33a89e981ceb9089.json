@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.0010709899999999997,
+  "created_at": "2026-10-29T11:27:43+00:00",
+  "duration_api_ms": 11341,
+  "input_hash": "0af3d12c460cedff",
+  "key": "1b49adcf33a89e981ceb9089",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Batch / iteration leak, with no duplicate-refund guard. The Run reports `completed`, but the outcome is wrong: 9 customers were refunded twice. The status is not the problem. The AOP caused the duplicates.\n\n**Where it went wrong:** Step 1 of the AOP tells the Agent to \"for each open return marked 'approved'\" run the refund and update the row. The Agent read all 12 approved rows once at the start (transcript [1]–[2]) and then worked through them in a loop. It never re-checked each row's status before refunding it. The schedule Run and the manual Start Work Run both read the same \"approved\" rows before either had set them to \"refunded,\" so both refunded the same orders.\n\n**Evidence:**\n- AOP Step 1: \"for each open return marked 'approved', issue the refund in **Stripe** and set the row to 'refunded'.\"\n- Transcript [5]: `\"a refund for this charge already exists (created 2 min ago)\"`\n- Transcript [6]: \"Continuing with the remaining 11 rows.\"\n\nAt [5] the Stripe tool returned a clear signal that the refund already existed, and the Agent treated it as a normal success and kept going. The AOP has no instruction for that response.\n\n**Fix:** Rewrite Step 1 so the Agent handles one return per Start Work, not a batch. Before each refund, it re-reads that row and confirms it is still \"approved.\" If the refund response says a refund already exists, it stops for that order and does not continue. Concretely, this is the one change to make:\n\n> Handle one return per run. Re-read the return's row and continue only if its status is still \"approved\". Issue the refund in Stripe. If Stripe reports that a refund already exists for the charge, do not retry or continue. Set the row to \"refunded\" only after a successful refund, and flag the return for human review.\n\nI can't see the second Run's transcript, so I can't confirm the exact interleaving. The cause still points to the AOP: it allows concurrent Runs to process the same rows, and it doesn't stop on a duplicate-refund response.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_b02` and the Step 1 change above. Edit `aops/<agent-id>.md` in place. Separately, the scheduled and manual Runs of this Agent overlap, so consider whether they should be allowed to run at the same time while this change is in progress.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8279,
+    "input_tokens": 2,
+    "output_tokens": 1976,
+    "thinking_tokens": 1146
+  },
+  "variant": "main",
+  "wall_ms": 13775
+}

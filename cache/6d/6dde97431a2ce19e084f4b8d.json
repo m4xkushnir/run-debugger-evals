@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.0331758,
+  "created_at": "2026-10-29T11:36:23+00:00",
+  "duration_api_ms": 12991,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "6dde97431a2ce19e084f4b8d",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "The Run failed because Duvo's own `update_case` tool returned a 500 error. Nothing in your AOP, Setup or Connections caused it, so the fix is to report it to Duvo.\n\n**Failure mode**\nPlatform / infra failure.\n\n**Where it went wrong**\nSteps 1 and 2 of the AOP ran correctly. The Agent claimed the case, read the supplier reply in **Gmail** and correctly extracted EUR 840.\n\nThe Run broke at AOP Step 3 (\"Call `update_case` with `credit_offered`…\"), at transcript turns [5]–[8]. The `update_case` call was well-formed and sent the extracted value. Duvo's case tool returned a 500 both times. The Run then ended without reaching `complete_case`. Because it errored mid-work, the platform settled the case as Failed. That is why the case shows \"Failed (no reason)\" rather than a reason recorded by the Agent.\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n\n**What I ruled out:**\n- **Connection failure:** `update_case` is a Duvo case tool, not a call to one of your Connections. The **Gmail** call in [3]–[4] succeeded.\n- **Missing data or AOP ambiguity:** the payload `{\"credit_offered\": 840}` matches what Step 3 asks for, and the value was read correctly from the email.\n- **Case-specific problem:** every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases. The same internal error repeats on every retry and doesn't depend on the case data. That points to a platform-side issue.\n\n**Fix**\nNone of your artifacts need to change. Duvo needs to fix the `update_case` failure on their side.\n\n**Next step**\nRaise this with Duvo support from the Duvo web app (app.duvo.ai) and include:\n- **Symptom:** `update_case` returns 500 Internal Server Error on every Run on this queue since 14:00, across different cases.\n- **Run:** `run_p03`, **Build:** `bld_p03`, **Case:** `case_p03` (claim CL-2210).\n- **Request IDs:** `req_9a7c1e`, `req_9a7c52`.\n- **Ruled out:** a malformed payload, Connection or Gmail problems, and anything specific to one case.\n\nUntil Duvo resolves it, avoid starting more Runs on this queue. They will hit the same error and fail their cases.\n\nOnce it's fixed, `case_p03` and the other cases that failed since 14:00 will need to be re-run. The credit offer (EUR 840 for CL-2210) was extracted but never saved.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1045,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1167,
+    "thinking_tokens": 173
+  },
+  "variant": "main",
+  "wall_ms": 14214
+}

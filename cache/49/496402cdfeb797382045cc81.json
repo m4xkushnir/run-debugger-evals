@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.00103229,
+  "created_at": "2026-10-29T11:25:01+00:00",
+  "duration_api_ms": 8416,
+  "input_hash": "d0dabf96580dd687",
+  "key": "496402cdfeb797382045cc81",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing terminal closure\n\n**Where it went wrong:** Step 2's failure branch. After the Packeta 422, the agent took the branch and posted to Slack (transcript [5]–[6]), then ended its turn at [7] without calling `complete_case`, `fail_case`, or `postpone_case`. The AOP never tells it to close the case on that branch, so the platform auto-closed it on clean run end. The Run status is `completed` because the agent finished without error, which is why it looks healthy. The case, however, was never given an outcome, so its evaluation is stuck.\n\n**Evidence:**\n- AOP Step 2: \"If the label can't be generated: post the order number to **Slack** #returns-ops.\" No closing action follows.\n- Transcript [7]: \"Label could not be created; I alerted #returns-ops.\" The run ends here, with no terminal call.\n- Case state: \"auto-completed on clean run end; evaluation: stuck in evaluating.\"\n\nThe Packeta 422 (\"Return service not available for destination SK\") is a business limitation on the destination, not a Connection or auth problem, so it isn't the root cause. The agent handled that error correctly. Skipping Gmail after no label was created is also correct. The gap is that the failure branch never closes the case.\n\n**Fix:** Add a terminal action to the Step 2 failure branch, for example: \"If the label can't be generated: post the order number to **Slack** #returns-ops, then call `fail_case` with reason 'No return label available for destination {country}'.\" If you'd rather retry later than fail outright, use `postpone_case` instead. The fix is confined to that one branch.\n\n**Next step:** I can hand this to `aop-writer` with the Build ID `bld_t03` and the change request above, so it rewrites Step 2 in `aops/<agent-id>.md`. A separate follow-up you may want: SK returns will hit this branch every time, so you might later add a fallback carrier or a manual-label step. That's a design decision for you and is not needed to fix the stuck case.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1515,
+    "thinking_tokens": 803
+  },
+  "variant": "main",
+  "wall_ms": 12109
+}

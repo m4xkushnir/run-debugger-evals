@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A03",
+  "cost_usd": 0.007955799999999999,
+  "created_at": "2026-10-29T11:24:16+00:00",
+  "duration_api_ms": 8343,
+  "input_hash": "d5a2c038d277510f",
+  "key": "a310dd7df865c2d254cc05a5",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed technically, but it produced the wrong outcome because the AOP left the key decision to the Agent's judgment.\n\n**Where it went wrong**\nTranscript turn [2] is the decision point. The Agent reached AOP Step 2 (\"If quantities don't match, handle it appropriately.\") and had no rule to apply. It guessed at \"appropriately\" and chose to email the supplier. The shortfall here is 20 of 500 units, which is 4%. Under the user's rule (under 5% is adjusted on the goods receipt in the WMS), that should not have gone to the supplier. The Gmail call and the Slack post then executed cleanly on the wrong branch.\n\n**Evidence**\n- AOP Step 2: \"If quantities don't match, handle it appropriately.\"\n- Transcript [2]: \"I'll handle it by asking the supplier to explain the shortfall.\"\n\n**Fix**\nReplace AOP Step 2 with explicit threshold branches. The 5% rule comes from your report. I don't have a rule for 5% and above, so that branch needs your input. Something like:\n- *If the shortfall is under 5% of the PO quantity: adjust the received quantity on the goods receipt in the WMS, and do not contact the supplier.*\n- *If the shortfall is 5% or more: [your chosen action, e.g. email the supplier or use Human in the loop].*\n\nAlso note two gaps I can't confirm from this data:\n- The transcript shows no WMS tool call or Connection. Check that the Agent has a WMS Connection available, otherwise the under-5% branch can't be executed.\n- The Slack summary in Step 3 should state which branch was taken.\n\n**Next step**\nI can invoke `aop-writer` to rewrite Step 2 (and Step 3's summary wording) in the Build `bld_d03` AOP, working in `aops/<agent-id>.md`. Please tell me what should happen at 5% and above, and confirm that a WMS Connection exists for this Agent.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8318,
+    "input_tokens": 2,
+    "output_tokens": 712,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12684
+}

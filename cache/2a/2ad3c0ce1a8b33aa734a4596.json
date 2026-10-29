@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.00117972,
+  "created_at": "2026-10-29T11:37:44+00:00",
+  "duration_api_ms": 9065,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "2ad3c0ce1a8b33aa734a4596",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. The Run finished without a platform error, but the outcome was wrong.\n\n**Where it went wrong:** Step 2 of the AOP, at the decision point in transcript [3]. Step 2 says \"use your judgment on whether to refund in full or offer a partial refund\" with no threshold. The AOP also never mentions the 15% cosmetic-damage policy, so the Agent had no rule to apply and chose full refund on its own reading of how the customer felt.\n\n**Evidence:**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"It looks significant enough to the customer, so I'll refund in full.\"\n\n**Fix:** Replace the judgment clause in Step 2 with a concrete rule, for example:\n\n> If the damage is cosmetic (surface marks or scratches that don't affect function or structure), issue a partial refund of 15% of the item price. If the damage affects function or structure, refund in full.\n\nThe 15% figure comes from your report. The cosmetic-versus-structural line is my suggestion, so confirm it matches your policy before the rewrite. Applied to this order, the rule gives a refund of €72.00, not €480.00.\n\n**Next step:**\n- **Money already moved:** Stripe returned `succeeded` for €480.00, and the customer was emailed that amount. Under the 15% policy about €408.00 was over-refunded. Decide how to recover it, and whether to contact the customer. I can't do that from the transcript.\n- **AOP fix:** I can hand this to `aop-writer` with Build `bld_a01` and the Step 2 change. The AOP file path is `aops/<agent-id>.md`, and the Agent ID isn't in what you sent, so you'll need to supply it.",
+  "usage": {
+    "cache_creation_input_tokens": 1064,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1790,
+    "thinking_tokens": 1183
+  },
+  "variant": "no_json",
+  "wall_ms": 10185
+}

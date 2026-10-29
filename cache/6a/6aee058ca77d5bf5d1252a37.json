@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.00094673,
+  "created_at": "2026-10-29T11:23:26+00:00",
+  "duration_api_ms": 8519,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "6aee058ca77d5bf5d1252a37",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. Step 2 told the Agent to \"use your judgment\" on full versus partial refund, with no threshold and no reference to the 15% cosmetic-damage policy. The Run completed without error, but the outcome was wrong.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [3]. The Agent classified the scratch as significant and chose a full refund. Its reasoning rested on how the damage looked to the customer, not on the policy. It then issued the refund at [4] for the full EUR 480.00.\n\n**Evidence:**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"\n\n**Fix:** Replace the judgment clause in Step 2 with an explicit rule tied to the policy. For example: \"If the damage is cosmetic only (surface scratches, scuffs, or marks that don't affect function or structure), refund 15% of the item price. If the damage affects function or structure, refund in full.\" The exact definition of \"cosmetic\" and the policy wording should come from your written refund policy, not from my paraphrase. The policy also needs to be available to the Agent, either in the AOP itself or in Files.\n\nOn this Run, the correct refund for a cosmetic scratch would have been EUR 72.00 (15% of EUR 480.00). The Agent refunded EUR 408.00 more than that, and the Gmail confirmation at [6] told the customer the wrong amount.\n\n**Next step:**\n- Hand the Build `bld_a01` and the Step 2 change to `aop-writer` so it rewrites Step 2 in `aops/<agent-id>.md`. Give it the exact policy wording to work from.\n- Separately, the overpayment has already been issued through Stripe, and the customer has been told EUR 480.00. Someone needs to correct that manually. This is outside what the AOP change can fix.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.92}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8403,
+    "input_tokens": 2,
+    "output_tokens": 1725,
+    "thinking_tokens": 990
+  },
+  "variant": "main",
+  "wall_ms": 12091
+}

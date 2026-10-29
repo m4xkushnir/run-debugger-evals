@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0097013,
+  "created_at": "2026-10-29T11:27:29+00:00",
+  "duration_api_ms": 8460,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "8841b6ccef89fa5c5bbcc590",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nBatch / iteration leak (category 6). The Run was queue-driven and claimed one case (\"Invoice from Brenntag CZ\"), but the AOP told it to process every pending invoice in the inbox. It hit the 30-minute limit partway through the batch.\n\n**Where it went wrong**\nStep 2 of the AOP, right after the `claim_case` result at [2]. At [5] the Agent switches from the single claimed case to the whole inbox. The decision point is the search at [3]. It uses `is:unread label:ap`, which isn't scoped to the claimed case. That returned 47 messages. The Run then worked through them serially and was stopped at 19 of 47. `complete_case` (Step 3) was never reached, so the case ended Failed.\n\n**Evidence**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox: extract fields and create a vendor bill in **NetSuite** for each.\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\nThe duration limit is the symptom. The root cause is that the AOP carries a batch of work in a single Run when the platform already iterates over cases.\n\nThere is a secondary risk. Bills 1-19 were created in NetSuite and the Run died before closing out. If the other 28 invoices are picked up by later Runs, or this one is retried, the AOP has no duplicate check and may create duplicate vendor bills. Check NetSuite for the 19 already created before re-running. I can't confirm from the transcript which invoices those were, so I'm not claiming anything about them.\n\n**Fix**\nRewrite AOP Step 2 to handle only the claimed case's invoice. For example: \"Use **Gmail** to find the single invoice email for the claimed case (identified by the case title/source message), extract its fields, and create one vendor bill in **NetSuite**. Do not process any other messages in the inbox.\" The case source (one case per invoice email) then has to be populated by the queue, so each invoice becomes its own case and its own short Run.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_b01`, the file `aops/<agent-id>.md`, and the change request: \"rewrite Step 2 to process only the claimed case's invoice, not all pending invoices in the inbox; add a check for an existing vendor bill before creating one.\" Separately, check whether the 19 bills already created in NetSuite need cleanup or de-duplication.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 887,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10010
+}

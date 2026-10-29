@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S02",
+  "cost_usd": 0.007868799999999999,
+  "created_at": "2026-10-29T11:30:26+00:00",
+  "duration_api_ms": 6277,
+  "input_hash": "7df77d8d99342926",
+  "key": "2e2ac9d6a98edf80e3007f8f",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nAOP ambiguity. The AOP says \"enter the amount as shown on the invoice\" without saying what format SAP expects. The ValidationError is the symptom.\n\n**Where it went wrong**\nTranscript [1]–[2], at the point of mapping the invoice total to the SAP call. This is AOP Step 2: \"Create the invoice in **SAP**, entering the amount as shown on the invoice.\" The Agent followed that literally. It copied the localized, formatted string (European decimal comma, thousands dot, currency symbol) into a field that requires a number. Step 2 has no instruction for normalizing the value, and nothing covers what to do if SAP rejects it. The Agent then stopped at [4] with no retry or fallback.\n\n**Evidence**\n- AOP: \"entering the amount as shown on the invoice.\"\n- Transcript [2]: `sap.create_invoice {\"amount\": \"1.234,50 €\"}`\n- Transcript [3]: `ERROR 400 ValidationError: \"amount\" must be a number`\n\n**Fix**\nChange AOP Step 2 to replace \"as shown on the invoice\" with an explicit normalization rule. For example: *\"Convert the invoice total to a plain decimal number before sending: remove the currency symbol and thousands separators, and use `.` as the decimal separator (e.g. `1.234,50 €` → `1234.50`). Pass the currency separately if SAP has a currency field. If the amount can't be parsed unambiguously, use **Human in the loop** instead of guessing.\"*\n\nI can't confirm from this transcript whether `sap.create_invoice` has a separate currency field. I'm only inferring that from the single call shown, so check that against your SAP Connection.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s02`, the change request \"rewrite Step 2 to normalize the amount to a plain decimal number before the SAP call\", and the file `aops/<agent-id>.md`. I need the Agent ID for that file path.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8148,
+    "input_tokens": 2,
+    "output_tokens": 705,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7534
+}

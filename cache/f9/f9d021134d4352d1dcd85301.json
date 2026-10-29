@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.00131766,
+  "created_at": "2026-10-29T11:28:18+00:00",
+  "duration_api_ms": 13692,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "f9d021134d4352d1dcd85301",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Wrong decomposition. The AOP makes one Run wait across multi-day timers, and a Run can't do that.\n\n**Where it went wrong:** Step 5 (send) through step 8 (escalate) run inside a single Run. Steps 6–8 need a 3-day and a 7-day wait for the supplier's reply, but the Run has no way to suspend and resume. At transcript [4] the Agent improvised a polling loop (\"I'll keep checking\"), which the AOP never asked for. The Run then sat idle until the platform stopped it at [5].\n\n**Evidence:**\n- Step 7 of the AOP: \"If no reply after 3 days, send a reminder.\"\n- Transcript [4]: \"No reply yet. I'll keep checking.\"\n- Transcript [5]: \"Run stopped after idle timeout.\"\n\n**Fix:** Split the claim at step 5. The first Run handles steps 1–5, then closes with `postpone_case` set to 3 days out, storing the Gmail thread ID and the claim ID on the case. A follow-up Run on that date checks for a reply. If there's none, it sends the reminder and postpones 4 more days. Steps 9–14 run once a reply arrives, and step 8's escalation runs when the second postponement lapses without a reply. This assumes the claim is queue-driven. The AOP says \"read the claim from the store,\" which suggests it is, but no `case_id` appears in what you shared.\n\n**Next step:**\n- Before retrying anything, check the Gmail Sent folder for the claim email to Mlékárna Polná. The transcript shows the Agent saying it was sent, but no `gmail.send` call. If it did go out, a retry would send a duplicate.\n- I can hand the restructure to `aop-writer` with Build `bld_w01` and the file `aops/<agent-id>.md`. It would rewrite steps 5–8 around `postpone_case`.\n\n```json\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.7}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 2467,
+    "thinking_tokens": 1789
+  },
+  "variant": "main",
+  "wall_ms": 15555
+}

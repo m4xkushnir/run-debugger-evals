@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S01",
+  "cost_usd": 0.0008557899999999999,
+  "created_at": "2026-10-29T11:30:00+00:00",
+  "duration_api_ms": 7214,
+  "input_hash": "1a25899d7045e182",
+  "key": "2bfb841ebd69185958da68e4",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data. The AOP referenced a Setup input (`alert_channel`) that was empty.\n\n**Where it went wrong:** Transcript turn [1]. The Agent read `alert_channel = \"\"` and continued anyway. Step 2 of the AOP says to post to the store's channel, which is the Setup input `alert_channel`. With no value, the Agent passed `\"#\"` as the channel in turn [2]. Slack rejected that as `channel_not_found` in turn [3].\n\n**Evidence:**\n- `[1] Agent: Setup inputs: alert_channel = \"\".`\n- `[2] Tool call → slack.post {\"channel\": \"#\", \"text\": \"SKU 40221 out of stock at CZ-018\"}`\n\nThe Slack Connection works for other Agents, so this isn't a Connection failure. The Run had no `case_id`, so this isn't a terminal-closure issue either.\n\n**Fix:** Set the `alert_channel` Setup input to the store's Slack channel (for example `#store-cz-018`) and re-run. The Connection and the AOP's step logic are fine as written.\n\n**Next step:** Set `alert_channel` in Setup and re-run. If you want the Agent to stop cleanly instead of posting to `\"#\"` when the input is blank, that's an AOP change: I can hand off to `aop-writer` to add an explicit check on step 2 that halts with a clear message if `alert_channel` is empty. Also, step 2 uses one `alert_channel` for every store, but step 1 reads the store from the run input. If this Agent covers more than one store, a single channel won't route each alert correctly, so you may want a per-store channel instead.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 866,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1218,
+    "thinking_tokens": 626
+  },
+  "variant": "main",
+  "wall_ms": 8515
+}

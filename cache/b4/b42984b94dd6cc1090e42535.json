@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0084036,
+  "created_at": "2026-10-29T11:31:36+00:00",
+  "duration_api_ms": 8136,
+  "input_hash": "8cdd082843487845",
+  "key": "b42984b94dd6cc1090e42535",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nAOP ambiguity. The Agent followed the AOP correctly. The AOP says \"If unsure about the supplier match, call `fail_case`\" but gives no definition of what counts as a match. The Run status is `completed` and the case was closed by the Agent as designed, so the Run itself did not break. The match decision did.\n\n**Where it went wrong**\nStep 2 of the AOP. At transcript turn [5], the Agent compared the invoice name with the SAP vendor name, saw they differed, and treated that as \"unsure\". It never used the VAT number in the SAP result, which settles the question. The failure also repeats: 31% of this week's cases failed the same way, which points to a rule gap, not a one-off.\n\n**Evidence**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Turn [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`\n- Turn [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Your context: the invoice VAT is `DE811145120`, identical to vendor 100311.\n\n**Fix**\nRewrite AOP Step 2 to replace \"unsure\" with a concrete match rule. For example: *If the invoice VAT equals the SAP vendor's VAT, treat it as a match regardless of name differences (legal suffixes, abbreviations, truncation). Search SAP by VAT first, and fall back to name only when the invoice has no VAT. Call `fail_case` only when no vendor has a matching VAT, or when several vendors match.*\n\nThis addresses the cause (a vague trigger with no deterministic identifier) and not the symptom (this one failed case).\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s06`, the file `aops/<agent-id>.md`, and this change request: \"Rewrite Step 2 to match on VAT first, name second, and define when `fail_case` applies.\" After it lands, the cases that failed this week with \"unable to match supplier\" can be reviewed. I haven't seen them, so I can't say how many were true mismatches.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 756,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9713
+}

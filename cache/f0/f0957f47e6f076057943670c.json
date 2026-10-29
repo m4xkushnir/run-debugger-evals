@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.010993200000000002,
+  "created_at": "2026-10-29T11:38:59+00:00",
+  "duration_api_ms": 6889,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "f0957f47e6f076057943670c",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak (category 6). The Run was timed out as a symptom; the root cause is an AOP that asks one Run to process the whole statement.\n\n**Where it went wrong**\nAt the decision point in transcript turn [3]–[4], the Agent took AOP Step 2 literally and started iterating over all 611 unmatched lines inside a single Run. It got through 230 (about 38%) before the 30-minute limit killed the Run at [5]. Steps 1 and 3 were never at fault; Step 3 (the Slack summary) was never reached, so nothing was posted.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix**\nChange the AOP's unit of work from \"the whole statement\" to \"one statement line\". Step 2 should handle a single unmatched line against NetSuite, and the platform should iterate over lines (for example, one case per unmatched line in a queue). The Slack summary then moves to a separate step or Agent that runs once the lines are processed, rather than being tied to the end of a long loop.\n\nA caveat: the transcript shows only the Agent's progress, not per-line timing, so I can't tell whether 611 lines would fit in 30 minutes if NetSuite lookups were faster. Even so, a single Run looping over a variable-size list will fail again on a busy day, so the fix stands either way.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03` and the change request: \"Rewrite Step 2 to reconcile a single unmatched statement line against open NetSuite invoices, and move the #finance Slack summary into a separate step that runs after all lines are processed.\" Note that the queue setup (one case per unmatched line, populated from the Fio statement) is a Setup change you'd make alongside the AOP rewrite.",
+  "usage": {
+    "cache_creation_input_tokens": 858,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 684,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 8469
+}

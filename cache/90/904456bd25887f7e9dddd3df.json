@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0019132,
+  "created_at": "2026-10-29T11:37:34+00:00",
+  "duration_api_ms": 4137,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "904456bd25887f7e9dddd3df",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (credential/scope mismatch: wrong-market login). This is a configuration problem on the Login, not a transient portal error.\n\n**Where it went wrong:** Step 2 (sign in with the Login **Alpenfrisch portal**) succeeded, but the account it signed in as is the Czech service account, `svc-replen-cz`. Step 3 then selected market AT, which the portal refuses for that account. The Agent correctly stopped at [6] without placing the order, but the AOP has no check that the signed-in account is authorised for the store's market before it starts.\n\n**Evidence:**\n- [3] `Signed in as svc-replen-cz@retailco.eu`\n- [5] `Access denied: this account is not authorised for market AT.`\n- Other context: \"Login 'Alpenfrisch portal' is the CZ service account svc-replen-cz.\"\n\n**Fix:** Point the AT market work at a Login whose account is authorised for market AT, or add a separate AT Login (e.g. \"Alpenfrisch portal – AT\") and select it in Step 2 when the store's market is AT. The Login is the thing to change, not the AOP's step logic, since the AOP already does the right thing once the portal refuses. If you want the AOP to make this explicit, add a line to Step 2: \"Use the Login matching the store's market; the CZ account cannot place AT orders.\"\n\n**Next step:** Create or obtain an AT-authorised portal credential in Login, then re-run store AT-114. If you want the AOP updated to select the Login by market, I can hand this to `aop-writer` with Build `bld_51e` as the base.",
+  "usage": {
+    "cache_creation_input_tokens": 8215,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 540,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 6199
+}

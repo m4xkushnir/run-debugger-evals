@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.00074486,
+  "created_at": "2026-10-29T11:32:47+00:00",
+  "duration_api_ms": 7378,
+  "input_hash": "1c85333d7be4398e",
+  "key": "b633d3c07c5c50c826d88ceb",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Not a failure. The Run completed as designed, and the Agent followed the AOP correctly.\n\n**Where it went wrong:** Nothing went wrong. The decision point is step 2 of the AOP, at transcript entries [4]–[6]. SAP returned the PO as received, so the Agent took the \"already received\" branch and closed the case without emailing the supplier.\n\n**Evidence:**\n- AOP step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [4]: `sap.get_po: {\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [6]: `complete_case {}`, and the case closed as \"Completed by Agent.\"\n\n**Fix:** None to the AOP. The branch did what it was written to do. Whether the supplier should be chased is a business rule question, not a bug. If the team wants chases even when SAP shows a receipt, that is a change to the goal and the AOP, and I'd hand that to `aop-writer`.\n\n**Next step:** Check whether SAP's \"received\" status for PO-61204 is accurate. Partial deliveries or a receipt posted in error would explain a missing chase even though the Run behaved correctly. If the SAP record is accurate, no action is needed. If the record is wrong, fix it in SAP and the next Run will chase normally. If you expected a chase despite the receipt, tell me and I'll prepare the AOP change for `aop-writer`.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.92}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8316,
+    "input_tokens": 2,
+    "output_tokens": 1323,
+    "thinking_tokens": 804
+  },
+  "variant": "main",
+  "wall_ms": 8655
+}

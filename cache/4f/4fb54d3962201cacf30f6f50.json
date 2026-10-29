@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.00071189,
+  "created_at": "2026-10-29T11:22:50+00:00",
+  "duration_api_ms": 6461,
+  "input_hash": "b03fc180112aa5af",
+  "key": "4fb54d3962201cacf30f6f50",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure: missing OAuth scope on the Gmail Connection.\n\n**Where it went wrong**\nTurn [2], the `gmail.send_message` call. The Build's AOP (Step 2) relies on sending mail, but the Gmail Connection 'Purchasing' doesn't have the scope that permits it. The call was rejected before any email left, so Step 3 (logging to \"PO reminders\") never ran.\n\n**Evidence**\n- Turn [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Other context: \"Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\"\n\n`gmail.send` is absent from the granted list, which matches the error exactly. This is the user's to fix, not a platform fault: the upstream system named the missing scope, and the Connection's granted scopes confirm the gap.\n\n**Fix**\nRe-authorize the 'Purchasing' Gmail Connection with the `gmail.send` scope added. No AOP change is needed for this failure. The Agent's handling was sound: it reported the failure and did not log a row for an unsent reminder.\n\n**Next step**\nRe-authorize the Gmail Connection with `gmail.send` in the Connection settings, confirm it shows that scope, then start a new Run for PO 4500918821. Run `run_c02` won't succeed on retry while the scope is missing. I can't confirm the Connection's current state from this paste, so check that the scope shows as granted before retrying. If you want the Agent to degrade more gracefully on future scope gaps, that would be a separate `aop-writer` request, but it isn't needed to fix this Run.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8369,
+    "input_tokens": 2,
+    "output_tokens": 1256,
+    "thinking_tokens": 636
+  },
+  "variant": "main",
+  "wall_ms": 10388
+}

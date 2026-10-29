@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.0011214299999999999,
+  "created_at": "2026-10-29T11:33:18+00:00",
+  "duration_api_ms": 10866,
+  "input_hash": "82cebd8c79c09140",
+  "key": "15fbb4313d38a3d07b27e016",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Connection failure. The DPD carrier API returned `429 Too Many Requests`, and the AOP has no branch for that response. The Run then ended in plain text without calling any terminal action, so the platform marked the case Failed with no reason.\n\n**Where it went wrong:** Transcript [3]–[5], against AOP Step 2. Step 2 says \"Get the latest status from the **DPD** Connection\" and gives no instruction for an error. When the call failed, the Agent stopped at [5] instead of closing the case. The AOP has no `postpone_case` or `fail_case` on the DPD-error path, so nothing told the Agent to hold the case until the carrier was available.\n\n**Evidence:**\n- `[4] Tool result ← dpd.track: ERROR 429 Too Many Requests. Retry-After: 600`\n- `[5] Agent: DPD is rate limiting. I can't get the status.`\n- AOP Step 2: \"Get the latest status from the **DPD** Connection.\" (no error branch)\n\n**Fix:** Add a branch to Step 2 of the AOP: *\"If the DPD call returns 429 or any error, call `postpone_case` with the reason 'DPD rate limited' and do not call `update_case` or `complete_case`.\"* The `Retry-After: 600` header means the case should come back roughly 10 minutes later, not fail.\n\n**Incidental, not causal:** The claimed tracking number was `0953 4412 8890`, but `dpd.track` was called with `09534412 8890`. The digits are the same and only the space moved, so this is not what caused the 429. Still, the Agent should pass the tracking value through unchanged, so it's worth a look when you edit Step 2.\n\n**Context:** With 1,900 cases queued and about 30% of Runs hitting the same 429, the postpone branch matters more than usual. Without it, many cases will fail today and need manual requeueing. Lowering the queue's concurrency for this Agent may also reduce 429s, but I can't verify that from the data you've shared.\n\n**Next step:** Hand the fix to `aop-writer` with Build `bld_g02` and the change request above, so it edits `aops/<agent-id>.md` directly.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 2077,
+    "thinking_tokens": 1303
+  },
+  "variant": "main",
+  "wall_ms": 12374
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.0090738,
+  "created_at": "2026-10-29T11:26:19+00:00",
+  "duration_api_ms": 7287,
+  "input_hash": "28456be35269bb05",
+  "key": "57598604866c44e2934c7c28",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (Run status is `completed`, so the Run did not error; the outcome was wrong).\n\n**Where it went wrong**\nTranscript turns [1]–[5], matching AOP Step 2. The Agent cancelled a EUR 62,400 PO in SAP and created a replacement with the backup supplier in one unchecked sequence. The AOP made the cancel-and-reorder decision on a single threshold (\"more than 1 day late\") with no human confirmation and no comparison of cost or of what the cancellation would forfeit (the main supplier's slot). Two secondary gaps are visible in the same step: the AOP never says what to do with price differences on the reorder, and the transcript ends at [5] with no Step 3 email shown, so the run's tail is unverified.\n\n**Evidence**\n- AOP Step 2: \"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier\"\n- Transcript [4]: `sap.create_po {\"supplier\": \"Backup: Nordpack AB\", \"value_eur\": 66100}`, against the original \"PO 4500921177 (EUR 62,400)\", which is the EUR 3,700 increase the user reported.\n\n**Fix**\nIn AOP Step 2, add a Human-in-the-loop gate before any SAP cancellation: *\"If the delivery is more than 1 day late, use **Human in the loop** to confirm before cancelling the PO. Present the original PO value, the backup supplier's price, and the delay. Do not cancel or reorder until approved. If the backup price exceeds the original by more than [X]% or EUR [Y], do not reorder without explicit approval.\"* The threshold values are the user's to choose; the 2-day slip and EUR 3,700 premium here would have been surfaced for a decision.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_h03`, the change request \"add a HITL gate with a price-delta threshold before the SAP cancel in Step 2\", and the file `aops/<agent-id>.md`. Separately, check the Run in the web app to confirm whether the Step 3 Gmail emails were sent, since the transcript shown stops after the reorder. The cancellation in SAP is already done, so the main supplier's slot is not recoverable by this change; it only protects future Runs.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8298,
+    "input_tokens": 2,
+    "output_tokens": 824,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9925
+}

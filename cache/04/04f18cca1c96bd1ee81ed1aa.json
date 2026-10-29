@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.00106786,
+  "created_at": "2026-10-29T11:24:48+00:00",
+  "duration_api_ms": 10318,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "04f18cca1c96bd1ee81ed1aa",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing terminal closure (taxonomy 3). The Run ended cleanly after a non-terminal action, so the platform auto-completed the case instead of the AOP closing it.\n\n**Where it went wrong:** Step 2's supplier-delay branch. The AOP says to note the new date and then continue, but gives no exit for that branch. After posting the date to Slack at [5], the Agent stopped at [7] without reaching Step 3 (the Gmail reminder) or Step 4 (`update_case` and `complete_case`). The Agent treated the note as the end of the work. The reminder was never sent, and `second_reminder_sent_at` was never written. Because the Run ended without an error, the case closed as Completed with `auto-completed on clean run end`, and the PO dropped out of the chain.\n\n**Evidence:**\n- [4] `Textima: We need until 12 Nov to ship, sorry for the delay.`\n- [7] `Agent: Noted the new date of 12 Nov in the thread.`\n- Case state: `Completed — reason: auto-completed on clean run end`\n\n**Fix:** Add a terminal action to the delay branch of Step 2. Based on your report, the most likely intent is to hold the case until the promised date, so the change is: *\"If the supplier asked for more time: post the new date in the thread, call `postpone_case` with the new date 12 Nov as the resume date, and stop. Do not send the second reminder.\"* This is an inference from your report and the AOP doesn't say it. If you want the reminder sent anyway, the branch should go to Step 3 instead. Either way, the AOP needs an explicit exit so the Agent never ends on a non-terminal action.\n\n**Next step:** Hand off to `aop-writer` with Build `bld_t02` and the AOP file `aops/<agent-id>.md`, asking it to make the Step 2 change above. For this PO, check whether the case can be reopened. If it can't, the second reminder has to go out manually.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8416,
+    "input_tokens": 2,
+    "output_tokens": 1967,
+    "thinking_tokens": 1266
+  },
+  "variant": "main",
+  "wall_ms": 12548
+}

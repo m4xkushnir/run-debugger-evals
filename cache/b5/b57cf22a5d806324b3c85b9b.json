@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.00122021,
+  "created_at": "2026-10-29T11:28:36+00:00",
+  "duration_api_ms": 11992,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "b57cf22a5d806324b3c85b9b",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak, triggered by a Connection (Login) expiry. The Run tried to process all 17 under-90% suppliers in one pass, and the Enterprise Browser session expired partway through.\n\n**Where it went wrong:** AOP Step 3, \"For each supplier under 90%, sign in to their portal with Enterprise Browser and download open-order status.\" The Run was handling supplier 9 of 17 (Agrofert) when the session timed out at transcript turn [7], about 55 minutes after it started. Steps 1 and 2 (Snowflake query, Sheets write) had already completed, so the Run failed mid-batch with the portal work unfinished.\n\n**Evidence:**\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\nThe expiry itself is the trigger, but the AOP is what made it fatal. One Run was asked to hold a single browser session across 17 sequential portal sign-ins, which runs past the session lifetime. The AOP says \"for each\", which is the iteration language the platform should handle by splitting work into separate cases.\n\n**Fix:** Rewrite Step 3 so each under-90% supplier is its own unit of work. Each supplier gets its own case, with a fresh Enterprise Browser sign-in, the open-order download, and a terminal action for that supplier. The Run no longer loops over all suppliers. Steps 1, 2, and 4–11 stay as they are, though the Step 2 Sheets write should skip creating an existing W43 tab on re-run.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_w02` and the change request \"split Step 3 into one case per supplier under 90%, each with its own Enterprise Browser sign-in.\" It will need the AOP file path (`aops/<agent-id>.md`). The Agent ID wasn't in what you sent, so please share it or confirm the path.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8451,
+    "input_tokens": 2,
+    "output_tokens": 2271,
+    "thinking_tokens": 1516
+  },
+  "variant": "main",
+  "wall_ms": 13420
+}

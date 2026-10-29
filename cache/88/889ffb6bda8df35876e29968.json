@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.0144772,
+  "created_at": "2026-10-29T11:38:52+00:00",
+  "duration_api_ms": 9250,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "889ffb6bda8df35876e29968",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nPlatform / infra failure. Not a Connection failure, AOP ambiguity, or missing terminal closure.\n\n**Where it went wrong**\nTranscript turns [5]–[8], at AOP Step 3 (`update_case` with `credit_offered`). Steps 1 and 2 worked: the Agent claimed CL-2210 and read the supplier reply from **Gmail**. The platform's own case tool then returned a 500 twice. The Agent stopped at [9] without reaching `complete_case` or `fail_case`, so the case was settled by the platform as Failed with no reason.\n\n**Evidence**\n- `[6] update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- Your context: \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\nWhy I rule out the user-side causes:\n- The payload was well-formed and the data was correct (`{\"credit_offered\": 840}` from \"We offer a credit of EUR 840.\").\n- The error comes from `update_case`, a platform tool, not from a Connection or the user's own system.\n- It reproduces identically on retry and across different cases, so it is independent of case data.\n- It began at a specific time (14:00) rather than after an AOP change. I haven't seen the Build history, so confirm no Build change landed around then.\n- No AOP, Setup, or Connection change would have prevented it.\n\nOne secondary observation, which is not the root cause: the AOP has no branch for `update_case` failing, so the Agent gave up with no terminal action. Adding a `fail_case` or `request_handover` branch would make the case state clearer, but it would not fix the outage.\n\n**Fix**\nThere is no change to make in your artifacts. The fix is on the Duvo side: the `update_case` 500 needs to be resolved by the platform team. Once it is, the Failed cases from this window will need to be re-run.\n\n**Next step**\nGet this to Duvo. No support-escalation tool is available in this session, so raise it with Duvo support from the Duvo web app and include:\n- Run `run_p03`, Build `bld_p03`, Case `case_p03` (claim CL-2210)\n- Error: `update_case` returns `500 Internal Server Error`, request IDs `req_9a7c1e` and `req_9a7c52`\n- Scope: every Run on this queue since 14:00 fails the same way across different cases\n- Ruled out: payload, Gmail Connection, and AOP logic\n\nAfter Duvo confirms the fix, re-run the affected cases. If you want the AOP to degrade more cleanly during future outages, I can hand a request to `aop-writer` to add a `request_handover` branch after repeated `update_case` failures, but treat that as optional.",
+  "usage": {
+    "cache_creation_input_tokens": 1049,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 956,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 10887
+}

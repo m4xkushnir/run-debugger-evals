@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.0352078,
+  "created_at": "2026-10-29T11:37:22+00:00",
+  "duration_api_ms": 14396,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "0d30cc70b05a3b6836de80da",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\n**Missing terminal closure.** The Gmail 503 is the symptom. The root cause is that the AOP has no branch for \"Step 3 failed after Step 2 already succeeded.\" The Run stopped without calling `complete_case`, `fail_case`, `postpone_case`, or `request_handover`, so the platform settled the case itself as Failed with no reason. Nothing on the case said the bill was already posted, so a re-run looked safe and produced a duplicate.\n\n**Where it went wrong**\n\nThe failure happened at transcript turn [6]–[7], which is **Step 3** of the AOP.\n\n- Step 2 had already done the irreversible work. NetSuite returned `posted` at turn [4].\n- The Gmail call then hit a temporary upstream error.\n- The AOP's only closing action is the unconditional Step 4 `complete_case`. The Agent had no instruction for a failed email, so it noted the error and ended the Run.\n\nThis is not a Connection problem. A 503 \"try again later\" is a transient Gmail error, not an expired Login or a missing scope. It is also not a Duvo platform fault, because the error came from Gmail. Neither the Connection nor any Setup change would have prevented the outcome. An AOP branch would have.\n\n**Evidence**\n\n- AOP: `3. Email the supplier the payment date via **Gmail**.` followed by `4. Call `complete_case`.`, with no failure branch.\n- Transcript: `[6] Tool result ← gmail.send_message: ERROR 503 Service Unavailable: backend error, try again later` and then `[7] Agent: Email failed with a temporary Gmail error.` There is no case-lifecycle call after this.\n- Case: `Failed (no reason)`. This is the platform's settlement, not one from the Agent.\n\n**Fix**\n\nAdd a failure branch to **Step 3** of the AOP:\n\n> *If the Gmail send fails, call `postpone_case` with the reason \"Bill INV-<number> already posted in NetSuite; only the supplier email is outstanding. Do not re-post.\" Do not call `complete_case`, and do not re-run Step 2.*\n\nThe case then carries an explicit record that the posting is done. The retry stays scoped to the email, and the next person or Run won't post the bill again.\n\n**Next step**\n\nI can invoke `aop-writer` with Build `bld_g04`, the file `aops/<agent-id>.md`, and this request: \"add a failure branch to Step 3 that calls `postpone_case` with a reason stating the bill is already posted and only the email is pending.\"\n\nSeparately, the AP team should void the duplicate INV-5512 bill in NetSuite and send the supplier email manually for this case.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 979,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1295,
+    "thinking_tokens": 360
+  },
+  "variant": "main",
+  "wall_ms": 15478
+}

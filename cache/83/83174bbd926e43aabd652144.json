@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.012875900000000003,
+  "created_at": "2026-10-29T11:25:54+00:00",
+  "duration_api_ms": 9701,
+  "input_hash": "89b60f1887533656",
+  "key": "83174bbd926e43aabd652144",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action. The Run technically completed, but the Agent applied a large, externally visible price change to every store with no human checkpoint.\n\n**Where it went wrong**\nTranscript [2] → [3], matching AOP Step 2. The Agent read a result of 38 rows and a single `markdown_pct: 30`, then went straight to applying it to all 140 stores. Nothing in Step 1 or Step 2 validates the recommendation data, sets a ceiling on the markdown, or asks a human to confirm before pricing is changed. The Run behaved exactly as the AOP told it to, so the root cause is the AOP lacking a gate, not a tool error.\n\n**Evidence**\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- Transcript [2] returned 38 rows but only one collapsed `markdown_pct` value, with no per-row detail visible, so the bad row was never surfaced for review.\n\n**Fix**\nAdd a Human in the loop gate to AOP Step 2, before the Pricing call, with a concrete threshold. For example: *\"Before applying, summarize the markdown % per row and the number of stores affected. If any markdown exceeds [X]% (set by the merchandising team), or the stores affected exceed [N], use **Human in the loop** to get approval before calling Pricing. Do not apply until approved.\"* The threshold X should be a Setup input so the team can tune it, and I can't tell from the transcript what the right value is.\n\nI can't see the bad row itself, since the transcript shows only the aggregate result, so I can't say what specifically was wrong in the data. A secondary hardening step would be a sanity check in Step 1 on the rows returned, but the HITL gate is the one change that would have stopped this Run.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_h02`, the change request \"add a HITL approval gate with a markdown-percentage threshold before the Pricing step in Step 2,\" and the file `aops/<agent-id>.md`. Note that the run is already live, so someone should separately roll back the 30% markdown in Pricing for the 5,320 updated prices.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 982,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 821,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12647
+}

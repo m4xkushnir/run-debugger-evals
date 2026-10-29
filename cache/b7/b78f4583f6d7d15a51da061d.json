@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0183619,
+  "created_at": "2026-10-29T11:29:04+00:00",
+  "duration_api_ms": 10687,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "b78f4583f6d7d15a51da061d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nWrong decomposition (taxonomy #7). One Agent holds both the real-time setup (steps 1-4) and a 7-day wait followed by a reminder and activation cycle (steps 5-11).\n\n**Where it went wrong**\nThe decision point is transcript turn [5], at AOP Step 5 (\"Wait 7 days for the signed bank letter\"). A Run can't sleep for 7 days. The Agent wrote that it would check back, then the Run ended with status `completed`. Steps 6-11 never ran, so vendor 100977 stayed unactivated and nobody chased the supplier. Nothing in the AOP told the Agent how to resume after the wait, so the Run closed cleanly instead of failing, and nothing flagged the problem.\n\n**Evidence**\n- Transcript [5]: `\"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"` This is the last turn, and there is no tool call after it.\n- AOP Step 5: `\"Wait 7 days for the signed bank letter.\"`\n\n**Fix**\nSplit the AOP at Step 5 into two Agents:\n- **Agent A (intake):** Steps 1-4. It ends by handing off, using `request_handover` or a queue entry, with the vendor number (100977) and supplier contact.\n- **Agent B (activation):** Steps 6-11. It is triggered when the signed letter arrives, or on a 7-day schedule. If the letter is missing, it chases the supplier (Step 7).\n\nThe wait is then handled by the platform's trigger or schedule, not by the Agent.\n\n**Also noticed (not a second fix)**\nStep 4 (\"Request bank confirmation\") has no matching tool call in the transcript. Turn [5] says it was requested, but the excerpt shows no email sent. The transcript also begins at `vies.check`, with no Step 1 Gmail read. This may just be a truncated excerpt. If it isn't, the supplier never received the bank-confirmation request, and Agent A's rewrite should make that step an explicit Gmail send. Please check the full transcript for it.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w03` and the change request: \"Split at Step 5. Agent A ends at Step 4 with a `request_handover` carrying the vendor id. Agent B covers Steps 6-11 and starts when the signed letter arrives or after 7 days.\" The supplier is already created in SAP, so Agent B needs to be started manually for vendor 100977.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1360,
+    "thinking_tokens": 485
+  },
+  "variant": "main",
+  "wall_ms": 13915
+}

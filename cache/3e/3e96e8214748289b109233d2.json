@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.00080852,
+  "created_at": "2026-10-29T11:23:09+00:00",
+  "duration_api_ms": 9418,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "3e96e8214748289b109233d2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure. The Login authenticated, but the account lacks authorisation for the market the Run needed.\n\n**Where it went wrong:** Step 2 signed in with the Login **Alpenfrisch portal**, which is the CZ service account `svc-replen-cz`. Step 3 then asked for market AT, and the portal refused it. The AOP has no mapping from market to Login, so the Agent had no way to know this account couldn't serve AT stores. The problem is upstream of the portal error: the Build bound one CZ-scoped Login to a run for an AT store.\n\n**Evidence:**\n- [3] `Signed in as svc-replen-cz@retailco.eu`\n- [5] `Page message: \"Access denied: this account is not authorised for market AT.\"`\n- Other context: \"Login 'Alpenfrisch portal' is the CZ service account svc-replen-cz.\"\n\n**Fix:** Give market AT its own Login on the Alpenfrisch portal, an account authorised for AT, and point AT runs at it. Market-specific Logins are the cleaner option: a second Login (for example, \"Alpenfrisch portal – AT\") in Setup, selected by the store's market. Changing the scope of the CZ account would be the wrong fix because it would widen a CZ service account's access to another market.\n\n**Next step:** Add the AT-authorised Login in Setup, then have the AOP select the Login from the market in Step 1 before Step 2. That AOP change is a handoff to `aop-writer`. Separately, the Run ended with a plain message to the user and no terminal action such as `fail_case`. If this Run was queue-driven, check the case's closure state, since the failure may not have been recorded on it.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 1449,
+    "thinking_tokens": 842
+  },
+  "variant": "main",
+  "wall_ms": 10922
+}

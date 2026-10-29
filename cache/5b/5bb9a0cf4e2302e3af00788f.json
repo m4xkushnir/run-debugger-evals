@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.00105487,
+  "created_at": "2026-10-29T11:31:30+00:00",
+  "duration_api_ms": 10536,
+  "input_hash": "8cdd082843487845",
+  "key": "5bb9a0cf4e2302e3af00788f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity\n\n**Where it went wrong:** Step 5 of the transcript, where the Agent judged the match by name alone. The AOP's Step 2 says \"If unsure about the supplier match, call `fail_case`,\" but it never defines what makes a match certain. The Agent was unsure because the names differ, so it took the fail branch. Both the transcript and the AOP leave the decision to the Agent's judgment.\n\n**Evidence:**\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n\nThe VAT numbers match exactly, and the search result returned the VAT, but the Agent never used it. The AOP doesn't tell it to. The Agent also searched with a shortened name (\"BAUHAUS Gesellschaft\"), dropping \"für Bau- und Hausbedarf mbH.\" The AOP doesn't say how to build the search query either, so this is a secondary contributor.\n\nOne open question: the transcript shows `claim_case` returning only `supplier_on_invoice` (the name). The VAT number appears only in your \"other context.\" If the invoice's VAT is available to the Agent but not returned by `claim_case`, the fix also needs to expose that field. Check this before you change the AOP.\n\n**Fix:** Rewrite Step 2 to define the match rule concretely: \"Extract the VAT ID from the invoice. Search SAP by VAT ID. If exactly one vendor matches, use it and continue. Only if no VAT match exists, search by normalized name, and call `fail_case` if that still gives no single clear match.\" Include the VAT ID in the `claim_case` output if it isn't already there.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_s06` and the change request above, pointing it at `aops/<agent-id>.md`. You didn't give me the Agent ID, so I can't name the file. The 31% failure rate means the same ambiguity is probably behind many other cases, so after the rewrite, check whether those failures also end in \"unable to match supplier\" with matching VAT numbers.\n\nConfidence in the diagnosis is high. Confidence in the \"VAT is available to the Agent\" detail is lower until you confirm it.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8417,
+    "input_tokens": 2,
+    "output_tokens": 1941,
+    "thinking_tokens": 1093
+  },
+  "variant": "main",
+  "wall_ms": 12277
+}

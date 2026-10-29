@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S02",
+  "cost_usd": 0.0007233900000000001,
+  "created_at": "2026-10-29T11:30:22+00:00",
+  "duration_api_ms": 7107,
+  "input_hash": "7df77d8d99342926",
+  "key": "712f2d37c00cca7a13059769",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** AOP ambiguity. Step 2 says to enter the amount \"as shown on the invoice,\" but it never says what format SAP expects.\n\n**Where it went wrong:** Turn [2], the `sap.create_invoice` call. The Agent passed the invoice's display string, `\"1.234,50 €\"`, straight through. That string uses a European thousands separator, a decimal comma, and a currency symbol. SAP's `amount` field only accepts a plain number, so turn [3] rejected it.\n\n**Evidence:**\n- AOP Step 2: \"entering the amount as shown on the invoice\"\n- Transcript [2]: `sap.create_invoice {\"amount\": \"1.234,50 €\"}`\n- Transcript [3]: `ERROR 400 ValidationError: \"amount\" must be a number`\n\nThe Agent followed the AOP literally. The AOP told it to copy the displayed text, not to convert it into a number, so this is a gap in the instructions rather than a model error. Turn [4] shows the Agent noticed the rejection but had no rule for recovering from it.\n\n**Fix:** Add a normalization rule to Step 2 of the AOP: *\"Convert the amount to a plain number before entering it: remove the currency symbol and thousands separators, and use a dot as the decimal point. Example: `1.234,50 €` → `1234.50`.\"* This should be a concrete rule, not \"use the right format.\"\n\n**Next step:** Hand this to `aop-writer` with:\n1. Build ID `bld_s02` (the AOP in effect for this Run).\n2. The change request: \"Rewrite Step 2 to normalize the invoice amount to a plain decimal number before calling SAP, with the example `1.234,50 €` → `1234.50`.\"\n3. The AOP file to edit in place. You didn't include the Agent ID, so I'll need it to locate `aops/<agent-id>.md`.\n\nI'd also check whether other invoices from European suppliers have failed the same way. If they have, this is a recurring AOP problem, not a one-off.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8169,
+    "input_tokens": 2,
+    "output_tokens": 1283,
+    "thinking_tokens": 563
+  },
+  "variant": "main",
+  "wall_ms": 8725
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.027094999999999998,
+  "created_at": "2026-10-29T11:35:42+00:00",
+  "duration_api_ms": 13507,
+  "input_hash": "531aa89fc651bef5",
+  "key": "2f06578feff14c97214db3ff",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing data. The Run ended as `completed`, but its result is wrong. The File the AOP relies on wasn't found, so the Agent audited the invoice against made-up \"typical market rates\" and wrote a clean result to Google Sheets.\n\n**Where it went wrong**\n- **Turn [2]:** the Files search for the rate card returned nothing.\n- **Turn [3]:** this is the decision point. Step 2 of the AOP (\"Open the rate card in Files\") has no instruction for when the File is missing, so the Agent made up a different comparison basis instead of stopping.\n- **Turns [4]–[6]:** these follow from that substitute basis. The \"No flags\" result was appended to \"Freight audit\" as if it were a real audit against the rate card.\n\n**Evidence**\n- Turn [2]: `files.search: {\"results\": []}`\n- Turn [3]: \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- AOP Step 2: \"Open the rate card in Files (\"Carrier rate card 2026.xlsx\").\"\n\n**Fix**\nAttach **\"Carrier rate card 2026.xlsx\"** to this Agent's **Files**, using that exact name. If a rate card is already attached under a different name, rename it to match Step 2. Without this File, Step 3's \"more than 3% above the rate card\" check has nothing to check against.\n\n**Next step**\n1. Add or rename the File in the Agent's **Files**.\n2. Treat the \"Freight audit\" row written by run_d01 as invalid. It shows `flags: []` but was never checked against the rate card.\n3. Start Work again on this invoice.\n\nOnce the File is in place, I can also invoke `aop-writer` on Build bld_d01 (`aops/<agent-id>.md`). It would add one rule to Step 2: if the rate card isn't found, stop and report the Run as failed instead of comparing against any other source. That prevents a silent false \"no flags\" result if the File goes missing again.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8235,
+    "input_tokens": 2,
+    "output_tokens": 1272,
+    "thinking_tokens": 572
+  },
+  "variant": "main",
+  "wall_ms": 14867
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.0070434,
+  "created_at": "2026-10-29T11:31:46+00:00",
+  "duration_api_ms": 5844,
+  "input_hash": "95d351598029029b",
+  "key": "538d8264d96d50c805fd3ad0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Connection failure (expired Login session). The Login **Coop portal (Okta)** had lapsed past the portal's 90-day session limit, so the Okta session was dead before the Run began.\n\n**Where it went wrong** — Step 1 of the AOP, at transcript turn [2]. The first `browser.open` call was redirected to Okta's sign-in page instead of the reports page. The Agent had nothing to fall back on, so at turn [3] it stopped. Step 2 never ran. The AOP also has no branch for \"session expired\", so the Run ended as failed.\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: Login last re-authenticated 94 days ago; the portal enforces 90-day sessions.\n\nThe 94 vs 90 day gap accounts for the failure. This is not a platform fault: the error comes from the user's own portal, and it will reproduce until the Login is refreshed. It will also recur every ~90 days.\n\n**Fix** — Re-authenticate the **Coop portal (Okta)** Login in Duvo so it holds a fresh session. To stop it recurring, re-authenticate on a schedule shorter than 90 days (e.g. every 60-75 days).\n\n**Next step** — Re-authenticate the Login in Setup, then Start Work again to confirm the Run reaches Step 2. If you also want the Agent to fail gracefully next time, I can invoke `aop-writer` to add a step 1 branch: \"If the browser is redirected to an Okta sign-in page, use **Human in the loop** to ask for re-authentication of the Login, then retry.\" The re-authentication itself is the fix for this Run; the AOP change is optional hardening.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8194,
+    "input_tokens": 2,
+    "output_tokens": 622,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7959
+}

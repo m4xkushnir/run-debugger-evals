@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.0113399,
+  "created_at": "2026-10-29T11:29:19+00:00",
+  "duration_api_ms": 6353,
+  "input_hash": "a422d48d55a66c92",
+  "key": "fe8e8fb5903b876323c022de",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nPlatform / infra failure. The Run died before any Agent turn, at sandbox startup, so the AOP never executed.\n\n**Where it went wrong**\nBetween \"Run starting\" and the first Agent turn, the platform could not pull the container image for the sandbox. It retried 3 of 3 times and then gave up. Neither AOP step (1. Snowflake query, 2. Slack post) was reached, so nothing in the AOP, Setup, or Connections was involved.\n\n**Evidence**\n- Transcript [2]: `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Your context: the last 3 Runs, on different days, failed with the identical error before any Agent turn.\n\nThe repetition across different days points away from a one-off network blip and away from anything case-specific. It is independent of the data the Agent processes.\n\n**What I ruled out**\n- **Connection failure:** no Connection call (Snowflake or Slack) was made, so there is no 401, scope error, or expired token to fix.\n- **AOP ambiguity or missing terminal closure:** the AOP never ran, and the two steps are simple and concrete anyway.\n- **Missing data:** no Setup input or File lookup occurred.\n\n**Fix**\nThere is no change to make in your Agent's artifacts (AOP, Connections, Setup, Files). The image pull is on Duvo's side, so this needs Duvo to resolve it.\n\n**Next step**\nRaise this with Duvo. If a support-escalation tool is available in your Duvo in-product chat, I'd draft it there for you to review and send. I haven't reported anything. Otherwise, contact Duvo support from the Duvo web app and include:\n- Run ID `run_p01`, Build ID `bld_p01`\n- Exact error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- Pattern: the last 3 Runs of this Agent, on different days, failed identically before any Agent turn\n- Ruled out: AOP, Connections, and Setup, since no Agent turn ever ran\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 798,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 741,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7957
+}

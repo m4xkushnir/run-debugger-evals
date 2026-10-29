@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0086401,
+  "created_at": "2026-10-29T11:23:21+00:00",
+  "duration_api_ms": 7400,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "b117b77fc98c142c2c9e8ba1",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing data / wrong credential binding (Setup). The Login **Alpenfrisch portal** is the CZ service account (`svc-replen-cz`), but the Run was for an AT store. It is not a platform fault and not an expired Connection: the sign-in succeeded and the portal then refused the market on authorization grounds.\n\n**Where it went wrong**\nTranscript step [2]–[5], which corresponds to AOP Step 2 (sign in with the Login **Alpenfrisch portal**) and Step 3 (choose the store's market). The AOP assumes the one Login can order for any market. The Login is bound to CZ only, so the AT selection was denied. The Agent's step [6] correctly stopped without placing an order, but the AOP has no branch for this case, so the Run ended as failed instead of being handed to a human.\n\n**Evidence**\n- `[3] browser.login: Signed in as svc-replen-cz@retailco.eu`\n- `[5] browser.select: Page message: \"Access denied: this account is not authorised for market AT.\"`\n- AOP Step 2: \"sign in to the Alpenfrisch portal with the Login **Alpenfrisch portal**\" (a single Login, with no market-specific selection)\n\n**Fix**\nMake the Login match the market. The cleanest single change is in Setup: add a Login for an account authorised for AT (or grant `svc-replen-cz` access to AT on the portal side), so the Run signs in with an account that can order for the store's market. If one account per market is needed, the AOP will then have to pick the Login by market, which is a follow-up to this change.\n\nI can't confirm from the transcript which of those two options (a new AT Login or widened permissions on the CZ account) is right for your portal setup, so that choice is yours.\n\n**Next step**\nAdd or fix the AT-authorised Login in Setup (or have the portal admin grant AT to `svc-replen-cz`), then re-run store AT-114. Once the Login situation is settled, I can invoke `aop-writer` with Build `bld_51e` to change Step 2 to select the Login by market and add a branch to Step 3: \"if the portal returns access denied for the market, use **Human in the loop** / `request_handover` instead of ending the Run.\"\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8361,
+    "input_tokens": 2,
+    "output_tokens": 780,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10589
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.017268799999999997,
+  "created_at": "2026-10-29T11:35:56+00:00",
+  "duration_api_ms": 9086,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "e7e82ca5f16f57627d833d51",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nBatch / iteration leak. The Run completed cleanly, but it did the wrong work. The case was scoped to one store. The AOP told the Agent to process every store, so each of today's 60 case Runs reordered stock for all 60 stores. That is roughly 60× duplicate replenishment orders.\n\n**Where it went wrong**\n- Step 2 of the AOP tells the Agent to check \"every store's stock level\". It never tells the Agent to use the store the case belongs to.\n- In the transcript, `claim_case` returned the case's store at [2]. The Agent ignored it at [3] and queried all stores, then submitted orders for all of them at [6]–[7].\n- The platform was already iterating one case per store. The AOP iterated again inside each Run.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript: `[2] Tool result ← claim_case: {\"store\": \"CZ-007\"}` → `[3] Tool call → snowflake.query {\"scope\": \"all stores\"}` → `[7] Tool result ← replenishment.submit: {\"orders\": 60}`\n\n**Fix**\nRewrite AOP Step 2 so it handles only the case's store: \"Use **Snowflake** to check stock levels for the store returned by `claim_case` only, and reorder that store's lines below minimum in the **Replenishment portal**.\" The platform's one-case-per-store queue already covers all 60 stores.\n\n**Next step**\n1. Contain the damage first. Today's 60 Runs each placed orders for all 60 stores, so up to 3,600 orders may have been submitted where about 60 were needed. Review and cancel the duplicates in the Replenishment portal before they ship. This skill can't do that for you.\n2. Then I can invoke `aop-writer` with Build `bld_b03` and the request \"rewrite Step 2 to scope the Snowflake query and reorder to the case's store only\", working in `aops/<agent-id>.md`.\n3. Optionally, a second gate is worth considering once Step 2 is fixed: a Human in the loop check before `replenishment.submit` above a line or order threshold.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8304,
+    "input_tokens": 2,
+    "output_tokens": 780,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10144
+}

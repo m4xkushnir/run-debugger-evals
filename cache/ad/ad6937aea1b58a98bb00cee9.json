@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.00128113,
+  "created_at": "2026-10-29T11:34:05+00:00",
+  "duration_api_ms": 13045,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "ad6937aea1b58a98bb00cee9",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing terminal closure. The Gmail 503 is the trigger, but the AOP has no branch for a failed step after the bill is posted, so the Run ended without `fail_case`, `postpone_case`, or `complete_case`.\n\n**Where it went wrong:** Step 3 of the AOP (\"Email the supplier the payment date via Gmail\"). The AOP has no error handling for this step. After `gmail.send_message` returned 503, the Agent wrote a plain-text status message (turn [7]) and stopped. It never called a terminal action. Because the Run errored out, the platform set the case to Failed on its own.\n\n**Evidence:**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Agent: Email failed with a temporary Gmail error.`\n- Case state: `Failed (no reason)`. No `fail_case` reason was recorded, which confirms the platform settled the case rather than the AOP.\n\n**Fix:** Add one branch to Step 3 of the AOP:\n\n> _If `gmail.send_message` returns an error, retry once after a short wait. If it still fails, call `fail_case` with the reason \"Bill INV-5512 posted in NetSuite; supplier payment-date email not sent. Needs manual follow-up.\" Do not call `postpone_case` here, because re-running the case would post the bill again._\n\nThe duplicate is a second, separate risk. Step 2 posts the bill without checking whether INV-5512 already exists, so any re-run of the case creates a duplicate. This is worth fixing in the same AOP pass: add a check for an existing bill for INV-5512 before the post in Step 2, or move the email into its own case so a failure there cannot put the case back through the post. I'd treat this as a follow-up rather than the main fix.\n\n**Next step:**\n- The duplicate bill has to be reversed in NetSuite by the AP team. I can't change anything there.\n- To fix the AOP, I can hand off to `aop-writer` with Build `bld_g04` and the AOP file `aops/<agent-id>.md`, with the change request: \"Add an error branch to Step 3 that calls `fail_case` with the reason above, and add an existing-bill check before Step 2's post.\"\n- The 503 was transient, so the retry-once branch may be enough on its own for most cases. I'd still keep the `fail_case` fallback so the case is never settled without a reason.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8343,
+    "input_tokens": 2,
+    "output_tokens": 2395,
+    "thinking_tokens": 1535
+  },
+  "variant": "main",
+  "wall_ms": 14664
+}

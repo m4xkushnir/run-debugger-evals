@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.009052200000000002,
+  "created_at": "2026-10-29T11:23:39+00:00",
+  "duration_api_ms": 8515,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "273b72bb664e8c6714a1e48d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nAOP ambiguity. The Run didn't error (status `completed`), but it produced the wrong outcome because the AOP left the refund decision to the Agent's judgment where a concrete threshold was needed.\n\n**Where it went wrong**\nTranscript turn [3], the decision point between the order lookup and the Stripe refund. It maps to AOP Step 2, the sub-bullet about significant damage. The Agent classified a minor scratch as \"significant\" and chose a full refund. Nothing in the AOP told it the cosmetic-damage policy (15%), so it had nothing to anchor on. Turn [4] then executed the full amount with no check.\n\n**Evidence**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"\n- Transcript [4]: `stripe.refund {\"order\": \"#88213\", \"amount_eur\": 480.00}`\n\nThe Agent's reasoning (\"significant enough to the customer\") is a guess paraphrasing the vague AOP wording. The 15% cosmetic policy appears only in the user's report, not in the AOP.\n\n**Fix**\nRewrite AOP Step 2 to replace the judgment call with explicit rules, for example: classify damage as cosmetic (scratches, scuffs, dents that don't affect function or structure) or structural/functional; *if cosmetic: refund 15% of item price; if structural or functional: refund in full.* Then have Step 3 use the computed amount. If the refund amount can be large, consider also gating Step 3 on a Human in the loop check above a set value, but that is a separate, optional safeguard, not the root cause here.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_a01`, the change request \"rewrite Step 2 to define cosmetic vs. structural damage and refund 15% for cosmetic, full for structural\", and the AOP file `aops/<agent-id>.md`. Note that I worked only from the AOP and transcript you pasted; the actual policy wording and the damage definitions should come from you. Also, the EUR 480 already refunded for #88213 is a separate matter and needs handling on your side, since I can't change it.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 821,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12617
+}

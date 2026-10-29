@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.025418800000000002,
+  "created_at": "2026-10-29T11:35:55+00:00",
+  "duration_api_ms": 11304,
+  "input_hash": "0af3d12c460cedff",
+  "key": "0f6db53f6962d0f56a0d1796",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\n**Batch / iteration leak.** The AOP tells one Run to process every approved row in the sheet instead of one return. When two Runs started 2 minutes apart (schedule + manual Start Work), both read the same set of approved rows and both refunded them. The Run shows `completed`, but the outcome is wrong: 9 customers were refunded twice.\n\n**Where it went wrong**\n- **AOP Step 1** (\"for each open return marked 'approved'\") makes every Run own the whole sheet. Nothing claims a row before refunding it, so two overlapping Runs see the same 12 rows.\n- **Transcript [1]–[3]:** this Run read all approved rows and committed to all of them (\"Refunding 12 approved returns\"). By then the other Run was already refunding the same rows, and the rows were still \"approved\" because the status only flips after the refund.\n- **Transcript [5]–[6]:** Stripe flagged the duplicate on the first refund, and the Agent carried on to the remaining 11 rows. That is a symptom. The Agent had no instruction to stop, because the AOP assumes it is the only worker on the sheet.\n\n**Evidence**\n- AOP Step 1: _\"for each open return marked \"approved\", issue the refund in **Stripe** and set the row to \"refunded\".\"_\n- Transcript [5]: `\"note\": \"a refund for this charge already exists (created 2 min ago)\"`. Transcript [6]: _\"Continuing with the remaining 11 rows.\"_\n\n**Fix**\nRewrite the AOP so each Run handles **one return**, delivered as a queue case. The platform handles iteration and makes sure no two Runs work the same return. The single-return AOP should:\n- check the row is still \"approved\" and that no Stripe refund exists before refunding;\n- close each branch with a terminal action: `complete_case` after refunding, `fail_case` if a refund already exists.\n\n**Next step**\nI can invoke `aop-writer` with:\n- **Build:** `bld_b02`\n- **Change request:** \"Rewrite Step 1 to refund a single approved return per case instead of iterating the Returns sheet. Before refunding, confirm the row is still 'approved' and no Stripe refund exists for the order. Close with `complete_case` after refunding, or `fail_case` if a refund already exists.\"\n- **File:** `aops/<agent-id>.md`\n\nUntil this ships, avoid running Start Work manually while the schedule is active. Separately, the 9 duplicate refunds need reconciling in Stripe. I can't identify which orders they are from this transcript, since it only shows order #90011.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8254,
+    "input_tokens": 2,
+    "output_tokens": 1188,
+    "thinking_tokens": 286
+  },
+  "variant": "main",
+  "wall_ms": 12416
+}

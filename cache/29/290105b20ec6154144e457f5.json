@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.00098439,
+  "created_at": "2026-10-29T11:30:33+00:00",
+  "duration_api_ms": 7978,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "290105b20ec6154144e457f5",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nBatch / iteration leak. The AOP asks one Run to process the whole statement, and that exceeds the 30-minute limit.\n\n**Where it went wrong**\nStep 2 of the AOP: \"Reconcile all unmatched lines in the statement against open invoices in NetSuite.\" The Run takes all 611 unmatched lines as one unit of work. The transcript shows it starting that loop at [3] and reaching only 230 of 611 by the cutoff at [5]. At that pace the work would have needed roughly 75 to 80 minutes, so the timeout was structural, not a one-off stall.\n\n**Evidence**\n- AOP Step 2: \"Reconcile **all unmatched lines** in the statement against open invoices in NetSuite.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix**\nRewrite Step 2 so the Agent handles one statement line per case. For each line, it searches NetSuite for a matching open invoice, then closes the case with `complete_case` when matched or `fail_case` (or `request_handover`) when no match is found. The platform iterates over the 611 lines, so no single Run has to do them all.\n\nTwo consequences to plan for:\n- Step 3 (the Slack summary) can't live inside the per-line branch. It needs its own step, either a separate Agent or a scheduled Run that reads the day's closed cases.\n- This Run likely left partial NetSuite matches behind. Before you rerun, check whether those 230 matches were committed or whether any were posted without a summary. I can't see that from the transcript.\n\n**Next step**\nI can hand this to `aop-writer` with Build `bld_s03` and the change request \"rewrite Step 2 to process a single statement line per case, with terminal actions per branch, and move the Slack summary to its own step.\" Share the NetSuite state for the 230 matched lines first if you want to check for duplicates.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 879,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1470,
+    "thinking_tokens": 742
+  },
+  "variant": "main",
+  "wall_ms": 9513
+}

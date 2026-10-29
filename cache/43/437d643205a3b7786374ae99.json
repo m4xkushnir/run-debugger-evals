@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.013247199999999999,
+  "created_at": "2026-10-29T11:38:33+00:00",
+  "duration_api_ms": 17414,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "437d643205a3b7786374ae99",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). A secondary effect is that the case was not closed by the Agent: it ended Failed because the Run was cut off, not through `complete_case` or `fail_case` (related to #3).\n\n**Where it went wrong**\nStep 2 of the AOP. The Run was claimed against a single case (\"Invoice from Brenntag CZ\"), but the AOP told the Agent to process every pending invoice in the inbox. At transcript [3]–[5] the Agent searched the whole AP inbox, found 47 unread messages, and committed to working through all of them in one Run. It got through 19 before the 30-minute limit stopped it at [7]. Step 3 (`complete_case`) was never reached.\n\nThe max-duration error is the symptom. The root cause is that one Run was given the work of 47 cases.\n\n**Evidence**\n- AOP Step 2: \"process all pending supplier invoices in the AP inbox\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [6]: \"Created vendor bills 1-19 of 47.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix**\nRewrite AOP Step 2 so the Agent handles only the invoice belonging to the claimed case (the one named in the `claim_case` result), instead of searching and iterating over the inbox. For example: \"Using the case title and details from `claim_case`, find the one matching email in **Gmail**, extract its fields, and create one vendor bill in **NetSuite**. Do not process any other messages.\" The platform's queue handles iteration across the other invoices, with one case per invoice.\n\nTwo things to check alongside this change. I can't confirm them from the transcript:\n- Bills 1–19 were created in NetSuite but the Run didn't finish cleanly, so the corresponding emails may not have been marked read or otherwise flagged. Before re-running, check for duplicates so those 19 invoices are not entered twice.\n- The Agent's processing of 19 invoices in 30 minutes shows the volume wouldn't fit in a single Run, so the fix needs the per-case approach, not just a longer timeout.\n\n**Next step**\nI can hand off to `aop-writer` with Build `bld_b01`, the AOP file `aops/<agent-id>.md`, and the change request: \"Rewrite Step 2 to process only the single invoice tied to the claimed case, not all pending messages in the inbox.\" After that lands, make sure the inbox invoices are fed in as individual cases in the queue, and reconcile the 19 bills already created in NetSuite.",
+  "usage": {
+    "cache_creation_input_tokens": 934,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 879,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 18411
+}

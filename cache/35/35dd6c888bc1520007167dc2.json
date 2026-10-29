@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.0098556,
+  "created_at": "2026-10-29T11:24:36+00:00",
+  "duration_api_ms": 7401,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "35dd6c888bc1520007167dc2",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing terminal closure. The \"PO not found\" branch in Step 2 has no terminal action (`fail_case`, `postpone_case`, or `request_handover`). The Run ended cleanly after the Slack post, so the platform settled the case itself as Completed with the reason \"auto-completed on clean run end\". The Run status is also \"completed\", so this isn't a crash. The Agent followed the AOP exactly, and the AOP left a gap.\n\n**Where it went wrong**\nTranscript turn [5]–[7], right after the empty `netsuite.find_po` result at turn [4]. The matching AOP point is Step 2, sub-bullet \"If the PO is not found: post the invoice number to Slack #ap-exceptions.\" That branch ends at the Slack post. It doesn't say to stop, and it doesn't say how to close the case. The Agent never reached Step 4 (`complete_case`), and it was never told to call anything else. The platform then closed the case as Completed, even though the invoice was never posted, which the case evaluation flagged as a critical issue.\n\n**Evidence**\n- AOP: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions.\"\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case evaluation: \"Invoice was never posted, but the case shows Completed.\"\n\n**Fix**\nEdit Step 2 of the AOP so the PO-not-found branch ends with an explicit terminal action. For example: \"If the PO is not found: post the invoice number to Slack #ap-exceptions, then call `fail_case` with reason 'PO not found' (or `request_handover` if AP should pick it up) and stop. Do not continue to Step 3.\"\n\nTwo smaller gaps in the same AOP have the same cause. Step 3 has no \"else\" branch for lines that don't match within 1%. Step 4 calls `complete_case` unconditionally. Both leave non-posting paths open to the same auto-completion. They are the same root cause, not separate fixes, so the rewrite should cover them together.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t01`, working in `aops/<agent-id>.md`. The change request would be: \"In Step 2, end the PO-not-found branch with `fail_case` (or `request_handover`) and stop. Add an else-branch to Step 3 for mismatches over 1% that routes for review with a terminal action. Make `complete_case` in Step 4 apply only after the vendor bill is posted.\" Shall I go ahead?\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8416,
+    "input_tokens": 2,
+    "output_tokens": 901,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11076
+}

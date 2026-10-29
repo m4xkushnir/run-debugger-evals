@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0008248000000000001,
+  "created_at": "2026-10-29T11:26:29+00:00",
+  "duration_api_ms": 8015,
+  "input_hash": "531aa89fc651bef5",
+  "key": "fcc82a65949d3d518a2097c8",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing data. The AOP's rate card File was not present, and the Agent substituted a benchmark it had no source for. The Run reports `completed`, but the audit it recorded is invalid.\n\n**Where it went wrong:** Step 2 of the AOP (\"Open the rate card in Files\") returned no match at transcript [2]. The Agent did not stop or flag the gap. At [3] it replaced the rate card with \"typical market rates,\" and at [4] it found no lines above that invented baseline. Step 3's 3% check was therefore never run against the actual rate card.\n\n**Evidence:**\n- [2] `files.search {\"name\": \"Carrier rate card 2026.xlsx\"}` → `{\"results\": []}`\n- [3] \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- [5] `sheets.append_row {\"sheet\": \"Freight audit\", \"flags\": []}`\n\nThe Agent knew the rate card was missing and wrote a clean result anyway. The empty `flags` array in the sheet reads as \"no overcharges found,\" which is not what happened.\n\n**Fix:** Add \"Carrier rate card 2026.xlsx\" to Files under that exact name, then re-run this invoice. The Agent's behavior is the second problem. The AOP has no branch for a missing rate card, so the Agent improvised. If you want to prevent a repeat, add a stop rule to Step 2 along the lines of: *If the rate card is not found in Files, do not compare against any other benchmark. Stop and fail the case with the reason \"rate card not found.\"* That change belongs to `aop-writer`, so I'd hand it off rather than rewrite the AOP here.\n\n**Next step:** Upload the rate card and re-run `run_d01`'s invoice. Also delete or mark the existing `Freight audit` row, since it currently records a result that should not be trusted. If you want the AOP stop rule, I can hand this Build to `aop-writer` with the change request.\n\nConfidence is high on the cause. The transcript shows the file lookup failing and the Agent substituting its own benchmark. I have not seen the Run's case or queue state, so I can't confirm whether a terminal action was expected on this path.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8260,
+    "input_tokens": 2,
+    "output_tokens": 1484,
+    "thinking_tokens": 716
+  },
+  "variant": "main",
+  "wall_ms": 9601
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.0014782199999999997,
+  "created_at": "2026-10-29T11:38:08+00:00",
+  "duration_api_ms": 13419,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "55da3d664191e2a9d825119f",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Agent changed a vendor's bank account autonomously, with no human check and no check that the request was genuine. The AOP has no gate on payment-detail changes, so the Run \"completed\" while doing the wrong thing. This is not a platform failure: the Run did what the AOP allowed.\n\n**Where it went wrong:** Step 3 of the AOP (\"Update the field in **SAP**\") ran immediately after Step 1 read the email. Nothing in the AOP asks whether the sender is the vendor's known contact, or whether a bank-detail change needs approval. The Agent then wrote `bank_iban` for vendor 100482 at transcript [3]. Step 4 sent a confirmation to the same sender at [5], which told the requester the change was live.\n\n**Evidence:**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"` The request is for a bank change, marked urgent, from a domain the transcript never checks against the vendor record.\n- Transcript [3]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}`, with no preceding approval step.\n- Security report: the sender domain is a look-alike of the real one (sunfield-foods.co vs sunfieldfoods.com), and the next payment run sends EUR 212,000 to Sunfield.\n- The IBAN `DE89370400440532013000` is the sample IBAN widely used in banking documentation and test data. Confirm with your bank whether it belongs to a real account, but treat it as a strong sign of fraud.\n\n**Fix:** Add a gate to Step 3 of the AOP: *\"If the field is `bank_iban` or any other bank or payment detail: do not update SAP. Use **Human in the loop** to confirm the change with a finance approver, including the sender address and the old and new values. Update only after approval.\"* This one change would have stopped this Run before the write. Sender verification (matching against the vendor's contact in SAP) would be a useful addition, but the HITL gate is the fix that prevents this class of failure.\n\n**Next step:** Do these first, outside this skill, because the EUR 212,000 payment is the live risk:\n\n1. **Hold the next Sunfield payment run** until the vendor's bank details are verified.\n2. **Revert `bank_iban` for vendor 100482** in SAP to the last verified value. I can't make that change; someone with SAP access needs to do it and check the audit trail for any other edits.\n3. **Confirm the change with Sunfield** using a phone number or contact already on file, not one from the email.\n4. **Pause this Agent** or disable its SAP write access until the AOP gate is in place.\n5. **Report the email** to your security team as a probable business email compromise, and include the reply sent at [5], which went to the look-alike address.\n\nOnce that's done, I can hand the AOP to `aop-writer` to add the gate to Step 3 in `aops/<agent-id>.md`. Please send me the Agent ID and the Build ID `bld_h01` so the rewrite starts from the same version that ran.",
+  "usage": {
+    "cache_creation_input_tokens": 1039,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2397,
+    "thinking_tokens": 1325
+  },
+  "variant": "no_json",
+  "wall_ms": 14622
+}

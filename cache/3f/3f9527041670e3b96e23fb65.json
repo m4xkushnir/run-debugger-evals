@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.023863799999999998,
+  "created_at": "2026-10-29T11:36:40+00:00",
+  "duration_api_ms": 7371,
+  "input_hash": "95d351598029029b",
+  "key": "3f9527041670e3b96e23fb65",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure: an expired Login session. The Login **Coop portal (Okta)** was last re-authenticated 94 days ago, and the portal enforces 90-day sessions. The session lapsed 4 days before this Run. This isn't a platform problem or an AOP logic error. The AOP never got past its first step because the Login it depends on was no longer valid.\n\n**Where it went wrong**\n- **AOP Step 1** (\"Use **Enterprise Browser** with the Login **Coop portal (Okta)** to open the reports page\").\n- **Transcript turn [2]**: the first `browser.open` was redirected to Okta's sign-in page instead of the reports page.\n- **Turn [3]**: the Agent correctly stopped instead of guessing.\n- Step 2 (the CSV download) never ran.\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: \"Login 'Coop portal (Okta)' was last re-authenticated 94 days ago; the portal enforces 90-day sessions.\"\n\n**Fix**\nRe-authenticate the **Coop portal (Okta)** Login in Setup so the Enterprise Browser has a valid Okta session again. Because the portal expires sessions every 90 days, this will happen again unless the Login is re-authenticated before each 90-day window closes. Put a reminder for about day 80 on whoever owns this Login.\n\n**Next step**\nRe-authenticate the **Coop portal (Okta)** Login in Setup, then Start Work on this Agent again to confirm the \"Open orders\" CSV downloads. If the Run still redirects to Okta right after a clean re-authentication, it's no longer a Login expiry. In that case, send it back to me and I'll treat it as a possible platform issue to raise with Duvo.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 851,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 779,
+    "thinking_tokens": 126
+  },
+  "variant": "main",
+  "wall_ms": 8827
+}

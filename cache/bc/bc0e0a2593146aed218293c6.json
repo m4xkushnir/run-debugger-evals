@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.00059822,
+  "created_at": "2026-10-29T11:38:14+00:00",
+  "duration_api_ms": 4257,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "bc0e0a2593146aed218293c6",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data, with a missing terminal closure on the branch that was supposed to handle it. The Agent swallowed a gap in its inputs and then closed the case as if the work was correct.\n\n**Where it went wrong:** Step 1 of the AOP (`claim_case`) returned an invoice with no `cost_center`. The AOP does not say what to do in that case, so the Agent improvised at transcript turn [3] and posted the bill with `cost_center: \"TBD\"` in Step 2 (`netsuite.post_bill` at [4]). It then called `complete_case` at [6]. The Run finished cleanly, which is why it reads as \"completed\", but the ledger entry is wrong.\n\n**Evidence:**\n- [3] Agent: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- [4] `netsuite.post_bill {\"invoice\": \"INV-7731\", \"cost_center\": \"TBD\"}`\n\n**Fix:** Add a branch to Step 2 of the AOP: *If the claimed case has no `cost_center`, do not post to NetSuite. Call `fail_case` (or `request_handover` to a human) with the reason \"missing cost_center\".* This makes the missing-data path terminal and explicit, so the Agent cannot post a placeholder value.\n\n**Next step:** Hand this to `aop-writer` with the Build `bld_d03` and the change request above, so it rewrites Step 2 in `aops/<agent-id>.md`. Separately, the invoice INV-7731 is already posted with cost center \"TBD\" in NetSuite, so someone on the finance side needs to correct that bill to the right cost center. Duvo cannot fix that from here.\n\n**Confidence note:** The transcript shows the decision clearly. I cannot see whether the case should have carried a `cost_center` upstream, so it is also worth checking whether the source of the case is supposed to provide one. That would be a Setup or data-source issue rather than an AOP issue.",
+  "usage": {
+    "cache_creation_input_tokens": 974,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 663,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 5566
+}

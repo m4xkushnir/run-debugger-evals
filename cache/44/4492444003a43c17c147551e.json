@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0252562,
+  "created_at": "2026-10-29T11:36:11+00:00",
+  "duration_api_ms": 13081,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "4492444003a43c17c147551e",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nWrong decomposition. One Agent is doing two Runs of work: a real-time onboarding pass (steps 1–4) and a 7-day wait-then-act cycle (steps 5–11). A Run cannot sit idle for 7 days and then resume. So this Run ended cleanly after step 4 and reported `completed`, and nothing was set up to pick up the work on day 7.\n\n**Where it went wrong**\n- **Transcript turn [5]** matches **AOP Step 5**.\n- After creating the vendor (turn [3]–[4], Step 3), the Agent reached the wait boundary.\n- It announced it would \"check back in 7 days\". That is a promise the platform has no way to keep inside a single Run.\n- The Run then ended with no further tool call, so Steps 6–11 never ran:\n  - activate payments\n  - chase the supplier\n  - welcome pack\n  - Coupa catalogue\n  - Slack notification\n  - 30-day review\n- This matches the report that vendor 100977 was \"created but never activated.\"\n\n**Evidence**\n- AOP: \"5. Wait 7 days for the signed bank letter.\"\n- Transcript: \"[5] Agent: Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n\nThe AOP has 11 top-level steps with a clear phase boundary at Step 5. That is the decomposition signal.\n\n**Fix**\nSplit the AOP at Step 5 into two Agents:\n- **Agent A** handles Steps 1–4: read the form, check VIES, create the vendor, request bank confirmation. It then hands off to a queue or to `request_handover`, carrying the SAP vendor number.\n- **Agent B** is triggered by the incoming signed bank letter, or by a scheduled check 7 days later. It handles Steps 6–11: activate if the letter was received, otherwise chase the supplier.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w03` and the request \"split this AOP at Step 5 into two Agents: an intake Agent (Steps 1–4) that hands off the SAP vendor ID, and a follow-up Agent (Steps 6–11) triggered by the bank letter or a 7-day schedule.\" It would work in `aops/<agent-id>.md`.\n\nBefore splitting, check two gaps in the transcript you pasted:\n- **Step 1:** there is no Gmail read.\n- **Step 4:** there is no tool call that sends the bank-confirmation request. Turn [5] claims it was requested, but no send appears.\n\nConfirm with the supplier that the request actually went out. If it didn't, vendor 100977 still needs it before any follow-up Agent can act.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8341,
+    "input_tokens": 2,
+    "output_tokens": 1179,
+    "thinking_tokens": 246
+  },
+  "variant": "main",
+  "wall_ms": 14254
+}

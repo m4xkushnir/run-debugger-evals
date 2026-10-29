@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.0016265199999999998,
+  "created_at": "2026-10-29T11:38:11+00:00",
+  "duration_api_ms": 13875,
+  "input_hash": "89b60f1887533656",
+  "key": "9556d0580d531a3562279495",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing Human-in-the-loop on a high-stakes action. The Run completed as designed, but the AOP let an unreviewed recommendation go live as a store-wide price change. This is not a platform failure: the Run status is `completed`, so it won't appear in failure monitoring.\n\n**Where it went wrong:** Step 1 → Step 2 handoff. The Snowflake query returned 38 rows but a single `markdown_pct`, and the Agent used that value without checking it. Step 2 then applied it to all 140 stores with no pause for review.\n\n**Evidence:**\n- `[2] Tool result ← snowflake.query: {\"rows\": 38, \"markdown_pct\": 30}`\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- `[4] Tool result ← pricing.apply_markdown: {\"updated_prices\": 5320}`. 5320 = 38 × 140, which suggests the 30% went to every recommendation row in every store, not only the bad one. This is an inference from the counts; the transcript doesn't show the per-row breakdown.\n\n**Fix:** Add a Human-in-the-loop checkpoint between Step 1 and Step 2. Proposed wording for the AOP:\n\n> Before applying any markdown, use **Human in the loop** to show the user the category, the number of recommendation rows read, and the proposed markdown percentage. Do not call **Pricing** until the user approves. If the rows disagree on the percentage, stop and ask.\n\nI'd gate every markdown rather than only large ones, because a live price change across all stores is hard to reverse and this error wasn't caught by any threshold.\n\n**Next step:**\n1. **Now (you, not the Agent):** Reverse the 30% markdown for Outdoor furniture across the 140 stores in the Pricing system. I can't do this; this skill is read-only. Also correct the Slack #merchandising post, which announced the markdown as intended.\n2. **Confirm the bad row** in the recommendation table in Snowflake. This tells you whether the source data or the query needs fixing too.\n3. **Hand off the fix to `aop-writer`** with Build `bld_h02` and the Step 2 gate change above. The AOP file path depends on the Agent ID, which you didn't include, so send that with the handoff.",
+  "usage": {
+    "cache_creation_input_tokens": 1003,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2708,
+    "thinking_tokens": 1934
+  },
+  "variant": "no_json",
+  "wall_ms": 15021
+}

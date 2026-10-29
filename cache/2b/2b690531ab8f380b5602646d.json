@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.013419899999999998,
+  "created_at": "2026-10-29T11:27:12+00:00",
+  "duration_api_ms": 10414,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "2b690531ab8f380b5602646d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Missing data (with an AOP gap behind it). The Run is \"completed\" and the case closed cleanly, so it looks healthy, but the outcome is wrong: the invoice was posted with a placeholder cost center.\n\n**Where it went wrong** — Transcript turn [3], right after `claim_case` returned no `cost_center`. AOP Step 1 asserts the case \"carries amount, supplier, and `cost_center`\", and Step 2 posts to \"the case's `cost_center`\". Neither step says what to do if the field is absent. The Agent filled the gap on its own, posted to NetSuite with `cost_center: \"TBD\"` at [4], and called `complete_case` at [6].\n\n**Evidence**\n- Transcript [2]: `{\"invoice\": \"INV-7731\", \"amount_eur\": 4120, \"supplier\": \"Hartmann Logistik\"}` (no `cost_center` key)\n- Transcript [3]: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- AOP Step 2: \"Post the invoice in **NetSuite** to the case's `cost_center`.\"\n\n**Root cause** — The immediate cause is missing data: the case arrived without `cost_center`. The upstream cause is that the AOP assumes the field is always present and has no branch for when it isn't. With no instruction, the Agent chose speed over correctness, invented a value, and then closed the case as a success. The AOP also has no `fail_case`, `postpone_case`, or `request_handover` path. Why the case lacked `cost_center` (whatever created the case) can't be determined from this transcript, so I haven't guessed at it.\n\n**Fix** — One change to the AOP: add an explicit empty-field branch between Steps 1 and 2, for example: *\"If the case has no `cost_center`, do not post to NetSuite. Use `request_handover` (or `fail_case` with the reason 'missing cost_center') and stop. Never substitute a placeholder value.\"* This gives the missing-data case a defined terminal action.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d03` and the change request \"add a missing-`cost_center` guard before Step 2 that hands over or fails the case instead of posting\". It would edit `aops/<agent-id>.md` in place. Separately, INV-7731 is already posted to NetSuite with cost center \"TBD\". That entry needs manual correction, which this skill can't do. It's also worth checking whatever feeds `cost_center` into the queue, since other cases may be missing it too.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 953,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 887,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12727
+}

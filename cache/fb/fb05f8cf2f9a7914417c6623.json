@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0009193,
+  "created_at": "2026-10-29T11:26:47+00:00",
+  "duration_api_ms": 9545,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "fb05f8cf2f9a7914417c6623",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing data. The Agent ran with a Setup input that was never set and substituted a value on its own.\n\n**Where it went wrong:** Transcript [3]. The AOP's Step 2 uses Setup input `safety_stock_days`, but the Agent found it unset and decided \"Treating it as 0\" instead of stopping. Everything after that followed from the zero: Step 2 at [4] computed 294 + 0 − 260 = 34, and the order was submitted at [5] with no safety stock included.\n\n**Evidence:**\n- [3] \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- [4] \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n\nThe order covers only the forecast demand minus stock, so it leaves no buffer. Stock after delivery is 260 + 34 = 294, which equals one week of forecast demand with nothing held back for variance. That fits a stockout later in the week, but the Run has no timestamps or sales-by-day data, so I can't confirm the Thursday timing from this transcript alone.\n\n**Fix:** Set `safety_stock_days` in the Setup for this Agent to the value the replenishment team intends. Once it's set, the Build will compute the buffer on future Runs.\n\n**Next step:**\n1. Set `safety_stock_days` in Setup. I can't do this from here, so it needs to happen in the Duvo web app.\n2. Order RP-99120 has already been submitted in the Replenishment portal with 34 units for SKU-1101. Someone should check whether it needs amending, since I have no access to the portal.\n3. Prevention: the AOP doesn't say what to do when the input is missing, which is why the Agent defaulted silently. If you want it to stop and ask instead, I can hand this to `aop-writer` with a request to add an explicit stop-or-HITL rule for an unset `safety_stock_days`.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8360,
+    "input_tokens": 2,
+    "output_tokens": 1671,
+    "thinking_tokens": 991
+  },
+  "variant": "main",
+  "wall_ms": 12683
+}

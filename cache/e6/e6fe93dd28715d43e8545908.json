@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.015133200000000001,
+  "created_at": "2026-10-29T11:39:39+00:00",
+  "duration_api_ms": 8071,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "e6fe93dd28715d43e8545908",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure (primary), with a Connection failure (Gmail 503) as the trigger. The AOP has no branch for a failed step after a non-reversible action, so the case was settled by the platform as Failed with no reason, while the NetSuite bill was already posted.\n\n**Where it went wrong**\nTranscript turn [6]–[7], at AOP Step 3 (\"Email the supplier the payment date via Gmail\"). After the 503, the Agent wrote a plain message at [7] and stopped. It never called `fail_case`, `postpone_case`, or `request_handover`, and never reached Step 4's `complete_case`. The AOP defines only the happy path: Steps 1-4 say nothing about what to do if Step 3 fails after Step 2 has already posted the bill. The Failed state with no reason is the platform's settlement of a Run that ended mid-work, not an Agent decision. That is what made the case look unprocessed, so the AP team re-ran it and posted a duplicate.\n\nThe 503 itself is the symptom. It was transient (\"try again later\"), and the AOP gave the Agent neither a retry nor a safe way out.\n\n**Evidence**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Email failed with a temporary Gmail error.` (the Run ends here, with no terminal action)\n- AOP: `2. Post the vendor bill in **NetSuite**.` followed by `3. Email the supplier the payment date via **Gmail**.` (no failure handling, no idempotency check)\n\n**Fix**\nChange the AOP so that Step 3 has an explicit failure branch that records that the bill is already posted, and Step 2 is idempotent. Concretely, add to Step 3: *\"If the Gmail send fails with a temporary error (5xx), retry once. If it still fails, call `postpone_case` with the reason 'Bill already posted in NetSuite; only the supplier email is pending. Do NOT re-post the bill.'\"* Also add to Step 2: *\"Before posting, check whether a vendor bill for this invoice number already exists in NetSuite; if it does, skip posting and go to Step 3.\"* The second rule is what protects against the duplicate when a human or the platform re-runs the case.\n\nSeparately and immediately: the duplicate INV-5512 bill in NetSuite needs to be voided or reversed by the AP team. Nothing in this diagnosis does that.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_g04`, working in `aops/<agent-id>.md`, and the change request: \"add a retry-then-`postpone_case` branch to Step 3 for Gmail 5xx errors, and add a pre-check in Step 2 that skips posting if a NetSuite bill for the invoice already exists.\" Want me to proceed?\n\nOne caveat: I'm working from the pasted transcript only. I could not confirm the case's settlement reason or whether the Gmail Connection is healthy now, but nothing in the transcript points to a Connection configuration problem (a 503 is an upstream outage, not an auth or scope error).",
+  "usage": {
+    "cache_creation_input_tokens": 983,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1048,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9270
+}

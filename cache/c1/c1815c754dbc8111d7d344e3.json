@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.013821199999999999,
+  "created_at": "2026-10-29T11:37:57+00:00",
+  "duration_api_ms": 7971,
+  "input_hash": "d0dabf96580dd687",
+  "key": "c1815c754dbc8111d7d344e3",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure (category 3). The \"label can't be generated\" branch has no terminal action, so the platform settled the case instead of the AOP.\n\n**Where it went wrong**\nAt transcript [5]–[7], after Packeta returned the 422, the Agent followed AOP Step 2's sub-bullet (post to Slack) and then stopped. It never reached Step 3 (correctly, since there is no label to email) or Step 4 (`complete_case`). The Run ended cleanly after a non-terminal action, so the platform applied its own settlement: Completed with the reason `auto-completed on clean run end`, with the outcome left to case evaluation. That is why the case is stuck in `evaluating`. A return that got no label and no customer email is recorded as Completed.\n\n**Evidence**\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Label could not be created; I alerted #returns-ops.`\n- AOP Step 2: `If the label can't be generated: post the order number to **Slack** #returns-ops.` The branch ends there, with no `fail_case`, `postpone_case`, or `request_handover`.\n- Case state: `auto-completed on clean run end`\n\nThe 422 is a symptom, not the root cause. It says Packeta doesn't offer returns to SK, which is a business condition and not a Connection fault (the Connection worked and returned a clear response). The AOP anticipated a label failure, but gave the Agent no way to close the case on that path.\n\n**Fix**\nIn AOP Step 2, add a terminal action to the failure branch. For example: *\"If the label can't be generated: post the order number to Slack #returns-ops, then call `request_handover` (or `fail_case`) with the Packeta error as the reason. Do not continue to Step 3.\"* Which action fits depends on whether ops should pick the return up manually (`request_handover`) or the case should be marked as failed (`fail_case`). Since a human in #returns-ops has to arrange the SK return by hand, `request_handover` is my recommendation.\n\nAlso worth noting: the Slack message (`R-30112: no return label`) omits the reason. Including the 422 text in the post would help ops, but that is secondary to the closure fix.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t03`, the change request \"in Step 2, after the Slack post, add `request_handover` with the Packeta error as the reason and stop before Step 3\", and the target file `aops/<agent-id>.md`. I don't have the Agent ID in what you shared, so that path needs filling in.\n\nSeparately, `case_t03` is currently recorded as Completed. You may want to check it and correct its outcome by hand, since the return was never actually processed.",
+  "usage": {
+    "cache_creation_input_tokens": 985,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 916,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9227
+}

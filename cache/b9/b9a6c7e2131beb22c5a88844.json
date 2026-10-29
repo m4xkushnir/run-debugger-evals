@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.0079261,
+  "created_at": "2026-10-29T11:22:50+00:00",
+  "duration_api_ms": 8583,
+  "input_hash": "904fcbb04475a734",
+  "key": "b9a6c7e2131beb22c5a88844",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nConnection failure. The Gmail Connection 'AP inbox' had an expired or revoked token, so the Agent never reached the AOP's invoice logic.\n\n**Where it went wrong**\nTranscript step [1]–[2], at AOP Step 1 (\"Use Gmail to find the newest unread email in the AP inbox\"). The very first Gmail call was rejected, and the Agent correctly stopped at [3]. The Agent behaved sensibly. The upstream cause is the Connection's authorisation, which was last renewed 91 days before the Run and is no longer valid.\n\n**Evidence**\n- Transcript [2]: `ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: Gmail Connection 'AP inbox' \"last authorised 2026-07-30 (91 days before this Run)\".\n\nAn `invalid_grant` with a token that old is the user's to fix (reauthorise). It is not a platform fault. Caveat: if the Connection fails again straight after a clean reauthentication, that would point to a platform issue and should go to Duvo. I can't tell from this data whether the Connection is still broken today, so reauthorising will confirm it.\n\n**Fix**\nReauthorise the Gmail Connection 'AP inbox' in Setup (sign in again to refresh the token). Then check that it keeps the scopes the AOP needs: read access for Step 1 and label/modify access for Step 4 (\"label the email 'registered'\").\n\n**Next step**\nReauthorise the Connection in Setup, then Start Work again on the Agent. I haven't proposed an AOP change: the AOP's \"If none: stop\" branch doesn't cover an auth failure, but that is a hardening option, not the cause. If this Connection lapses repeatedly, tell me and I can hand `aop-writer` Build `bld_7a1` to add an explicit \"if Gmail returns an auth error, use Human in the loop to ask for reauthorisation\" branch.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 709,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12435
+}

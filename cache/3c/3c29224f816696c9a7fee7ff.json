@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.00088849,
+  "created_at": "2026-10-29T11:27:57+00:00",
+  "duration_api_ms": 8579,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "3c29224f816696c9a7fee7ff",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "## Failure mode\n**Batch / iteration leak.** The Run completed without a platform error, but it did the wrong work. The AOP told the Agent to process every store, and the Agent did, instead of handling the one store its case was claimed for.\n\n## Where it went wrong\nStep 1 claimed the case for store **CZ-007**. Step 2 then told the Agent to check \"every store's stock level,\" and the Agent ran the query across all stores at transcript [3]. From there it reordered 412 lines across 60 stores at [6]. The case-scoped store from [2] was never used.\n\n## Evidence\n- AOP Step 2: *\"Use **Snowflake** to check every store's stock level and reorder anything below minimum...\"*\n- Transcript [2]: `{\"store\": \"CZ-007\"}`, the store this case was claimed for.\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`, the Agent widened scope beyond its case.\n- Transcript [6]–[7]: `replenishment.submit {\"lines\": 412}` → `{\"orders\": 60}`, so one Run placed orders for 60 stores.\n\n## Fix\nRewrite Step 2 so the Agent works only on the store returned by `claim_case`:\n\n> *Use the store returned by `claim_case`. Check that store's stock in **Snowflake** and reorder any line below minimum in the **Replenishment portal**. Do not query or order for other stores; the platform runs one case per store.*\n\nThis is one change to one artifact, the AOP. Because the other 59 cases ran the same Build, the same fix covers all of them.\n\n## Next step\n- **Hand off to `aop-writer`** with Build `bld_b03` and the change request above, working in `aops/<agent-id>.md`.\n- **Review the orders already placed.** Each of the 60 cases submitted orders for all 60 stores, so there may be up to 3,600 store-level order sets in the Replenishment portal, most of them duplicates. I can't change those from here. Someone should check them in the portal and cancel or adjust them before the Agent runs again. This is also why the Run looked healthy: the platform reported `completed`, but the outcome was wrong.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8329,
+    "input_tokens": 2,
+    "output_tokens": 1610,
+    "thinking_tokens": 849
+  },
+  "variant": "main",
+  "wall_ms": 10538
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.07816000000000001,
+  "created_at": "2026-10-29T11:34:51+00:00",
+  "duration_api_ms": 6222,
+  "input_hash": "b03fc180112aa5af",
+  "key": "b834398add5f650e51fba840",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure. The Gmail Connection \"Purchasing\" is missing the send scope.\n\n**Where it went wrong**\nAt transcript turn [2]–[3], AOP Step 2 (\"Use **Gmail** to send the supplier a reminder\"). The Agent read the input correctly and built a valid `gmail.send_message` call to `orders@kovotech.cz`. Gmail rejected the call with a 403 because the Connection was never authorized to send mail. Step 2 needs send permission. The Connection only holds read and label scopes. Step 3 never ran, so nothing was logged. The Agent's decision-making was sound. The Connection the AOP depends on can't do what Step 2 asks of it.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Connection context: \"Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\"\n\n**Fix**\nExtend the **Purchasing** Gmail Connection to include the `gmail.send` scope. To do that, reauthorize the Connection and grant send permission.\n\n**Next step**\nReconnect the \"Purchasing\" Gmail Connection in Setup and approve the send permission when Google asks. Then use Start Work to rerun the Agent on PO 4500918821. No reminder went out and no row was logged, so a rerun won't create a duplicate. The fix is in the Connection, not the AOP, so no `aop-writer` handoff is needed.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 8344,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 570,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8645
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.0011874,
+  "created_at": "2026-10-29T11:33:47+00:00",
+  "duration_api_ms": 11346,
+  "input_hash": "cec074b757b36bc9",
+  "key": "7a3dd8a1397397c7543666c6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Connection failure (upstream 5xx from the retailer's portal). The root cause is outside your Agent's configuration.\n\n**Where it went wrong:** Step 1 of the AOP, at the first `browser.open` call. Both attempts (transcript [1] and [3]) hit the portal's load balancer before any page loaded, so the Run never reached \"New ASN\" or the shipment lines in Step 2.\n\n**Evidence:**\n- `[2] Tool result ← browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- Other context: \"The portal's status page reports 'degraded performance' today.\"\n\nThe 504 came from the portal's infrastructure, not from Duvo or the Login. Other Agents on other portals run normally, which rules out a platform-wide Duvo problem. The Agent's retry of the same request also returned the same 504, so the timeout is not a one-off.\n\n**Fix:** No change to the AOP, Setup, Files, or the Tesco Partner Toolkit Login will prevent this. Wait for the portal to recover, then start the Run again. Confirm recovery on the portal's status page first, and check that a manual load of \"New ASN\" succeeds before rerunning.\n\nOptional hardening, not the root cause: the AOP has no rule for a portal outage. You could add a branch like \"if the portal returns a 5xx on two attempts, stop and report the portal as unavailable instead of ending the Run without a reason.\" Use `aop-writer` if you want that. It would make future outages easier to read in the transcript. It would not have made this Run succeed.\n\n**Something to check:** The transcript passes `\"New ASN\"` as the `url` argument to `browser.open`. That is a page label, not a URL. The request still reached the load balancer, so I don't think it caused this 504. But confirm that the AOP or Enterprise Browser step resolves \"New ASN\" to the actual portal address, because a bad target would fail the same way once the portal is healthy.\n\n**Next step:** Rerun after the portal's status shows recovery. If the 504 persists while the status page reports healthy, raise it with Duvo support from the web app and include run_g03, bld_g03, the exact error, and the points above.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"none\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8270,
+    "input_tokens": 2,
+    "output_tokens": 2209,
+    "thinking_tokens": 1440
+  },
+  "variant": "main",
+  "wall_ms": 12898
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.009595600000000001,
+  "created_at": "2026-10-29T11:24:35+00:00",
+  "duration_api_ms": 8371,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "ca8a0c5d751a434ae68423c7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Missing terminal closure. The \"PO not found\" branch in Step 2 ends after the Slack post with no `fail_case`, `postpone_case`, or `request_handover`. The Run finished cleanly, so the platform settled the case itself as Completed (\"auto-completed on clean run end\"). The Run status is `completed`, so it looks healthy even though the invoice was never posted.\n\n**Where it went wrong** — Transcript [4]→[5]→[7]. `netsuite.find_po` returned no results, the Agent took the Step 2 exception branch (Slack post), and then stopped. Step 2 never says what happens to the case afterwards. Step 4 (`complete_case`) is only reachable after Step 3, and the Agent never called it either. The platform's auto-complete filled the gap with the wrong outcome, and the evaluation flagged it: \"Invoice was never posted, but the case shows Completed.\"\n\n**Evidence**\n- AOP Step 2: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions.\" (no terminal action follows)\n- Transcript [4]: `{\"results\": []}`\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case: \"auto-completed on clean run end\"\n\nTwo secondary gaps are visible, but they are not the cause of this failure. Step 3 also has no branch for lines that don't match within 1%. The goal says \"or route it for review\", but nothing in the AOP does that.\n\n**Fix** — Edit Step 2 of the AOP so the not-found branch ends in an explicit terminal action. For example: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions, then call `fail_case` with the reason 'PO not found' and stop.\" Use `request_handover` instead if a person in AP should pick it up. The same rule should be applied to the Step 3 mismatch branch.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_t01`, the AOP file `aops/<agent-id>.md`, and the request: \"In Step 2, end the PO-not-found branch with `fail_case` after the Slack post. In Step 3, add a branch for lines outside 1% that ends in `request_handover` or `fail_case`.\" The agent ID isn't in what you shared, so I left the file path as a placeholder. Case `case_t01` is currently marked Completed and should be corrected by hand, since this fix only applies to future Runs.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8416,
+    "input_tokens": 2,
+    "output_tokens": 875,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11390
+}

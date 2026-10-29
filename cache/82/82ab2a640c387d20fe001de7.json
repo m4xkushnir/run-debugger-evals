@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.014571900000000002,
+  "created_at": "2026-10-29T11:29:34+00:00",
+  "duration_api_ms": 7870,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "82ab2a640c387d20fe001de7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Platform / infra failure (not a user-side Connection failure).\n\n**Where it went wrong** — Step 2 of the AOP (\"Send the confirmation via Gmail\"). The only tool call, `gmail.send_message` at transcript turn [1], failed inside the platform's credential layer before anything reached Gmail. The Agent had no branch it could have taken: the AOP is a trivial two-step procedure and was followed correctly.\n\n**Evidence**\n- Transcript [2]: `gmail.send_message: ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Your context: the Connection was re-authenticated at 09:12, a test send at 09:13 worked, and this Run (09:20) plus the 2 after it failed with the same error.\n\n**Why this isn't a Connection failure you can fix:** an expired token or missing scope would be a 401/403 from Gmail and would be cured by reauthentication. Here the error is a 500 from the platform's own key-management/decryption layer, it reproduces identically across three Runs, and it appeared right after a successful reauthentication and a working test send. That points to the stored credentials for the Connection becoming undecryptable on the platform side (for example, the re-auth wrote a credential blob that later Runs can't decrypt, or Runs are hitting a different/broken decryption path than the test send). I can't determine which from this data, and no AOP, Setup, or Connection change on your side would have prevented it. Re-authenticating again is unlikely to help, since you've already done that.\n\n**Ruled out**\n- AOP ambiguity or missing branches: the AOP is two steps, and the Agent executed them.\n- Missing data: the recipient was populated (`buyer@hotel-praha.cz`).\n- Expired token / missing scope: the error is a 500 internal decryption error, not an upstream auth response, and a test send worked after reauth.\n- Missing terminal closure: no case is involved as far as the data shows.\n\n**Fix** — None in your artifacts. This needs Duvo to investigate the credential decryption failure for this Gmail Connection.\n\n**Next step** — Escalate to Duvo. If a support-escalation tool (Duvo's in-product chat) is available in your session, I'd draft it there for you to review and send; I can't see one here, so please raise it with Duvo support from the Duvo web app and include:\n- Run IDs: `run_p02` (plus the 2 later failed Runs), Build ID `bld_p02`\n- Exact error: `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Timeline: Gmail Connection re-authenticated 09:12, test send succeeded 09:13, Runs from 09:20 onward fail identically\n- What you ruled out (above)\n\nIn the meantime, the order confirmation for `buyer@hotel-praha.cz` was not sent, so you may want to send it manually or hold the affected orders until Duvo resolves this.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.86}",
+  "usage": {
+    "cache_creation_input_tokens": 856,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1041,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9356
+}

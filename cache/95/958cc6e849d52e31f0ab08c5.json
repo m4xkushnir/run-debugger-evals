@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.007828799999999999,
+  "created_at": "2026-10-29T11:23:03+00:00",
+  "duration_api_ms": 9130,
+  "input_hash": "b03fc180112aa5af",
+  "key": "958cc6e849d52e31f0ab08c5",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure: the Gmail Connection \"Purchasing\" lacks the scope the AOP relies on.\n\n**Where it went wrong**\nAt transcript turn [2]-[3], Step 2 of the AOP (\"Use **Gmail** to send the supplier a reminder\") called `gmail.send_message`, which the platform rejected. The Agent then correctly stopped, so Step 3 (the Google Sheets log) never ran. The Agent behaved sensibly. The root cause is upstream: the Connection was granted read and label scopes only, yet the AOP requires sending email.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Context: Gmail Connection 'Purchasing' granted scopes: `gmail.readonly, gmail.labels`.\n\nThe required scope (`gmail.send`) is absent from the granted list, so this is a scope gap and not an expired token or an upstream outage. It will recur on every Run of this Agent until the scope is added.\n\n**Fix**\nExtend the **Gmail** Connection \"Purchasing\" to include the `https://www.googleapis.com/auth/gmail.send` scope, then re-authorize it so the new scope takes effect. No AOP change is needed for the fix itself.\n\n**Next step**\nRe-authorize the \"Purchasing\" Connection in Setup with `gmail.send` granted, then re-run PO 4500918821. The reminder was never sent, so the supplier has not been notified, and no row was appended to \"PO reminders\", so there is no duplicate to clean up.\n\nOptional hardening, as a separate follow-up: the AOP has no branch for a failed send. I can invoke `aop-writer` to add a step such as \"If the Gmail send fails, use **Human in the loop** to notify the purchasing owner\" so a future Connection problem surfaces visibly. This is not the root cause of this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8348,
+    "input_tokens": 2,
+    "output_tokens": 699,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12824
+}

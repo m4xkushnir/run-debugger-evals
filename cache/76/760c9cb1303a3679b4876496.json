@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.009443700000000001,
+  "created_at": "2026-10-29T11:30:45+00:00",
+  "duration_api_ms": 8918,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "760c9cb1303a3679b4876496",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The Run was not broken by a Connection or platform fault. The AOP asked a single Run to reconcile an entire statement's backlog, and that did not fit in the 30-minute limit.\n\n**Where it went wrong**\nStep 2 of the AOP. After step 1 returned 611 unmatched lines, the Agent started working through them one by one in a single Run (transcript [3]–[4]). It had matched 230 of 611 when the duration cap stopped it at [5]. Step 3 (the Slack summary) never ran, so nothing was reported and the 381 remaining lines were left unprocessed.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix**\nRewrite the AOP so each Run handles one unit of work instead of the whole statement. Concretely, Step 2 should become something like: \"Reconcile this one unmatched statement line against open invoices in NetSuite.\" The platform iterates over the lines, for example via a queue where each unmatched line is a case. Fetching the statement and splitting it into lines becomes a separate, small intake Agent, with Step 3's Slack summary done once the queue has drained. Each per-line Run then needs a terminal action (`complete_case`, or `request_handover` for lines with no clear match).\n\nCaveats from the data I have:\n- The transcript is short and shows no per-line errors. Throughput was about 230 lines in 30 minutes, so processing is slow rather than failing. A queue-based design fixes the time limit only if each line is reasonably quick.\n- I can't tell from this paste whether the Run was queue-driven. If it was not, the queue split is the fix; if it was, the AOP is simply iterating inside one case.\n- Check that the 230 matches posted before the Run was stopped, so the rerun doesn't double-match them.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03` and the change request \"rewrite Step 2 to reconcile a single unmatched statement line per Run, and move the statement download and the Slack summary into separate intake and summary steps\", working in `aops/<agent-id>.md`. The queue setup itself is a change you'd make in Duvo.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"decomposition\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8197,
+    "input_tokens": 2,
+    "output_tokens": 862,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11116
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0090695,
+  "created_at": "2026-10-29T11:31:19+00:00",
+  "duration_api_ms": 9007,
+  "input_hash": "80480c72868f94f9",
+  "key": "b8e6ec376b3a453c09d91b62",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing data (`unit_price` absent from the case), compounded by missing HITL on a purchase-confirmation sent externally. The Run itself did not error; it \"completed\" with a wrong outcome.\n\n**Where it went wrong**\nTranscript [2]→[3]: `claim_case` returned no `unit_price`, and the Agent improvised a substitute instead of stopping. The matching AOP point is Step 1 (\"the case carries PO number, supplier, quantity and `unit_price`\"), which asserts the field is always present and defines no branch for when it is not. Step 2 then required a unit price and total, so the Agent filled the gap itself. Step 3 (`complete_case`) ran unconditionally, so the wrong email was closed out as a success.\n\n**Evidence**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}` (no `unit_price`)\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists 'Standard price 4.10 EUR/pc', using that.\"\n- AOP Step 1: \"the case carries PO number, supplier, quantity and `unit_price`.\"\n\nThe 4.10 EUR figure came from a supplier's email signature, not from the contract. That is why the price was wrong (the contract price is 3.65 EUR; 1200 × 3.65 = 4,380 EUR vs. the 4,920 EUR sent). I can't tell from the transcript why `unit_price` was missing on this case (upstream case creation); that is worth checking separately, but the AOP should not depend on it being present.\n\n**Fix**\nOne change to the AOP: add an explicit rule to Step 1, e.g. *\"If `unit_price` is missing or empty on the case, do not look for a price elsewhere and do not send the email. Use `fail_case` (or `request_handover`) with the reason 'unit_price missing', and wait for a human.\"* This also covers the HITL gap, since a missing price now routes to a person rather than a guess.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s05`, the change request above, and the file `aops/<agent-id>.md` to edit the AOP in place. Separately, please check why case `case_s05` was created without `unit_price`, since a case-creation or Setup issue there would keep producing these.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8355,
+    "input_tokens": 2,
+    "output_tokens": 823,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10751
+}

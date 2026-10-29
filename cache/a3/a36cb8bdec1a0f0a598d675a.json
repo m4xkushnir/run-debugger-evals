@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.0292918,
+  "created_at": "2026-10-29T11:35:15+00:00",
+  "duration_api_ms": 9744,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "a36cb8bdec1a0f0a598d675a",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure. The \"supplier asked for more time\" branch in Step 2 has no terminal action, so the platform settled the case instead of the AOP.\n\n**Where it went wrong**\nThe decision point is transcript turns [4]–[7]. The supplier's reply matched the Step 2 sub-branch, so the Agent posted the new date to the thread ([5]) and then stopped ([7]).\n\n- It never reached Step 3 (Gmail reminder) or Step 4 (`update_case` / `complete_case`).\n- It never called `postpone_case`.\n\nThe AOP's branch ends at \"note the new date in the thread\". It doesn't say whether to skip the reminder or what to do with the case. The Run ended cleanly after a non-terminal action (`slack.post`), so the platform auto-completed the case. A Completed case leaves the reminder chain, so nothing was scheduled for 12 Nov. The case looks healthy in the Queue, which is why this showed up later as a missed follow-up rather than as a failed Run.\n\n**Evidence**\n- AOP Step 2: \"If the supplier has replied asking for more time: note the new date in the thread.\"\n- Transcript [7]: \"Agent: Noted the new date of 12 Nov in the thread.\"\n- Case state: \"Completed — reason: auto-completed on clean run end\"\n\n**Fix**\nAdd a terminal action to the Step 2 \"asked for more time\" branch:\n\n> *If the supplier has replied asking for more time: note the new date in the thread, then call `postpone_case` until that date. Do not send the reminder.*\n\nThat keeps the PO in the queue and brings it back on 12 Nov.\n\n**Next step**\nI can hand this to `aop-writer` with:\n- Build `bld_t02`\n- File `aops/<agent-id>.md`\n- Request: \"rewrite Step 2's 'asked for more time' branch to end with `postpone_case` until the supplier's new date, skipping Steps 3–4.\"\n\nSeparately, case_t02 / PO-55120 is already Completed. You'll need to requeue it or follow up with Textima manually on 12 Nov.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1052,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 970,
+    "thinking_tokens": 225
+  },
+  "variant": "main",
+  "wall_ms": 11229
+}

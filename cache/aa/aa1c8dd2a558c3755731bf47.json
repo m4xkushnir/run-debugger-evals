@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0132092,
+  "created_at": "2026-10-29T11:37:46+00:00",
+  "duration_api_ms": 9022,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "aa1c8dd2a558c3755731bf47",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity (taxonomy #2). The Run itself completed and the Google Sheets call succeeded, so this is a wrong-outcome Run, not a technical failure.\n\n**Where it went wrong**\nStep 3 of the AOP: \"Flag any line where the charge seems too high compared with the rate card.\" It gives no threshold, so the Agent invented one on the fly, differently for each line. At transcript turn [1] it flagged a +1.9% difference. At turn [2] it declined to flag a +9.0% difference (2,600 CZK) by reasoning that fuel surcharges vary, which is a rationale the AOP never provided. The two decisions are inconsistent with each other, and both trace back to \"seems too high\".\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Transcript [2]: \"Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe model's turns paraphrase the vague AOP wording (\"seems\"), which is the signature of this failure mode. A secondary gap is that the AOP says nothing about whether fuel surcharges are allowed on top of the rate card, so the Agent filled that in from general knowledge.\n\n**Fix**\nReplace the judgment call in Step 3 with a concrete rule on the AOP. For example: \"Flag a line if the charged amount exceeds the rate card amount by more than X% **or** more than Y CZK, whichever is stricter. Treat fuel surcharges as [allowed up to Z% / not allowed unless itemised on the invoice].\" The values X, Y and Z are business decisions that you need to supply. From the transcript alone I can't tell what your tolerance is, but with the two lines above, any sensible threshold would have to flag line 2 (+9.0%, 2,600 CZK) and would likely not flag line 1 (+1.9%, 40 CZK).\n\n**Next step**\nDecide your tolerance (percentage and/or absolute CZK, plus the fuel surcharge policy), then I can invoke `aop-writer` with Build `bld_f02`, working in `aops/<agent-id>.md`, to rewrite Step 3 with that rule. Note that I worked only from the pasted AOP and transcript; I haven't seen the rate card in Files, so I can't verify whether it states a fuel surcharge policy. If it does, the rule should reference it.",
+  "usage": {
+    "cache_creation_input_tokens": 987,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 854,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 10147
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.010723200000000002,
+  "created_at": "2026-10-29T11:34:36+00:00",
+  "duration_api_ms": 6822,
+  "input_hash": "4a001beca9456e30",
+  "key": "a27413a359ccbe1d4277459d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — AOP ambiguity. The Run status is \"completed\", but the outcome is wrong: the bill was registered against our own entity instead of the supplier.\n\n**Where it went wrong** — Transcript [1], at AOP Step 1. The Agent extracted the bill-to customer's VAT ID (CZ45272956, ours) as the supplier's VAT ID. Step 1 only says \"extract the supplier name, VAT ID and total\" and doesn't say which of the invoice's two VAT IDs to take. Everything after that followed from this: Step 2 matched on the wrong ID, and `find_vendor` returned our own entity.\n\n**Evidence**\n- Transcript [1]: `Extracted: supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'; total 8,412.00 EUR.`\n- Transcript [3]: `{\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"}`\n- AOP Step 1: \"extract the supplier name, VAT ID and total\"\n- Context: the supplier's actual VAT ID is DE811203984.\n\nThe symptom is a bill created against the wrong vendor. The root cause is upstream: the AOP doesn't distinguish the supplier's VAT ID from the bill-to customer's, and doesn't say what to do when the lookup returns our own entity.\n\nThe Agent also had a second chance to catch this at [3]. The result was labelled \"(our own entity)\", and the Agent created the bill anyway. The AOP gave no rule that a match to our own entity is invalid, and Step 2 has no failure branch, so a bad match went straight to `create_bill`.\n\n**Fix** — One change to the AOP: rewrite Steps 1 and 2 so that the VAT ID is explicitly the supplier's (the issuer, not the \"Bill to\" party), and so that a lookup returning our own entity, or no vendor, stops the Run instead of creating a bill. For example:\n- Step 1: \"Extract the *supplier's* (issuer's) VAT ID. Ignore the VAT ID of the bill-to customer (RetailCo CZ s.r.o., CZ45272956).\"\n- Step 2: \"If the vendor match is our own entity or is not found, do not create the bill. Use **Human in the loop** to confirm the vendor.\"\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g05`, the AOP file `aops/<agent-id>.md`, and this change request: \"Rewrite Steps 1–2 to extract only the supplier's VAT ID, exclude our own entity's VAT ID, and add a Human-in-the-loop branch when the vendor lookup returns our own entity or no match.\" Bill 200140 for 8,412.00 EUR has already been created in NetSuite, so someone should review and correct or void it manually.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8292,
+    "input_tokens": 2,
+    "output_tokens": 989,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7903
+}

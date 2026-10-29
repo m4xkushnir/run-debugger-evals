@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.0068535,
+  "created_at": "2026-10-29T11:32:57+00:00",
+  "duration_api_ms": 9131,
+  "input_hash": "1c85333d7be4398e",
+  "key": "bae8dc1b7e133e9133566ad2",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Not a failure. The Run behaved exactly as the AOP specifies. (Run status `completed`, case `Completed by Agent`.)\n\n**Where it went wrong** — Nothing broke in the transcript. At step [3]–[4] the Agent checked the PO in SAP, got `\"status\": \"received\"`, and took the Step 2 branch (complete and stop), so the Step 3 supplier email correctly never ran. The mismatch is between your expectation and the data: SAP reported the delivery as already received.\n\n**Evidence**\n- Transcript [4]: `{\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n\n**Fix** — No change to the AOP, Connections, or Setup is needed for this Run. The one thing to verify is whether SAP's `received` status for PO-61204 is accurate (for example, a partial receipt or a wrongly booked goods receipt). If the delivery really was not received, the issue is the SAP data, not the Agent. If partial receipts should still trigger a chase, that is a separate AOP change, and the transcript gives no evidence that this was a partial receipt, so I'm not proposing it.\n\n**Next step** — Check PO-61204 in SAP to confirm the goods receipt dated 2026-10-27. If it's wrong, correct it in SAP and re-run the case. If you want the Agent to treat certain receipt states (e.g. partial) as still needing a chase, tell me the rule and I can hand it to `aop-writer` to rewrite Step 2.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8295,
+    "input_tokens": 2,
+    "output_tokens": 602,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10599
+}

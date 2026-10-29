@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.033071800000000005,
+  "created_at": "2026-10-29T11:37:07+00:00",
+  "duration_api_ms": 12621,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "0bbdbd2275d5e952525028ff",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\nNamed pattern: **portal UI drift against a hard-coded AOP step.** The carrier portal changed its layout. Step 2 of the AOP pins the Agent to a specific button on a specific page, and gives it no way to get there or recover. This is not a Connection or Login failure, because sign-in succeeded. It is not a platform failure either: the portal is the user's external system, and an AOP change would have prevented the error.\n\n**Where it went wrong**\n\n- **Transcript [2]:** right after signing in, the portal announced that documents had moved.\n- **Transcript [3]–[4]:** the Agent followed **AOP Step 2** literally. It clicked \"Export CSV\" without navigating anywhere and got `Element not found`.\n\nStep 2 assumes the Agent is already on \"the Invoices page\" and that an \"Export CSV\" button exists there. Neither was true after the redesign. Step 2 also never says how to reach that page, and has no branch for a missing button. So the Agent stopped at [5] instead of following the navigation hint in the banner.\n\nThe `Element not found` error is the symptom. The root cause is that Step 2 encodes a UI path that no longer exists, with no navigation instruction and no fallback.\n\n**Evidence**\n\n- Transcript [2]: `Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- AOP Step 2: `Click \"Export CSV\" on the Invoices page and save the file to Files.`\n\n**Fix**\n\nRewrite **AOP Step 2** in three parts:\n\n1. **Navigate explicitly:** go to **My Account → Billing**, the location the portal now names.\n2. **Export by goal, not by exact label:** find this week's invoices and export them as CSV, accepting equivalent controls such as \"Export\", \"Download CSV\", or \"Download\".\n3. **Fail clearly:** if no export control is found, end the Run with a clear failure that names the page reached, rather than stopping silently.\n\n**Next step**\n\nI can hand this off to `aop-writer` with:\n\n- **Build:** `bld_g01`\n- **Change request:** \"Rewrite Step 2 to navigate to My Account → Billing before exporting, match the export control by intent rather than the exact 'Export CSV' label, and fail with a clear reason if no export control is found.\"\n- **File:** this Agent's AOP file at `aops/<agent-id>.md`. I'll need the Agent ID to point at the right file.\n\nBefore rerunning, it's worth opening the GLS portal once yourself to confirm what the export control is now called under Billing. You can then give `aop-writer` the exact label.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 852,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1239,
+    "thinking_tokens": 335
+  },
+  "variant": "main",
+  "wall_ms": 13849
+}

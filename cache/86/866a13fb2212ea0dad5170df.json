@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0008998000000000001,
+  "created_at": "2026-10-29T11:26:25+00:00",
+  "duration_api_ms": 8212,
+  "input_hash": "531aa89fc651bef5",
+  "key": "866a13fb2212ea0dad5170df",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing data. The Run completed, but the outcome is wrong: the audit reported no problems when it never compared anything against the rate card.\n\n**Where it went wrong:** Step 2 of the AOP (open the rate card in Files). Transcript [1]–[2]: `files.search` for \"Carrier rate card 2026.xlsx\" returned no results. Transcript [3] is the decision point. Instead of stopping or flagging the gap, the Agent substituted its own baseline, and Step 3 (\"flag every line more than 3% above the rate card\") was then evaluated against market rates the AOP never mentioned.\n\n**Evidence:**\n- Transcript [2]: `{\"results\": []}`\n- Transcript [3]: \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- Transcript [5]: `\"flags\": []` was appended to \"Freight audit\" as a clean result.\n\nThe status is \"completed\" because nothing crashed, but this is a silent false negative. The AOP has no branch for a missing rate card, so the Agent improvised one, and the sheet now shows a clean audit that did not happen.\n\n**Fix:** Make \"Carrier rate card 2026.xlsx\" available in Files under that exact name. The search came back empty, so first check whether the file exists under a slightly different name (year, spacing, extension). Then re-run the Agent on this invoice.\n\nA follow-on change to the AOP would prevent a repeat. Add to Step 2: \"If the rate card is not found in Files, stop without comparing against any other source and do not write to Google Sheets.\" That rewrite belongs with `aop-writer`, not in this diagnosis.\n\n**Next step:** Confirm the rate card is in Files under the exact name, then re-run this invoice. Also review the \"Freight audit\" row this Run appended. It records an all-clear that wasn't based on the rate card, so it should be corrected or removed before anyone relies on it. If you want the AOP guard added, I can hand the current Build to `aop-writer` with that change request.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8260,
+    "input_tokens": 2,
+    "output_tokens": 1634,
+    "thinking_tokens": 922
+  },
+  "variant": "main",
+  "wall_ms": 10125
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.04062,
+  "created_at": "2026-10-29T11:37:37+00:00",
+  "duration_api_ms": 6979,
+  "input_hash": "904fcbb04475a734",
+  "key": "76042b4a29b672bf582c6dff",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure (expired/revoked Gmail authorisation), compounded by an AOP that has no branch for a Connection error.\n\n**Where it went wrong**\nTranscript turn [1]–[2]: the very first call in AOP Step 1 (`gmail.search_messages`) was rejected, so the Run never reached Steps 2–4. The Agent then stopped at turn [3] with no defined fallback, because the AOP only specifies \"If none: stop\" for an empty inbox, not for an inaccessible one.\n\n**Evidence**\n- Transcript [2]: `ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: Gmail Connection 'AP inbox' \"last authorised 2026-07-30 (91 days before this Run)\".\n\nThe 401 is the symptom. The root cause is that the Connection's authorisation lapsed (`invalid_grant` means the refresh token is expired or revoked), and nothing in the AOP tells the Agent how to surface that so someone fixes it. This is a user-fixable expiry, not a platform fault: the Connection hasn't been shown to fail after a clean reauthentication, so I'm not classing it as platform/infra. One caveat: I can't tell from the data whether the token expired by policy or was revoked by a user/admin, so reauthorising will confirm which.\n\n**Fix**\nReauthorise the **Gmail** Connection 'AP inbox' in Setup (sign in again and grant the same scopes the AOP relies on: read/search and labelling). This is the change that unblocks the Run. If it fails again straight after a clean reauthorisation, that would point to a platform issue and should go to Duvo support.\n\n**Next step**\n1. Reauthorise the 'AP inbox' Connection in Setup, then start a new Run to confirm Step 1 succeeds.\n2. Optional hardening, which I'd treat as a separate follow-up: I can invoke `aop-writer` with Build `bld_7a1` and the request \"add to Step 1: *If the Gmail search returns an authorisation error (401/invalid_grant), use **Human in the loop** to tell the AP team the Gmail Connection needs reauthorising, then stop*\", editing `aops/<agent-id>.md` in place. That doesn't prevent the expiry, but it makes the next one loud rather than a silent failed Run.",
+  "usage": {
+    "cache_creation_input_tokens": 8154,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 800,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 8863
+}

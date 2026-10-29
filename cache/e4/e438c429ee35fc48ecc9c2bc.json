@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.023363799999999997,
+  "created_at": "2026-10-29T11:36:54+00:00",
+  "duration_api_ms": 7934,
+  "input_hash": "086079e1976a5bd5",
+  "key": "e438c429ee35fc48ecc9c2bc",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Not a failure. Run `run_n01` is paused on a pending Human-in-the-loop request. It has not failed. Its status is `waiting`, not `failed`, and it did exactly what the AOP told it to.\n\n**Where it went wrong:** Nothing went wrong in the Agent's logic. At transcript turn [1] the Agent read the request (AOP Step 1). It saw that EUR 1,850 is above the EUR 1,000 threshold and correctly took the Step 2 branch. At [2] it raised the approval request, and at [3] that request came back `pending`. The Run is now correctly holding before Step 3 (issue the credit note in **NetSuite** and email the customer). It will stay that way until someone answers yes or no. That is why it has been \"stuck since yesterday\": it is waiting on a person, not on a bug.\n\n**Evidence:**\n- AOP Step 2: *\"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"*\n- Transcript [3]: *`human_in_the_loop.request: {\"status\": \"pending\"}`*\n\n**Fix:** Nothing in the AOP, Connections, or Setup needs to change. The approval gate is working as designed, and it is the right safeguard for a EUR 1,850 credit. What's needed is a decision. Someone has to answer the pending approval request *\"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"* on this Run.\n\n**Next step:** Open Run `run_n01` in the [Duvo web app](https://app.duvo.ai), find the pending Human-in-the-loop request, and answer it. \"Yes\" lets the Agent issue the credit note in NetSuite and email Hotel Praha. \"No\" stops it before anything is issued.\n\nIf approvals like this often sit unanswered for a day, check who receives these requests and whether they're being notified. I'd need more than this one Run to say that's a real problem, though.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 861,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 750,
+    "thinking_tokens": 61
+  },
+  "variant": "main",
+  "wall_ms": 9053
+}

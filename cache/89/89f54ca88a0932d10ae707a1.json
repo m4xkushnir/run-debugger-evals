@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.00132902,
+  "created_at": "2026-10-29T11:39:09+00:00",
+  "duration_api_ms": 10370,
+  "input_hash": "8cdd082843487845",
+  "key": "89f54ca88a0932d10ae707a1",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity. The AOP's supplier-match rule (\"If unsure about the supplier match, call `fail_case`\") gives no concrete test for \"sure,\" so the Agent treated a name difference as uncertainty even though a stronger identifier was available.\n\n**Where it went wrong**\nStep 2 of the AOP, at transcript turn [5]. The Agent compared only the supplier names, found they differed, and stopped there. Turn [4] had already returned the matching VAT number, which the Agent did not use.\n\n**Evidence**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`\n\nThe failure is the Agent working as the AOP instructs. The Run itself completed normally and closed the case correctly with `fail_case`, so this is not a crash or a missing terminal action.\n\n**A gap to verify before the fix works:** the transcript shows `claim_case` returning only `supplier_on_invoice`, with no VAT. The invoice VAT (DE811145120) appears only in your \"other context,\" so the Agent never had it to compare. A rule that says \"match on VAT\" will fail unless `claim_case` also returns the invoice's VAT field. If it doesn't, that is a second, smaller fix (missing data), either in the Connection/tool output or by attaching the field to the case.\n\n**Fix**\nReplace the vague fallback in Step 2 with an explicit match order, for example:\n\"Match the supplier in SAP by VAT ID first. If the invoice VAT equals a vendor's `vat` in the search results, treat it as a match and continue, even if the names differ. Only if no vendor's VAT matches, call `fail_case` with reason `unable to match supplier`.\"\n\nThis should also account for the 31% failure rate this week. If most of those cases have the same name-vs-legal-name mismatch with a matching VAT, one rule change addresses most of them.\n\n**Next step**\nHand this to `aop-writer` with:\n- Build `bld_s06`, so it works from the exact AOP that ran.\n- The change request above: \"rewrite Step 2 to match on VAT ID before name, and fail only when neither matches.\"\n- The AOP file, `aops/<agent-id>.md` (I don't have the Agent ID, so fill that in).\n\nBefore or alongside that, confirm that `claim_case` returns the invoice VAT. If it doesn't, that needs fixing too, or the rewritten rule will still fail on every case.",
+  "usage": {
+    "cache_creation_input_tokens": 1078,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2083,
+    "thinking_tokens": 1198
+  },
+  "variant": "no_json",
+  "wall_ms": 11558
+}

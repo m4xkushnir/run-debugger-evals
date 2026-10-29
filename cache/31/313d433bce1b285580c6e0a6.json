@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.00109492,
+  "created_at": "2026-10-29T11:38:52+00:00",
+  "duration_api_ms": 9401,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "313d433bce1b285580c6e0a6",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nPlatform / infra failure. The `update_case` tool returned HTTP 500 from Duvo's side, not from your configuration.\n\n**Where it went wrong**\nStep 3 of the AOP, at transcript turn [5]. The write to the case was the first call that failed. The retry at [7] failed the same way, and the Agent stopped at [9].\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\n**Ruled out**\n- **AOP:** Step 3 correctly calls `update_case` with `credit_offered` after extracting the value. Nothing in the procedure caused the error.\n- **Input data:** `{\"credit_offered\": 840}` is a valid payload. The same error appears on other cases, so the case data isn't the trigger.\n- **Gmail / Connection:** The Gmail read at [4] succeeded and returned the right amount. `update_case` is a platform tool, not one of your Connections, so a Connection fix wouldn't touch it.\n- **Transient:** The retry at [7] failed with the same 500 and a new request ID. Retrying the same call won't clear it.\n\n**Fix**\nNo change to your Agent, AOP, Setup, or Connections would prevent this. The fix is on Duvo's side. I can't see the platform's internal state, so I can't say what caused the 500 or when it will clear. The pattern points to a platform-side regression or incident starting around 14:00 on this queue.\n\n**Next step**\nReport this to Duvo support from the Duvo web app. Include:\n- Run ID `run_p03`, Build ID `bld_p03`, Case ID `case_p03`\n- Request IDs `req_9a7c1e` and `req_9a7c52`\n- The exact error: `ERROR 500 Internal Server Error` on `update_case`\n- The queue-wide pattern: every Run since 14:00 fails the same way across different cases\n- What's been ruled out: AOP, input data, the Gmail read, and retry\n\nUntil Duvo resolves it, queued cases on this Agent will keep failing at the write step. You can hold new work on the queue if you'd rather not generate more failed cases.\n\nOne side note, not the cause: the case ended as \"Failed (no reason)\" because the Run errored before the AOP reached a terminal action. Once the platform is healthy, you could add a branch that catches a failed `update_case` and calls `fail_case` with a reason, so the Queue shows why each case failed. I'd treat that as a separate change to make later, not part of this fix.",
+  "usage": {
+    "cache_creation_input_tokens": 1070,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1618,
+    "thinking_tokens": 684
+  },
+  "variant": "no_json",
+  "wall_ms": 10853
+}

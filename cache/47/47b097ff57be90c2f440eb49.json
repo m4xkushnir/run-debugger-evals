@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.00116179,
+  "created_at": "2026-10-29T11:26:24+00:00",
+  "duration_api_ms": 9497,
+  "input_hash": "531aa89fc651bef5",
+  "key": "47b097ff57be90c2f440eb49",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing data. The rate card wasn't available, and the Agent substituted its own judgment instead of stopping.\n\n**Where it went wrong:** Transcript [2] to [4]. `files.search` for \"Carrier rate card 2026.xlsx\" returned no results, which is the point where the audit had no valid comparison basis. The Agent switched to \"typical market rates\" (turn [3]) and concluded that every line was fine (turn [4]). The AOP's Step 2 says to open the rate card but has no instruction for when it can't be found, so the Agent improvised a baseline the AOP never authorized.\n\n**Evidence:**\n> [2] Tool result ← files.search: {\"results\": []}\n> [3] Agent: The rate card isn't available. I'll compare against typical market rates for these lanes instead.\n\n**Fix:** Make the rate card available in Files under the exact name the AOP references: upload \"Carrier rate card 2026.xlsx\", or correct the name in Step 2 if the file already exists under a different one. A search returning nothing usually means the file is absent or the name doesn't match.\n\nI'd also add a guard to the AOP so a missing rate card stops the Run rather than producing a \"clean\" audit. That's an AOP change, so I'd hand it to `aop-writer` with a request like \"in Step 2, if the rate card isn't found, stop and fail the Run without writing to Google Sheets.\" I haven't rewritten it here.\n\n**Next step:**\n- Check the Freight audit sheet. The Run appended a row with `\"flags\": []`, which records a clean audit that never happened. Correct or remove that row before anyone relies on it.\n- Attach or rename the rate card in Files, then re-run against the same invoice.\n- Tell me if you want the AOP guard drafted via `aop-writer`.\n\nI can't tell from what you shared whether any line actually exceeded the rate card by more than 3%, because the invoice lines and the rate card weren't included. The \"no flags\" result is unverified.\n\n**Note:** The Run's status says \"completed,\" but the outcome was wrong. This is a silent failure, so check the status alongside what the Run actually did.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 921,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1808,
+    "thinking_tokens": 1063
+  },
+  "variant": "main",
+  "wall_ms": 12510
+}

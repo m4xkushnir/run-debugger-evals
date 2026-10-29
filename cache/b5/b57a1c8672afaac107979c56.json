@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.037247800000000005,
+  "created_at": "2026-10-29T11:37:12+00:00",
+  "duration_api_ms": 15214,
+  "input_hash": "82cebd8c79c09140",
+  "key": "b57a1c8672afaac107979c56",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "## Failure mode\n\n**Missing terminal closure.** DPD's 429 rate limit was the trigger. The underlying problem is that the AOP has no branch for it, so the Run ended without closing the case.\n\n## Where it went wrong\n\n- **Transcript [4]→[5]:** DPD returned a 429 with an explicit retry window. The Agent noted the problem in a message and stopped. It never called `complete_case`, `fail_case`, `postpone_case`, or `request_handover`.\n- **AOP Step 2:** \"Get the latest status from the **DPD** Connection\" assumes the call succeeds. Step 3 is the only step with a terminal action, and it only covers the success path.\n\nBecause no terminal action ran, the platform settled the case. That is why `case_g02` shows **Failed (no reason)** rather than a reason the Agent set.\n\nThis is not a broken Connection or a platform fault. The 429 came from DPD, and it is expected under Black Friday load: 1,900 queued cases, about 30% of today's Runs hitting the same error. Rate limiting is temporary and announces when it will clear. The correct response is to postpone the case, not fail it.\n\n## Evidence\n\n> `[4] Tool result ← dpd.track: ERROR 429 Too Many Requests. Retry-After: 600`\n> `[5] Agent: DPD is rate limiting. I can't get the status.`\n\n## Fix\n\nAdd a branch to **Step 2 of the AOP**: *\"If the DPD Connection returns 429 Too Many Requests, call `postpone_case` for the `Retry-After` duration (default 10 minutes if absent) and stop. Do not fail the case.\"*\n\nThis turns about 30% of today's failures into deferred retries. It also spreads the queue's load on DPD instead of hammering it.\n\n**Separate observation (not the cause of this Run):** in [3] the Agent reformatted the tracking number. Claim returned `\"0953 4412 8890\"` but the Agent sent `\"09534412 8890\"`. Once the rate limit clears, this could produce not-found results. It is worth a follow-up instruction to pass the tracking value exactly as `claim_case` returns it.\n\n## Next step\n\nI can hand off to `aop-writer` with:\n- **Build:** `bld_g02`\n- **Change:** \"Add a 429 branch to Step 2 that calls `postpone_case` for the `Retry-After` duration.\"\n- **File:** `aops/<agent-id>.md`\n\nAlready-failed cases from today will need re-queuing once the fix lands.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 909,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1425,
+    "thinking_tokens": 546
+  },
+  "variant": "main",
+  "wall_ms": 16250
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.0092235,
+  "created_at": "2026-10-29T11:24:55+00:00",
+  "duration_api_ms": 6684,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "be49db26f7a1fdaeb0c1cf7a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing terminal closure (taxonomy #3). The Run looks healthy (\"completed\", case auto-completed), but the branch the supplier-delay path needed never reached an Agent-owned terminal action.\n\n**Where it went wrong**\nAt transcript [5]–[7], the Agent took the \"supplier asked for more time\" branch in AOP Step 3's preceding sub-bullet (Step 2) and stopped after noting the date in the thread. The AOP gives that branch no terminal action: no `postpone_case` with a resume date, no `request_handover`, and no instruction to skip or still do Step 3/4. The Run ended after a non-terminal action (`slack.post`), with no `update_case`, no `complete_case`, and no Gmail send. The platform then settled the case itself: \"auto-completed on clean run end\". The case was closed as Completed instead of being postponed to 12 Nov, so nothing ever resurfaced it and the PO dropped out of the reminder chain.\n\n**Evidence**\n- AOP Step 2: \"If the supplier has replied asking for more time: note the new date in the thread.\"\n- Transcript [7]: \"Noted the new date of 12 Nov in the thread.\" (the last turn, with no closing tool call)\n- Case state: \"Completed — reason: auto-completed on clean run end\"\n\nThe note lives only in a Slack thread, which no one is watching, rather than in the case lifecycle, which is what schedules follow-up.\n\n**Fix**\nEdit AOP Step 2 so the delay branch ends in a terminal action: \"If the supplier has replied asking for more time: note the new date in the thread, call `update_case` with the new date, then call `postpone_case` to that date and stop. Do not send the reminder.\" The Agent then resumes the case on 12 Nov and sends the second reminder.\n\n**Next step**\nI can hand this to `aop-writer` with Build `bld_t02`, the file `aops/<agent-id>.md`, and the change request \"rewrite Step 2 so the supplier-delay branch ends with `update_case` and `postpone_case` to the supplier's new date\". The case itself (`case_t02`) is already Completed, so someone will need to reopen it or send the reminder manually for PO-55120 now. This diagnosis assumes `postpone_case` accepts a resume date; the transcript doesn't show its parameters, so confirm that when the AOP is rewritten.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8395,
+    "input_tokens": 2,
+    "output_tokens": 838,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9073
+}

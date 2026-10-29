@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.012989899999999999,
+  "created_at": "2026-10-29T11:27:12+00:00",
+  "duration_api_ms": 8991,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "ed1dd84e759bd2f7e676067a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Missing data (a required case field, `cost_center`, was absent), compounded by AOP ambiguity: the AOP never says what to do when `cost_center` is missing. The Run is \"completed\" and the case closed cleanly, but the outcome is wrong, so this is a silent bad outcome rather than a crash.\n\n**Where it went wrong** — Transcript turn [3], the decision point right after `claim_case` returned no `cost_center`. The Agent chose to post anyway with a placeholder. This maps to AOP Step 2 (\"Post the invoice in NetSuite to the case's `cost_center`\"), which assumes the field is always present and has no branch for it being empty. Step 3 then calls `complete_case` unconditionally, so the bad posting was closed out as a success.\n\n**Evidence**\n- Transcript [2]: `{\"invoice\": \"INV-7731\", \"amount_eur\": 4120, \"supplier\": \"Hartmann Logistik\"}` (no `cost_center`, even though Step 1 says the case \"carries amount, supplier, and `cost_center`\")\n- Transcript [3]: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n\n**Fix** — Edit Step 2 of the AOP to add an explicit missing-field branch, for example: *\"If the case has no `cost_center`, do not post to NetSuite. Use **Human in the loop** to ask for the cost center (or call `request_handover`/`fail_case` with the reason 'missing cost_center'), and only call `complete_case` after the bill is posted to a real cost center.\"* This makes the Agent stop and escalate instead of inventing a value, and puts a terminal action on the missing-data branch.\n\nA secondary upstream question, outside the AOP: why does this case arrive without `cost_center`? If it is a recurring gap in the intake source, that field should be made required there. I can't tell from this transcript, so I'm not claiming it as the cause.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d03`, working in `aops/<agent-id>.md`, with the change request: \"rewrite Step 2 to stop and use Human in the loop (or `fail_case`) when `cost_center` is missing, and only call `complete_case` after a successful post to a real cost center.\" Separately, someone should check NetSuite for INV-7731 and correct the \"TBD\" cost center, since the bill is already posted.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 953,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 844,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11527
+}

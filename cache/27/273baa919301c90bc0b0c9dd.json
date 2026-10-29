@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.0402678,
+  "created_at": "2026-10-29T11:37:13+00:00",
+  "duration_api_ms": 15381,
+  "input_hash": "82cebd8c79c09140",
+  "key": "273baa919301c90bc0b0c9dd",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure on a transient Connection error. The DPD 429 is the trigger, but the AOP has no branch for it, so the Run ended without a terminal action and the platform failed the case instead of retrying it.\n\n**Where it went wrong**\nAt transcript turn [5], after DPD returned a 429 at [4]. AOP Step 2 (\"Get the latest status from the **DPD** Connection\") has only a success path. Its only terminal action is `complete_case` in Step 3. When the status lookup failed, the Agent had no instruction to follow. It narrated the problem and stopped without calling `postpone_case` or `fail_case`. The platform then settled `case_g02` as Failed with no reason.\n\nThe 429 itself is not a broken Connection. It is DPD rate-limiting a Black Friday queue of 1,900 cases. The response said exactly when to retry (`Retry-After: 600`). This case could have been recovered ten minutes later. Instead it is lost as Failed, along with roughly 30% of today's Runs.\n\n**Evidence**\n- Transcript [4]: `ERROR 429 Too Many Requests. Retry-After: 600`\n- Transcript [5]: `DPD is rate limiting. I can't get the status.` The Run ended here with no `postpone_case`, `fail_case`, or `request_handover`.\n- Case state: `Failed (no reason)`, which is a platform settlement rather than one made by the Agent.\n\n**Fix**\nAdd a rate-limit branch to Step 2 of the AOP: *\"If the DPD Connection returns 429 (or another temporary error), call `postpone_case` using the Retry-After delay (default 10 minutes if none is given) and stop. Do not call `complete_case`.\"*\n\nThis turns each 429 into a delayed retry instead of a failed case. Postponing also spreads the queue's load on DPD over time, which should reduce how often the 429 recurs.\n\nSide note: at [3] the tracking number was passed as `\"09534412 8890\"`, not the `\"0953 4412 8890\"` that `claim_case` returned at [2]. The Agent mangled the input. That did not cause this failure, but check for it once the retries go through.\n\n**Next step**\nI can invoke `aop-writer` on Build `bld_g02` (AOP file `aops/<agent-id>.md`) with this request: \"add a rate-limit branch to Step 2 that calls `postpone_case` for the Retry-After delay on a DPD 429.\" After that, the cases already failed today will need to be re-queued, because the fix only covers future Runs.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}",
+  "usage": {
+    "cache_creation_input_tokens": 909,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1576,
+    "thinking_tokens": 679
+  },
+  "variant": "main",
+  "wall_ms": 16452
+}

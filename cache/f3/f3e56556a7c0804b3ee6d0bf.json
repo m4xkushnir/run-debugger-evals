@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.0086261,
+  "created_at": "2026-10-29T11:22:53+00:00",
+  "duration_api_ms": 11963,
+  "input_hash": "904fcbb04475a734",
+  "key": "f3e56556a7c0804b3ee6d0bf",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Connection failure (expired/revoked OAuth token on the Gmail Connection \"AP inbox\").\n\n**Where it went wrong** — Transcript turn [2], on the very first tool call of AOP Step 1 (\"Use **Gmail** to find the newest unread email in the AP inbox…\"). The Run never reached the PDF extraction or NetSuite steps. The Agent's handling at turn [3] was reasonable given the AOP: it reported the cause and stopped. The AOP has no branch for an inaccessible inbox, so the Run ended as failed rather than surfacing a clear, actionable signal.\n\n**Evidence**\n- Transcript [2]: `ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: Gmail Connection 'AP inbox' was last authorised 2026-07-30, 91 days before this Run.\n\nThe 401 is the symptom. The root cause is that the Connection's authorisation lapsed and nothing refreshed it. I can't tell from the data whether it expired through inactivity or was revoked (password change, admin policy, user removing app access). Both produce `invalid_grant`, and both are fixed by reauthorising.\n\n**Fix** — Reauthorise the **Gmail** Connection \"AP inbox\" in Setup (reconnect the account, and confirm the scopes the AOP relies on: reading messages for Step 1 and modifying labels for Step 4). Because this Connection is the Agent's only way in, every Run will fail the same way until it's reauthorised. If it lapses again soon after a clean reauthorisation, that would point to something other than ordinary expiry (e.g. a Workspace admin token policy), and it'd be worth revisiting.\n\n**Next step** — Reauthorise the Gmail Connection \"AP inbox\" in Setup, then re-run. Optionally, I can invoke `aop-writer` afterward to add an explicit Step 1 branch such as \"If Gmail returns an authorisation error, use **Human in the loop** to notify the AP owner that the Connection needs reauthorising\", so a future lapse is flagged to someone rather than just failing. That's a hardening step, not the fix for this Run.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 779,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 15763
+}

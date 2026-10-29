@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.00058935,
+  "created_at": "2026-10-29T11:31:39+00:00",
+  "duration_api_ms": 5670,
+  "input_hash": "95d351598029029b",
+  "key": "0f078377c02c25a75bfb6f10",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Connection failure. The Login behind the Enterprise Browser step has an expired Okta session.\n\n**Where it went wrong:** Step 1 of the AOP, at the first tool call. `browser.open` on the reports page was redirected to Okta instead of loading the page. The Agent then stopped at turn [3] rather than handling the redirect.\n\n**Evidence:**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: Login 'Coop portal (Okta)' was last re-authenticated 94 days ago, and the portal enforces 90-day sessions.\n\nThe error summary (\"Okta sign-in required\") is the symptom. The cause is that the stored session outlived the portal's 90-day limit, so the Login no longer works. Nothing in the AOP was wrong for this Run, so an AOP rewrite isn't the fix.\n\n**Fix:** Re-authenticate the Login 'Coop portal (Okta)' in Setup so it has a fresh session, then start a new Run. This is a Connection change, not an AOP change.\n\nTo stop this recurring every 90 days, re-authenticate on a calendar reminder shortly before day 90. If you want the Agent to fail more clearly when this happens, you could add a branch to Step 1 of the AOP: \"If the browser is redirected to Okta sign-in, stop and report that the Coop portal Login needs re-authentication.\" That would be an `aop-writer` change, and it's optional. It wouldn't have fixed this Run.\n\n**Next step:** Re-authenticate the 'Coop portal (Okta)' Login in Setup and re-run. If you want the stop-and-report branch in the AOP, I can hand that to `aop-writer`. The transcript doesn't show a terminal action, so if this Run was queue-driven, check whether the case was closed or left open.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.92}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8215,
+    "input_tokens": 2,
+    "output_tokens": 1014,
+    "thinking_tokens": 355
+  },
+  "variant": "main",
+  "wall_ms": 7905
+}

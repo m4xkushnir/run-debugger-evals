@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.00075141,
+  "created_at": "2026-10-29T11:30:52+00:00",
+  "duration_api_ms": 7177,
+  "input_hash": "f214809918538af8",
+  "key": "9938c944ebb3f9ef83c28e55",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [1]. The Agent set out to check all 2,300 SKUs in the catalogue, not the 3 products the customer asked about. Shopify's limit is 2 calls per second, so a sequential sweep of 2,300 lookups was always going to hit the 429. The Run got about 180 calls in before the rate limit stopped it.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\nThe 429 is the symptom. The cause is that Step 2 iterates the whole catalogue when the request only needs three lookups. The email asked about three products, so about 2,297 of the calls were unnecessary.\n\n**Fix:** Rewrite Step 2 so it looks up only the SKUs matched in Step 1, one `shopify.get_inventory` call per requested product. Also add an explicit rule for a 429 response: wait the `Retry-After` interval and retry, and if it still fails, end the case with `fail_case` and a reason instead of stopping mid-work.\n\n**Next step:** I can hand this to `aop-writer` with the Build ID `bld_s04` and the change request above. `aop-writer` would edit `aops/<agent-id>.md` in place. I haven't made any changes.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 1336,
+    "thinking_tokens": 748
+  },
+  "variant": "main",
+  "wall_ms": 8748
+}

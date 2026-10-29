@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.0100979,
+  "created_at": "2026-10-29T11:31:44+00:00",
+  "duration_api_ms": 5456,
+  "input_hash": "95d351598029029b",
+  "key": "42f39dd2282e74c2760d1ae1",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Connection failure (expired Login session). The Login's 90-day portal session lapsed.\n\n**Where it went wrong** — Step 1 of the AOP. The browser opened the reports page with the Login **Coop portal (Okta)**, but the portal redirected to Okta because the stored session was no longer valid. The Run never reached Step 2.\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: the Login was last re-authenticated 94 days ago, and the portal enforces 90-day sessions. The session expired about 4 days before this Run.\n\n**Fix** — Re-authenticate the **Coop portal (Okta)** Login in Duvo so it holds a fresh session. This is the one change needed to unblock the Run. The recurring cause is that the session lapses every 90 days, so the Login will need re-authenticating again before each 90-day mark (about every 80 days, to leave margin).\n\nCaveat: the AOP has no branch for an expired session, so a future lapse will fail the same way. That is secondary to the expiry itself, and I'm not proposing an AOP change now. If you want it to hand off cleanly instead of failing, say so and I can pass an AOP change request to `aop-writer` against Build `bld_x01`.\n\n**Next step** — Open the Login **Coop portal (Okta)** in Duvo, sign in again, then Start Work to re-run. If the Run fails with the same Okta redirect straight after a successful re-authentication, that points to a platform issue rather than an expired session, and it should go to Duvo support with Run `run_x01` and Build `bld_x01`.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 855,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 594,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7489
+}

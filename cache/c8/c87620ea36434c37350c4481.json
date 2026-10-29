@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.00038336,
+  "created_at": "2026-10-29T11:33:01+00:00",
+  "duration_api_ms": 4225,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "c87620ea36434c37350c4481",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Named pattern: UI drift. The Agent's Connection was healthy, but the portal changed its layout and the AOP's instruction no longer matches the page. This is not a Connection failure, and it doesn't fit the platform/infra category.\n\n**Where it went wrong:** Step 2 of the AOP, \"Click 'Export CSV' on the Invoices page.\" At transcript [2], the sign-in succeeded, but the banner says the portal was redesigned and invoices now live under \"My Account → Billing.\" The Agent never navigated there. It stayed on whatever landing page the login returned and looked for a button that isn't on that page. The failure happened at [3]–[4].\n\n**Evidence:**\n- [2] `Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- [4] `ERROR: Element not found: button 'Export CSV'`\n\n**Fix:** Change Step 2 of the AOP so the Agent navigates to the new location before looking for the export control. For example: \"Navigate to My Account → Billing. Click 'Export CSV' on the invoices list. If 'Export CSV' is not found, use Human in the loop and stop; do not guess an alternative control.\" The fallback line matters because the portal has already changed once, and an Agent that improvises clicks on a redesigned page is hard to audit.\n\n**Next step:** Hand this to `aop-writer` with the Build ID `bld_g01`, the change request above, and the AOP file `aops/<agent-id>.md`. You'll also want to confirm that the \"Export CSV\" label still exists under Billing. I can't verify that from the transcript, so it's worth a quick look in the portal before the rewrite goes live.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 602,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 5859
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.00106379,
+  "created_at": "2026-10-29T11:25:01+00:00",
+  "duration_api_ms": 8447,
+  "input_hash": "d0dabf96580dd687",
+  "key": "fc2eb920f253abf6b99c4670",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing terminal closure. The Run ended cleanly, so the platform auto-completed the case and left its evaluation stuck.\n\n**Where it went wrong:** Step 2's failure branch. When Packeta returned the 422, the AOP only said to alert Slack. It never said to close the case, so the Agent stopped after posting to Slack, skipped Step 3 (Gmail) and Step 4 (`complete_case`), and ended with a plain text message at turn [7]. A clean run end with no terminal action leaves the case to the platform's auto-completion, which is why the case reads \"Completed\" while its evaluation is stuck. The Run status (\"completed\") describes the Run, not the case outcome, so the case is the thing that's wrong.\n\n**Evidence:**\n- AOP Step 2: \"If the label can't be generated: post the order number to **Slack** #returns-ops.\"\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Agent: Label could not be created; I alerted #returns-ops.` (no `fail_case`, `postpone_case`, or `complete_case` call anywhere in the transcript)\n\nThe 422 is a business-rule rejection from Packeta for the SK destination, not a Connection failure, so no Connection change would fix this. The AOP has no path that closes the case when the label can't be made.\n\n**Fix:** In Step 2's failure branch, add a terminal action after the Slack post: \"…then call `fail_case` with reason `no return label available for destination SK` and stop.\" Use `postpone_case` instead only if you want the case retried later, for example once Packeta adds SK support.\n\n**Next step:** I can hand this to `aop-writer` to rewrite Step 2 in the AOP file (`aops/<agent-id>.md`). The request should target Build `bld_t03`, with the change above. I haven't edited anything. Once the rewrite is in, the case for `case_t03` will still need to be handled manually, since the auto-completed outcome won't change on its own.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1578,
+    "thinking_tokens": 859
+  },
+  "variant": "main",
+  "wall_ms": 12570
+}

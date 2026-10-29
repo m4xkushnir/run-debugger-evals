@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.0194062,
+  "created_at": "2026-10-29T11:34:18+00:00",
+  "duration_api_ms": 14225,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "55e7085a35b5bfde3bcc7a20",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure. The Gmail 503 is the symptom. The root cause is that the AOP has no branch for a failed Step 3, so the Run ended without `complete_case`, `fail_case`, `postpone_case` or `request_handover`.\n\n**Where it went wrong**\nThe decision point is transcript turn [6]→[7], at AOP Step 3 (\"Email the supplier the payment date via Gmail\"). The Agent got a transient 503 and wrote a status sentence instead of closing the case. Step 4 (`complete_case`) was the only terminal action, and it sits on the success path only. The platform then settled the case itself as Failed with no reason, which fits a Run that stopped mid-work. The case record therefore says nothing about what had already happened.\n\n**Evidence**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Email failed with a temporary Gmail error.` (no terminal call follows)\n- AOP: `3. Email the supplier the payment date via **Gmail**.` followed by `4. Call complete_case.` There is no instruction for when Step 3 fails.\n\n**Why this caused the duplicate**\nStep 2 posted the bill in NetSuite at [4], so the side effect was already committed. The case then showed Failed with no reason, and nothing told the AP team the bill was already posted. They re-ran it. The AOP has no check for an existing bill on INV-5512, so Step 2 posted it a second time.\n\n**Fix**\nOne change to the AOP, covering Steps 2–3:\n- **Step 2:** before posting, search NetSuite for an existing vendor bill for the invoice. If one exists, skip posting and continue to Step 3.\n- **Step 3:** if `gmail.send_message` returns a transient error (5xx), retry once. If it still fails, call `postpone_case` with the reason \"NetSuite bill for <invoice> already posted; supplier email not sent. Do not repost, only resend the email.\"\n\nThe guard in Step 2 matters more than the retry. Any re-run, whether by a postpone or by a person, would otherwise repost the bill.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_g04`, the change request above, and the AOP file `aops/<agent-id>.md`. I don't have the Agent ID, so I can't give the exact path.\n\nSeparately, the duplicate bill already in NetSuite needs to be voided or reversed by the AP team. That is outside the Agent's configuration.\n\nThis diagnosis rests on the pasted excerpt, which doesn't show how the Run itself ended. I inferred the platform-settled Failed state from the case showing Failed with no reason.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8322,
+    "input_tokens": 2,
+    "output_tokens": 1857,
+    "thinking_tokens": 909
+  },
+  "variant": "main",
+  "wall_ms": 15471
+}

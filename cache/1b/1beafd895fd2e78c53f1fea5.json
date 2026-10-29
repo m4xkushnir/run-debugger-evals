@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.00074014,
+  "created_at": "2026-10-29T11:27:20+00:00",
+  "duration_api_ms": 7013,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "1beafd895fd2e78c53f1fea5",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP tells the Agent to process *all* pending supplier invoices in the AP inbox. The Agent did that in a single Run. It searched the inbox, found 47 messages, and began creating vendor bills one by one (message [5]). It created 19 bills before the 30-minute limit stopped the Run at message [7]. Steps 3 (`complete_case`) was never reached, and the case was left Failed.\n\n**Evidence:**\n- AOP Step 2: \"process all pending supplier invoices in the AP inbox\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\nThe case-level mismatch is also worth noting. `claim_case` returned the title \"Invoice from Brenntag CZ,\" so the case represents one invoice. The AOP ignored that and searched the whole inbox, which is why the Run became a batch job.\n\n**Fix:** Rewrite Step 2 to handle only the invoice this case represents. For example: \"Using the invoice from the claimed case, extract the fields in **Gmail** and create one vendor bill in **NetSuite**. If the extraction or bill creation fails, call `fail_case` with the reason.\" Step 3 stays as `complete_case`. The platform runs one case per invoice, so the loop over 47 invoices goes away.\n\n**Before re-running, check NetSuite.** Bills 1–19 were created, and this AOP has no duplicate check. Search NetSuite for those vendor bills and confirm which ones exist before any retry. Also confirm that all 19 belong to the vendor and invoices you expect. A retry without this check could create duplicate bills.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_b01` and the change request \"rewrite Step 2 to handle only the claimed case's invoice, with a `fail_case` branch on error.\" Do the NetSuite duplicate check first.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8294,
+    "input_tokens": 2,
+    "output_tokens": 1314,
+    "thinking_tokens": 590
+  },
+  "variant": "main",
+  "wall_ms": 9005
+}

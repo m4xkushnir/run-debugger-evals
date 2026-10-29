@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0011088200000000002,
+  "created_at": "2026-10-29T11:39:03+00:00",
+  "duration_api_ms": 9380,
+  "input_hash": "80480c72868f94f9",
+  "key": "41924bfe2e8fd86c8f0ccfad",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity, triggered by missing data. The case had no `unit_price`, and the AOP did not say what to do in that case, so the Agent guessed a price.\n\n**Where it went wrong:** Transcript [3] and Step 2 of the AOP. Step 1 expected the case to carry a unit price, but `claim_case` returned none (transcript [2]). The AOP gave no instruction for that gap, so the Agent substituted a price from the supplier's email signature and sent it at [4]. The run then completed normally at [6]–[7], so the platform's terminal-closure check did not catch the error.\n\n**Evidence:**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`. No unit price.\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n\nThe signature's \"standard price\" is not the contract price. The contract price is 3.65 EUR, so the email overstated the total by 1200 × 0.45 = 540 EUR.\n\n**Fix:** Add a missing-price branch to Step 1 of the AOP: *If the case has no `unit_price`, do not look up, infer, or estimate one. Call `request_handover` with the reason \"unit_price missing on PO-88120\" and stop without sending email.* The price should come only from the case or a verified source. If your contract prices live in Setup, the more durable version is to reference a per-supplier contract-price input in Step 2 and fail the case when it is absent.\n\n**Next step:**\n- Send the supplier a correction, since the 4.10 EUR figure and the 4,920 EUR total are already in their inbox. This needs a person.\n- Hand the fix to `aop-writer` with Build `bld_s05` and the AOP file for this Agent. I don't have the Agent ID in paste mode, so please give me the path (`aops/<agent-id>.md`).\n- Secondary: the sent body omits the PO number, which Step 2 requires (\"PO number, quantity, unit price, total\"). Fix this in the same AOP edit by adding the PO number to the email template step.",
+  "usage": {
+    "cache_creation_input_tokens": 1037,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1659,
+    "thinking_tokens": 930
+  },
+  "variant": "no_json",
+  "wall_ms": 10922
+}

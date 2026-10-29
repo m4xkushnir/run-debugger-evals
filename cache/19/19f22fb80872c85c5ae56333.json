@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.00067439,
+  "created_at": "2026-10-29T11:22:58+00:00",
+  "duration_api_ms": 6585,
+  "input_hash": "b03fc180112aa5af",
+  "key": "19f22fb80872c85c5ae56333",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Connection failure. The Gmail Connection lacks the scope the AOP needs for step 2.\n\n**Where it went wrong:** Step 2 of the AOP, \"Use **Gmail** to send the supplier a reminder.\" The Run reached this step at message [2] and the call failed at [3]. The Connection named 'Purchasing' was granted only `gmail.readonly` and `gmail.labels`, but sending requires `gmail.send`. The Build (`bld_2c9`) assumes a send-capable Gmail Connection, and the Connection doesn't provide one.\n\n**Evidence:**\n- [3] `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Other context: `Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.`\n\n**Fix:** Re-authorize the Gmail Connection 'Purchasing' with the `gmail.send` scope added, so it grants `gmail.readonly`, `gmail.labels`, and `gmail.send`. No AOP change is needed. The Agent handled the failure correctly: it stopped, sent nothing, and reported the problem at [4]. Sheets logging never ran, so no row is missing and nothing was sent twice.\n\n**Next step:** Re-authorize the Purchasing Gmail Connection in Setup with the send scope, then re-run the PO 4500918821 reminder. The due date (2026-10-20) has passed, so the reminder is still needed. Check the Connection's granted scopes after reauthorizing to confirm `gmail.send` is present before re-running. If the 403 persists after a clean reauthorization, that points to a platform issue and not a scope problem, and I'd reclassify it.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8369,
+    "input_tokens": 2,
+    "output_tokens": 1181,
+    "thinking_tokens": 543
+  },
+  "variant": "main",
+  "wall_ms": 9069
+}

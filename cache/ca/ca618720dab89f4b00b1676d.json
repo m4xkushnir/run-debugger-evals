@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.011447899999999999,
+  "created_at": "2026-10-29T11:32:38+00:00",
+  "duration_api_ms": 7997,
+  "input_hash": "086079e1976a5bd5",
+  "key": "ca618720dab89f4b00b1676d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Not a failure. The Run is paused on Human-in-the-loop, working as designed (status `waiting`).\n\n**Where it went wrong** — Nothing broke. The Run followed AOP Step 2 (\"If the amount exceeds EUR 1,000: use Human in the loop to get approval before issuing\"). The request of EUR 1,850 is over the threshold, so the Agent asked for approval at transcript turn [2] and is blocked on the answer. Steps 3 (issue credit note in NetSuite, email the customer) has not run, and correctly so.\n\n**Evidence**\n- Transcript [2]: `human_in_the_loop.request {\"question\": \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"}`\n- Transcript [3]: `{\"status\": \"pending\"}`\n- AOP Step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n\nThere is no error, no failed tool call, and no Connection problem in the transcript. The Run has been \"stuck since yesterday\" because nobody has answered the approval request yet.\n\n**Fix** — No change to the AOP, Connections, or Setup is needed. Open the Run in the Duvo web app, find the pending Human-in-the-loop request for the EUR 1,850 Hotel Praha credit note, and answer it (yes/no). The Run will then continue: on approval it proceeds to Step 3, and on a rejection it will follow whatever the Agent does with a \"no\".\n\nOne thing worth noting: the AOP does not say what to do on a \"no\" answer or if no one answers. If unanswered approvals stalling for a day is a recurring problem, that's a separate improvement (e.g. a rule for who gets notified, or what to do on rejection). It is not the cause of this Run's state, and I wouldn't change it based on this one Run.\n\n**Next step** — Approve or reject the pending request in the Duvo web app. If you answer it and the Run still doesn't move, share the Run's new transcript turns and I'll diagnose from there.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 865,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 725,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9415
+}

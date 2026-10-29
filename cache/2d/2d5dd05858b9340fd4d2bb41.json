@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.007594799999999999,
+  "created_at": "2026-10-29T11:28:04+00:00",
+  "duration_api_ms": 5435,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "2d5dd05858b9340fd4d2bb41",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Batch / iteration leak (category 6). The Run \"succeeded\" technically, but it did the work of all 60 cases in each case.\n\n**Where it went wrong** — Step 2 of the AOP, at transcript turn [3]. `claim_case` returned a single store (`{\"store\": \"CZ-007\"}`), but the Agent ignored it and queried and ordered for every store. The Run status is completed and the case closed cleanly via `complete_case`, so nothing errored. The failure is the outcome: duplicated orders.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`, followed by [5] \"Reordering 412 lines across 60 stores.\"\n- Context: 60 per-store cases ran today, and each placed orders for all 60 stores. That means up to 60x duplicate replenishment orders (the real impact is worth checking in the Replenishment portal).\n\nThe AOP never tells the Agent to use the claimed case's `store`. \"Every store\" is a literal instruction, and the platform already iterates by case, so the Agent did what it was told, once per case.\n\n**Fix** — Rewrite AOP Step 2 to scope to the claimed case only, e.g.: *\"Using the `store` from the claimed case, use Snowflake to check stock levels for that store only, and reorder items below minimum for that store only in the Replenishment portal. Never query or order for other stores.\"* Optionally add a guard: if the case has no `store`, call `fail_case`.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b03` and this change request to edit `aops/<agent-id>.md` in place. Separately, please audit today's Replenishment portal orders and cancel the duplicates, since I can't see or change those from here.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8308,
+    "input_tokens": 2,
+    "output_tokens": 676,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 6867
+}

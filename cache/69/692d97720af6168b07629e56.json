@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.00058086,
+  "created_at": "2026-10-29T11:32:47+00:00",
+  "duration_api_ms": 5838,
+  "input_hash": "1c85333d7be4398e",
+  "key": "692d97720af6168b07629e56",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Not a failure. The Run did what the AOP told it to do.\n\n**Where it went wrong:** Nothing went wrong in the Run. The Agent reached the branch in Step 2 and stopped there. Step 3 (the Gmail email to the supplier) only runs when the PO is *not* already received, and SAP reported that it was.\n\n**Evidence:**\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [4]: `sap.get_po` → `{\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n- Transcript [7]: `complete_case` → `{\"status\": \"completed\"}`\n\n**Fix:** None to the AOP, Connections, or Setup. The Run followed the procedure correctly.\n\nIf you expected a supplier email, the question is whether SAP's data is right, not whether the Agent behaved correctly. Check PO-61204 in SAP directly. If it shows received but the goods haven't arrived, or the receipt belongs to a different line or PO, the problem is in the source data. In that case, correct the record in SAP and re-run. If you think the \"received\" check should be stricter (for example, requiring a full quantity match rather than a status flag), that's an AOP change for `aop-writer`, but this Run doesn't show a defect that needs one.\n\n**Next step:** Verify PO-61204's receipt status in SAP. If it's accurate, this Run needs no action. If it's wrong, fix the SAP record first.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8316,
+    "input_tokens": 2,
+    "output_tokens": 995,
+    "thinking_tokens": 430
+  },
+  "variant": "main",
+  "wall_ms": 7183
+}

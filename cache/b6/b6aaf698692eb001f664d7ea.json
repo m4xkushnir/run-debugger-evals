@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.010239700000000001,
+  "created_at": "2026-10-29T11:25:40+00:00",
+  "duration_api_ms": 9164,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "b6aaf698692eb001f664d7ea",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (taxonomy #4). The Run status is \"completed\", but the outcome is wrong: a bank-detail change was applied from an unverified, look-alike sender. This is a business-process failure, not a technical one.\n\n**Where it went wrong**\nTranscript [2]→[3]: the Agent read the email and immediately called `sap.update_vendor` on `bank_iban` with no sender verification and no human confirmation. This matches AOP Step 3 (\"Update the field in **SAP**\"), which has no gate. Step 2 identifies the supplier from the email's content only, and Step 4 then confirms the change back to the sender, which tells a possible fraudster that it worked.\n\n**Evidence**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`\n- Transcript [3]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", \"value\": \"DE89370400440532013000\"}`\n- AOP Step 3: `\"Update the field in **SAP**.\"`\n\nThe sender domain (sunfield-foods.co) differs from the legitimate one (sunfieldfoods.com). The email also carries urgency (\"effective immediately\"), a classic payment-diversion pattern. With EUR 212,000 due in the next payment run, this is a likely business email compromise (BEC) attempt.\n\n**Fix**\nAdd a Human-in-the-loop gate to AOP Step 3 so that no change to bank or payment fields is written to SAP without approval. The gate should include these rules:\n- Before updating, compare the sender's domain with the domain on file for the vendor in SAP. If it does not match, do not update. Use **Human in the loop** to escalate.\n- For any change to `bank_iban` or other payment fields, use **Human in the loop** to get approval from a named approver, who verifies the change via a call-back to a phone number already on file (not one from the email).\n- Step 4 must not confirm the change until approval is recorded.\n\n**Next step**\nUrgent, before the payment run: have someone revert the IBAN on vendor 100482 in SAP and hold the EUR 212,000 payment until the change is verified out of band. Treat the reply sent at [5] as having reached a potentially fraudulent sender.\n\nThen I can invoke `aop-writer` with Build `bld_h01`, the change request \"add a sender-domain check and a HITL approval gate before any bank-detail update in Step 3, and defer the confirmation in Step 4 until approval\", and the AOP file `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8357,
+    "input_tokens": 2,
+    "output_tokens": 940,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11895
+}

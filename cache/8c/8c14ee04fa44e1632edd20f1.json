@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.010333500000000002,
+  "created_at": "2026-10-29T11:29:38+00:00",
+  "duration_api_ms": 7590,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "8c14ee04fa44e1632edd20f1",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nPlatform / infra failure. The Connection layer failed to decrypt stored credentials, and that error is Duvo's own, not an upstream response from Gmail.\n\n**Where it went wrong**\nTranscript step [1]-[2]: the first and only action, `gmail.send_message`, failed. The Run never got past AOP Step 2 (\"Send the confirmation via **Gmail**\"). The AOP itself is fine: it has one step, one action, and no branch that a rewrite could improve.\n\n**Evidence**\n- Transcript [2]: `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Run error summary: `internal error in connection layer`\n- Context: re-authentication at 09:12, test send at 09:13 worked, then this Run at 09:20 and the two after it failed identically.\n\n**Why this isn't a Connection failure**\nAn expired token or missing scope would be yours to fix. Here you already reauthenticated and a test send succeeded, so the Connection was valid. The failure is a 500 from the credential-decryption path (the `kms` reference), not a 401/403 from Gmail. It repeats identically across three Runs and is independent of the order data. Nothing in the AOP, Setup, or Connection settings would have prevented it. One caveat: the test send worked and the Runs didn't, so the Run path may be reading the credentials differently from the test path (for example a stale or mismatched credential record). That is something only Duvo can check.\n\n**Fix**\nThere is no change to make in your artifacts. Re-authenticating again is unlikely to help, since you've already done that once. The fix is on Duvo's side: the credential decryption failure for this Gmail Connection needs investigating.\n\n**Next step**\nRaise this with Duvo. If a support-escalation tool is available in your session (Duvo's in-product chat), I can draft the escalation there for you to review and send. Otherwise, contact Duvo support from the Duvo web app and include:\n- Run IDs: `run_p02` (plus the two later failed Runs), Build `bld_p02`\n- Exact error: `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Timeline: Gmail Connection re-authenticated at 09:12, test send succeeded at 09:13, Runs from 09:20 onward fail\n- Ruled out: expired token or scope problem (reauthentication succeeded and a test send worked), AOP logic (single send step), and case or order data (identical failure on all three Runs)\n\nIn the meantime, the order confirmation was not sent to `buyer@hotel-praha.cz`, so it will need to be sent manually or re-run once Duvo resolves the issue.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8195,
+    "input_tokens": 2,
+    "output_tokens": 951,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9354
+}

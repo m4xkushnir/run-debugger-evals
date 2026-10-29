@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.00096783,
+  "created_at": "2026-10-29T11:34:31+00:00",
+  "duration_api_ms": 8918,
+  "input_hash": "4a001beca9456e30",
+  "key": "3478b79b4d89563b9e05842d",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity. The Agent matched on the wrong VAT ID, and the AOP gave it no rule for which one to use or what to do when the match is wrong.\n\n**Where it went wrong:** Step 1 (extraction) and Step 2 (vendor matching). Step 1 asks for \"the VAT ID\" as if the invoice has one. This invoice has two, and the Agent took the bill-to customer's ID (CZ45272956, which is ours) instead of the supplier's (DE811203984). Step 2 then searched NetSuite with that ID. The lookup returned our own entity, and the Agent created the bill against it without checking.\n\n**Evidence:**\n- Transcript [1]: `supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'`\n- Transcript [3]: `{\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"}`\n- Transcript [4]: `netsuite.create_bill {\"vendor\": \"200140\", \"amount\": 8412.00}`\n- Other context: `the supplier's (DE811203984) and the bill-to customer's (CZ45272956, ours)`\n\n**Why the Run shows \"completed\":** The Run finished without a platform error because every tool call succeeded. The wrong outcome is a bill booked to our own entity, and nothing in the AOP told the Agent to treat that as a stop condition. The Agent saw \"(our own entity)\" in the tool result at [3] and went ahead anyway.\n\n**Fix:** Change Step 1 to name the supplier's VAT ID explicitly and exclude the bill-to ID. For example:\n- \"Extract the **supplier's** VAT ID: the one shown with the supplier's name and address (typically the issuer's, e.g. DE…). Do **not** use the bill-to customer's VAT ID, which belongs to our entity (CZ45272956).\"\n\nThen add a guard to Step 2:\n- \"If the matched vendor is our own entity (200140 / RetailCo CZ s.r.o.), or its name does not match the extracted supplier name, do not create a bill. Use **Human in the loop** to confirm the vendor, or fail the case.\"\n\n**Next step:**\n1. Check NetSuite for the bill created against vendor 200140 for 8,412.00 EUR. The tool response did not return a bill ID, so you'll need to search for it. It should be voided or reversed, and the correct vendor (Frischeparadies KG, which should be matched on DE811203984 — confirm that lookup returns it) should get the bill. I can't do either from this diagnosis.\n2. Once the cleanup is done, I can hand the AOP change to `aop-writer` for Steps 1 and 2.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8313,
+    "input_tokens": 2,
+    "output_tokens": 1769,
+    "thinking_tokens": 817
+  },
+  "variant": "main",
+  "wall_ms": 10177
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.00090041,
+  "created_at": "2026-10-29T11:30:53+00:00",
+  "duration_api_ms": 8838,
+  "input_hash": "f214809918538af8",
+  "key": "56d34bd629d53f86f87e926e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP tells the Agent to check every SKU in the catalogue, not just the products the customer asked about. The Agent started that loop at message [1] (\"Checking the catalogue: 2,300 SKUs\") and made one `get_inventory` call per SKU. Shopify's limit of 2 calls per second was hit at SKU-0181, around message [6]. The 429 is the symptom. The AOP's per-catalogue loop is the cause, since it makes roughly 2,300 calls for a request about 3 products.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix:** Rewrite Step 2 so the Agent checks stock only for the SKUs of the products identified in Step 1, instead of iterating the full catalogue.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_s04` and the AOP file (`aops/<agent-id>.md`), requesting that Step 2 be scoped to the 3 requested products. Reconnecting Shopify won't prevent this, because the Connection is working; the Agent is simply asking for too much.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 1634,
+    "thinking_tokens": 1119
+  },
+  "variant": "main",
+  "wall_ms": 10352
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.008717700000000002,
+  "created_at": "2026-10-29T11:29:25+00:00",
+  "duration_api_ms": 9076,
+  "input_hash": "a422d48d55a66c92",
+  "key": "2987d105361995adcdc32fc7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nPlatform / infra failure. The sandbox never started, so no Agent turn ever ran and the AOP was never executed.\n\n**Where it went wrong**\nAt transcript line [2], before any model turn. The Run died at sandbox provisioning, ahead of AOP Step 1 (the Snowflake query). Nothing in the AOP, Setup, or Connections was reached, so none of them can be the cause.\n\n**Evidence**\n- Transcript [2]: `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Your context: the last 3 Runs, on different days, failed with the identical error before any Agent turn.\n\nThe error repeats identically across Runs on different days and is independent of the case data. It is an infrastructure-level error (container image pull), not an upstream response from Snowflake or Slack. No change to the AOP (Snowflake and Slack steps) would have prevented it. I ruled out these alternatives:\n- **Connection failure:** no Connection call was made.\n- **AOP ambiguity or missing terminal closure:** the AOP never ran.\n- **Missing data:** no step was reached that could reference missing input.\n\nCaveat: I only have the transcript you pasted. I can't see whether a platform incident was open at the time, and the \"last 3 Runs\" detail is your report, not something I verified.\n\n**Fix**\nThere is no change to make in your artifacts (AOP, Connection, Setup, Files). The fix is on Duvo's side: the sandbox container image pull needs to be investigated, since it times out repeatedly and consistently.\n\n**Next step**\nGet this to Duvo support. If a support-escalation tool is available in Duvo's in-product chat, I'd draft the escalation there for you to review and send. Otherwise, raise it with Duvo support from the Duvo web app and include:\n- Run ID `run_p01`, Build ID `bld_p01`\n- The exact error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- That the last 3 Runs of this Agent on different days failed identically before any Agent turn\n- What was ruled out: the AOP, Connections, and Setup were never reached\n\nNothing has been reported yet. You need to send it.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8137,
+    "input_tokens": 2,
+    "output_tokens": 790,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10520
+}

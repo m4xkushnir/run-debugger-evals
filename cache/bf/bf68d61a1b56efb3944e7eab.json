@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0094536,
+  "created_at": "2026-10-29T11:31:31+00:00",
+  "duration_api_ms": 8406,
+  "input_hash": "8cdd082843487845",
+  "key": "bf68d61a1b56efb3944e7eab",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity. Step 2 says \"If unsure about the supplier match, call `fail_case`\" with no definition of what counts as a match. The Run itself completed normally; the Agent closed the case correctly per the AOP. The defect is in the rule, not the execution.\n\n**Where it went wrong:** Transcript turn [5], right after the SAP search at [4]. The Agent compared names only and treated the legal-name difference as uncertainty, which triggered the fail branch in AOP Step 2. The 31% failure rate this week means the same ambiguity is hitting every invoice where the invoice name differs from the SAP vendor name.\n\n**Evidence:**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`, and your context says the invoice VAT is the identical `DE811145120`.\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n\nThe VAT ID matched exactly, which is a strong identifier, but the AOP never says to use it. \"Unsure\" was left to the Agent's judgment, and it defaulted to name similarity. A secondary contributor is that the search at [3] used a truncated name (\"BAUHAUS Gesellschaft\"). It happened to return the right vendor, but the AOP gives no guidance on search strategy either.\n\n**Fix:** Replace the vague \"unsure\" rule in AOP Step 2 with a concrete matching rule, for example: *\"Match on VAT ID first. If the invoice VAT ID equals a SAP vendor's VAT ID, treat it as the same supplier regardless of name differences and continue to Step 3. If there is no VAT match, or more than one vendor matches, call `fail_case`.\"* If the invoice does not carry a VAT ID, say what to fall back to. This applies to the one artifact, the AOP, and should clear the recurring 31% pattern.\n\n**Next step:** I can invoke `aop-writer` with Build `bld_s06`, the file `aops/<agent-id>.md`, and the change request \"rewrite Step 2 to match suppliers on VAT ID first, with name differences ignored, and fail only on no match or multiple matches.\" Since this was a case-driven Run, case_s06 is already Failed, so it will need to be reopened or reprocessed after the AOP is updated.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 861,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9599
+}

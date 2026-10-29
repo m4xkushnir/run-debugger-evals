@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0119819,
+  "created_at": "2026-10-29T11:30:55+00:00",
+  "duration_api_ms": 6623,
+  "input_hash": "f214809918538af8",
+  "key": "dfc4d432a0281dd77d45197c",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy 6). The 429 from Shopify is only the symptom.\n\n**Where it went wrong**\nStep 2 of the AOP. At transcript turn [1] the Agent decided to walk the whole catalogue (\"2,300 SKUs\") instead of looking up the products the customer asked about. By turn [5] it had made about 180 sequential `shopify.get_inventory` calls and hit Shopify's rate limit at SKU-0181. The email named only 3 products, so roughly 2,297 of those calls had nothing to do with the request.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n\nEven with perfect retry handling, 2,300 calls at 2 per second is about 19 minutes of work, and every one of them is wasted. The Agent also had no instruction for what to do on a 429 (turn [7] just states the problem and stops). That is a secondary gap and not the root cause. If the loop is removed, the Run makes about 3 calls and never gets near the limit.\n\n**Fix**\nRewrite AOP Step 2 so it checks only the SKUs matching the products parsed in Step 1, instead of iterating the catalogue. For example: *\"For each product identified in Step 1, look up its SKU and check stock in Shopify with one `get_inventory` call. Do not enumerate the full catalogue. If Shopify returns 429, wait for the `Retry-After` period and retry once; if it still fails, use Human in the loop or `fail_case` with the reason.\"*\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, the change request above, and the AOP file `aops/<agent-id>.md` so the rewrite is made in place. I'm not rewriting the AOP in this skill.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 961,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 740,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8056
+}

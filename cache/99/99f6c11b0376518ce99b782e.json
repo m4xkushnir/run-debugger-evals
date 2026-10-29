@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0205219,
+  "created_at": "2026-10-29T11:29:07+00:00",
+  "duration_api_ms": 14021,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "99f6c11b0376518ce99b782e",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\nWrong decomposition. One Agent is carrying a Run's worth of work (steps 1-4) and a later, separate piece of work (steps 5-11) that starts after a 7-day wait. The Run's status is `completed`, so this is a wrong outcome rather than a crash.\n\n**Where it went wrong**\n\nAt transcript turn [5], where the Run reached AOP Step 5 (\"Wait 7 days for the signed bank letter\"). A Run has no way to sleep for 7 days and resume. The Agent wrote a closing message and the Run ended. Steps 6-11 (activate payments, chase, welcome pack, Coupa, Slack, 30-day review) never ran. That is why vendor 100977 exists in **SAP** but was never activated, and why nothing happened after day 1.\n\n**Evidence**\n\n- Transcript [5]: `\"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"`\n- AOP Step 5: `\"Wait 7 days for the signed bank letter.\"`\n- AOP Steps 6-7: `\"If received, activate payments in SAP.\"` / `\"If not received, chase the supplier.\"`\n\nNothing in the transcript schedules, queues, or hands off the \"check back\". The promise has no mechanism behind it. The AOP has 11 top-level steps, with a clear phase boundary at the wait: onboarding, then a wait, then an activation/chase cycle. That matches the decomposition signature.\n\n**Fix**\n\nSplit the AOP at Step 5 into two Agents:\n\n- **Agent A (intake)** covers Steps 1-4 (read form, VIES check, create vendor in SAP, request bank confirmation). It ends with `request_handover`, or by placing the supplier on a queue, so the 7-day wait is no longer inside a Run.\n- **Agent B (activation)** is triggered when the signed bank letter arrives, or when the 7-day window lapses, and covers Steps 6-11. It handles one supplier per case, with the \"received / not received → chase\" branch.\n\n**Caveats from the transcript**\n\n- It contains no **Gmail** read for Step 1 and no tool call that sends the bank-confirmation request in Step 4. The Agent's claim in [5] that confirmation was requested isn't backed by any call shown. If your transcript is complete, the supplier may never have been asked for the letter, so verify this once the split is in place. If the excerpt is partial, ignore it.\n- I can't see whether this Run was queue-driven, so I haven't assessed terminal closure.\n\n**Next step**\n\nDecide how Agent A hands off: `request_handover` or a queue. Then I can invoke `aop-writer` with Build `bld_w03` and the change request \"split at Step 5: end Agent A after Step 4 with a handover, and write Agent B's AOP for Steps 6-11 as a single-supplier procedure\". The file to work in is `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1576,
+    "thinking_tokens": 560
+  },
+  "variant": "main",
+  "wall_ms": 17363
+}

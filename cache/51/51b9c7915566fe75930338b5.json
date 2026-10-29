@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.00113413,
+  "created_at": "2026-10-29T11:34:02+00:00",
+  "duration_api_ms": 11206,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "51b9c7915566fe75930338b5",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure, triggered by a Connection failure. The Gmail 503 is transient and upstream, but the Run didn't fail because of the 503 alone. The AOP has no branch for a failed email, so the Agent stopped without calling `complete_case` or `fail_case`. The platform then settled the case as Failed with no reason.\n\n**Where it went wrong**\nStep 3 of the AOP (email the supplier via Gmail) has no failure path. After the 503 at transcript [6], the Agent wrote a plain-text message at [7] and ended the Run. Step 4 (`complete_case`) was skipped, and no `fail_case` or `postpone_case` was called in its place.\n\n**Evidence**\n- [6] `ERROR 503 Service Unavailable: backend error, try again later`\n- [7] `Agent: Email failed with a temporary Gmail error.`\n- AOP Step 3: \"Email the supplier the payment date via **Gmail**.\" It doesn't say what to do if this fails.\n- Case state: `Failed (no reason)`. The Run errored before any terminal action, so there is no Agent-set reason.\n\n**Fix**\nAdd a branch to Step 3 of the AOP: \"If the Gmail send fails, retry once. If it still fails, call `postpone_case` with reason 'supplier email failed, retry later'.\" That gives the case an explicit outcome instead of a platform settlement.\n\n**Separate issue: the duplicate bill**\nThis is a second, independent gap, and the AOP change above won't fix it. Step 2 posts the bill without checking whether INV-5512 already exists in NetSuite. Any re-run after a partial failure will post it again. Add a step before 2: \"Search NetSuite for an existing bill with this invoice number. If one exists, skip posting and go to Step 3.\" The AP team also needs to reverse the duplicate in NetSuite by hand. The Agent can't do that.\n\n**Next step**\nI can't invoke `aop-writer` from paste mode, so you'll need to run it. Give it Build `bld_g04` and the AOP file for this Agent (`aops/<agent-id>.md`), and ask it to add the Step 3 failure branch and the Step 2 duplicate check. Before you rerun this Agent, confirm the Gmail Connection works again. The 503 may have been a one-off, but I can't verify upstream state from here.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8343,
+    "input_tokens": 2,
+    "output_tokens": 2101,
+    "thinking_tokens": 1261
+  },
+  "variant": "main",
+  "wall_ms": 12588
+}

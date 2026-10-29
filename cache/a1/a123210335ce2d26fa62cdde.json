@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0082188,
+  "created_at": "2026-10-29T11:23:00+00:00",
+  "duration_api_ms": 6296,
+  "input_hash": "b03fc180112aa5af",
+  "key": "a123210335ce2d26fa62cdde",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure. The 'Purchasing' Gmail Connection lacks the scope the AOP relies on.\n\n**Where it went wrong**\nStep 2 of the AOP (send the reminder via Gmail). The Agent reached the right decision at transcript turn [2] and called `gmail.send_message` correctly. The call failed at turn [3] because the Connection was never granted a send scope. Step 3 (log to Google Sheets) never ran, since it depends on Step 2 succeeding.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Context: Gmail Connection 'Purchasing' granted scopes: `gmail.readonly, gmail.labels`.\n\nThe 403 is the symptom. The root cause is that the AOP sends email, but the Connection was set up with read-only and label scopes. This would fail on every Run, regardless of the PO or supplier, so it isn't a one-off. The Agent's input parsing and the email content were fine.\n\n**Fix**\nExtend the 'Purchasing' Gmail Connection to include the `gmail.send` scope (re-authorize it with that permission granted). No AOP change is needed to make this Run succeed.\n\n**Next step**\nRe-authorize the 'Purchasing' Gmail Connection in Setup with `gmail.send` added, then re-run PO 4500918821. Nothing was sent or logged, so there's no duplicate to worry about.\n\nOptional hardening, as a separate follow-up: the AOP has no fallback if Step 2 fails. If you want that, I can hand off to `aop-writer` to add a branch (for example, use **Human in the loop** to notify a buyer if the send fails). I'd treat that as secondary to the scope fix.\n\nCaveat: this is paste mode, so I'm relying on the scopes you listed. If the Connection still fails with the same 403 immediately after a clean re-authorization that includes `gmail.send`, that would point to a platform issue and should go to Duvo support.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8348,
+    "input_tokens": 2,
+    "output_tokens": 738,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10046
+}

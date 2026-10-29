@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0008025199999999999,
+  "created_at": "2026-10-29T11:23:10+00:00",
+  "duration_api_ms": 8084,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "26e968eb882c7590a2724dd2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Connection failure. The Login is authorised for the wrong market. This is an authorisation mismatch, not an expired token or a broken session.\n\n**Where it went wrong:** Step 2 hardcodes the Login **Alpenfrisch portal**, which is the CZ service account `svc-replen-cz`. Step 3 then asks for market AT, which that account isn't permitted to use. The failure occurs at transcript [4]–[5], when the agent selects the Market field.\n\n**Evidence:**\n- [3] `browser.login: Signed in as svc-replen-cz@retailco.eu`\n- [5] `browser.select: Page message: \"Access denied: this account is not authorised for market AT.\"`\n\nThe sign-in succeeded, so the Login works. The portal is refusing this account for this market.\n\n**Fix:** Attach an Alpenfrisch portal Login that is authorised for market AT (for example, an AT service account) to the Connection used for this Agent. Then the Login for store AT-114 is the AT account. Because Step 2 names one fixed Login, every non-CZ store will fail the same way until the Login is chosen by market. If you want that handled in the Agent, the Step 2 change is a market-to-Login mapping, which I'd hand to `aop-writer`.\n\n**Next step:** Add the AT-authorised Alpenfrisch portal Login in Setup, then re-run store AT-114. If you want the AOP to pick the Login by market, I can hand the mapping change to `aop-writer`.\n\nNo order was placed and Step 4 never ran, so the Replenishment log has no entry for this Run. Nothing needs cleaning up.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 1437,
+    "thinking_tokens": 849
+  },
+  "variant": "main",
+  "wall_ms": 10387
+}

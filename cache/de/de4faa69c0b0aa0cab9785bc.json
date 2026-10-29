@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.0122992,
+  "created_at": "2026-10-29T11:38:07+00:00",
+  "duration_api_ms": 9253,
+  "input_hash": "89b60f1887533656",
+  "key": "de4faa69c0b0aa0cab9785bc",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (category 4). The Run is technically \"completed\", but the outcome was wrong. A bulk, externally visible price change went live with no human checkpoint.\n\n**Where it went wrong**\nTranscript [2] → [3], matching AOP Step 2. The Agent read a single `markdown_pct` of 30 from Snowflake and immediately called `pricing.apply_markdown` across all 140 stores (5,320 prices updated). Nothing between Step 1 and Step 2 validates the data or asks a human to approve it. Step 3 (the Slack post) only reports after the fact, so it can't stop anything.\n\n**Evidence**\n- Transcript [2]: `{\"rows\": 38, \"markdown_pct\": 30}`\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n\nThe bad row in the recommendation table is the trigger. The root cause is that the AOP treats the Snowflake output as trusted and has no gate before a hard-to-reverse, chain-wide action. A 30% markdown across 140 stores is large, and nothing in the AOP bounds it or asks for approval. Note that I can't see the underlying table, so I'm relying on your report that a row was bad. The transcript doesn't show which row or why.\n\n**Fix**\nEdit AOP Step 2 to add a Human in the loop gate before applying the markdown, for example: *\"Before applying, if `markdown_pct` is above [your approved ceiling, e.g. 20%] or the change affects more than [N] stores, use **Human in the loop** to show the category, percentage, and store count and wait for approval. Only then call the Pricing system.\"* The threshold should be a concrete number you choose, not left to the Agent's judgment.\n\n**Next step**\nI can invoke `aop-writer` to rewrite Step 2 with the HITL gate, passing it Build `bld_h02` and the AOP file `aops/<agent-id>.md`. I need you to confirm the markdown ceiling and store-count threshold first. I can't see the agent ID from what you've shared, so the file path needs filling in.",
+  "usage": {
+    "cache_creation_input_tokens": 982,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 765,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 10524
+}

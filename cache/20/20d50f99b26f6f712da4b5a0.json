@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0102315,
+  "created_at": "2026-10-29T11:28:20+00:00",
+  "duration_api_ms": 7733,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "20d50f99b26f6f712da4b5a0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nWrong decomposition (category 7). The AOP holds a real-time claim-filing phase and a multi-day wait/reminder/escalation/closure phase in one Agent and one Run. The Run was stopped by the idle timeout while it was waiting.\n\n**Where it went wrong**\nThe decision point is at transcript [1]–[4], which maps to AOP Steps 6–9. After sending the claim (Step 5), the Agent reached \"Wait for the supplier's reply\" (Step 6) and tried to wait inside the Run by polling Gmail. Steps 7 and 8 need 3 and 7 days of elapsed time, and a Run can't stay alive that long without activity. The Run therefore hit the idle timeout before the supplier could reply. The timeout is the symptom. The root cause is that the AOP asks one Run to span a multi-day wait.\n\n**Evidence**\n- Transcript: `\"Claim sent to supplier Mlékárna Polná. Now waiting for the supplier's reply (step 6).\"`\n- Transcript: `\"No reply yet. I'll keep checking.\"`\n- AOP: `\"7. If no reply after 3 days, send a reminder.\"` / `\"8. If no reply after 7 days, escalate to the category manager.\"`\n\nThe AOP also has 14 top-level steps, with a clear phase boundary at Step 6 (file the claim, then wait, then process the reply). The Run ended with no terminal action, and the transcript doesn't show whether it was queue-driven. If it was, the case was settled by the platform rather than by the AOP. That is secondary to the decomposition problem.\n\n**Fix**\nSplit the AOP at Step 6 into two Agents.\n- **Agent A (claim intake):** Steps 1–5. After sending the email, it ends the Run, ideally with `request_handover` or by creating a case in a \"awaiting supplier reply\" queue, passing the claim details and thread id.\n- **Agent B (reply handling):** Steps 9–14, triggered when the supplier's reply arrives. The 3-day reminder and 7-day escalation (Steps 7–8) go in a scheduled or queue-driven follow-up that checks for claims with no reply, not in a sleeping Run.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w01`, the file `aops/<agent-id>.md`, and the change request: \"split at Step 6. Keep Steps 1–5 in the intake Agent and end with a handover or queue entry. Move Steps 9–14 into a reply-handling Agent, and turn Steps 7–8 into a time-based follow-up check.\" The queue and trigger setup in Duvo is a separate change for you to make in the app.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8375,
+    "input_tokens": 2,
+    "output_tokens": 939,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9056
+}

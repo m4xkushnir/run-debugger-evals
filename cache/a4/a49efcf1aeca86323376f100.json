@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.00088609,
+  "created_at": "2026-10-29T11:27:16+00:00",
+  "duration_api_ms": 7373,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "a49efcf1aeca86323376f100",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak.\n\n**Where it went wrong**\nStep 2 of the AOP. The case was already claimed in Step 1 (`claim_case` returned the title \"Invoice from Brenntag CZ\"), so the Run had a single invoice to work on. Step 2 ignored that and told the Agent to process all pending supplier invoices in the inbox. The Agent then ran a 47-message search at [3]–[4], started working through the whole batch at [5]–[6], and hit the 30-minute limit after 19 bills. The case was never closed by the AOP, so the platform marked it Failed.\n\n**Evidence**\n- AOP Step 2: \"use **Gmail** to process all pending supplier invoices in the AP inbox\"\n- Transcript [4]: `{\"count\": 47}`\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n\n**Fix**\nRewrite Step 2 so it handles only the claimed invoice: \"Using the claimed case's invoice (the email identified by the case), extract the fields and create one vendor bill in NetSuite.\" Remove the inbox-wide search. The platform runs the Agent once per case, so it will iterate over the 47 invoices without the Agent looping over them.\n\n**Next step**\nBefore any retry, check NetSuite for the 19 vendor bills already created. A re-run that doesn't skip them would create duplicates. Then I can hand this to `aop-writer` with Build `bld_b01` and the change request above, and it will edit the AOP file for this Agent. The remaining 28 invoices will need to come through the queue once the fix is live.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 955,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1243,
+    "thinking_tokens": 661
+  },
+  "variant": "main",
+  "wall_ms": 9249
+}

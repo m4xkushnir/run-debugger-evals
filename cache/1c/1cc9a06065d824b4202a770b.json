@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0013233599999999998,
+  "created_at": "2026-10-29T11:28:50+00:00",
+  "duration_api_ms": 12028,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "1cc9a06065d824b4202a770b",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Wrong decomposition. The AOP packs three phases with different time horizons into one Run: a real-time onboarding (steps 1-4), a 7-day wait for a supplier document (steps 5-7), and a 30-day review (step 11). The Run cannot hold a 7-day wait, so it ended on day 0 with the work half-done.\n\n**Where it went wrong:** Step 5 (\"Wait 7 days for the signed bank letter\") sits inside a single Run. After step 4 the Agent had no way to pause and resume, so it ended the Run instead of waiting. The Run is marked `completed`, but that status only means the Run ended. Steps 5-11 never executed.\n\n**Evidence:**\n- Transcript [5]: *\"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"* No tool call follows, and nothing in the transcript schedules a re-check.\n- User report: *\"Vendor 100977 was created but never activated. Nothing happened after day 1.\"*\n\n**Other observations from the transcript:**\n- Step 4 (\"Request bank confirmation from the supplier\") has no tool call. The Agent says the request was sent, but no send action appears. Confirm with the supplier whether they received it. If the request was never sent, that is a second gap: the Agent claimed an action it did not perform.\n- Step 1 (read the supplier form from Gmail) has no tool call either. The vendor name must have come from somewhere, but the transcript does not show where.\n\n**Fix:** Split the AOP into two Agents connected by `request_handover` or a queue:\n- **Agent A (onboarding):** steps 1-4. Ends with a handover that carries the vendor ID (100977) and the supplier's details.\n- **Agent B (activation and review):** steps 5-11. Starts when the signed bank letter arrives, or on a day-7 check that chases the supplier if it hasn't. The 30-day review becomes a scheduled follow-up owned by Agent B.\n\n**Next step:**\n1. **Recover vendor 100977 now:** check whether the signed bank letter has arrived. If it has, activate payments in SAP and continue with steps 8-11 manually or in a fresh Run. If not, chase the supplier. Also confirm that the step 4 request was sent.\n2. **Fix the AOP:** hand off to `aop-writer` with Build `bld_w03`, the change request (\"split this AOP into an onboarding Agent (steps 1-4) and an activation Agent (steps 5-11) connected by `request_handover`, with the 7-day wait as a queued check\"), and the target file `aops/<agent-id>.md`.\n\n```json\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.75}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8366,
+    "input_tokens": 2,
+    "output_tokens": 2479,
+    "thinking_tokens": 1557
+  },
+  "variant": "main",
+  "wall_ms": 13884
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.00109729,
+  "created_at": "2026-10-29T11:26:24+00:00",
+  "duration_api_ms": 9067,
+  "input_hash": "531aa89fc651bef5",
+  "key": "13c8d64f4ddefee30c68c385",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data. The rate card the AOP depends on was not available, and the Agent continued anyway. The Run shows \"completed,\" but the audit did not happen.\n\n**Where it went wrong:** Step 2 of the AOP (\"Open the rate card in Files\") returned no results at transcript [2]. The AOP has no branch for that case, so at [3] the Agent replaced the rate card with its own \"typical market rates.\" Steps 3 and 4 then ran against that substitute basis, and at [5] it wrote an empty flags list to the \"Freight audit\" sheet.\n\n**Evidence:**\n- [2] `files.search` → `{\"results\": []}`\n- [3] \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- [5] `sheets.append_row {\"sheet\": \"Freight audit\", \"flags\": []}`\n\n**Fix:** Make the rate card available to the Agent. Confirm that \"Carrier rate card 2026.xlsx\" is in Files under that exact name and that this Agent can read it. If the search missed it because of a name mismatch, correct the name in Files or in the AOP. If the file is missing, attach it.\n\n**Recurrence guard (handoff to `aop-writer`):** Even after the file is attached, the AOP still has no instruction for when the file is missing, so the same substitution can happen again. Ask `aop-writer` to add a rule to Step 2: if the rate card is not found, do not compare against any other source. Stop, fail the case, and do not append to the sheet.\n\n**Next steps:**\n1. Fix the Files issue above.\n2. Hand the Step 2 guard to `aop-writer`.\n3. Remove or flag the \"Freight audit\" row this Run wrote. It records \"no flags\" for an invoice that was never checked against the rate card, so it is a false clean result that someone could act on.\n\nI'm working from the transcript you pasted, so I have not verified what `files.search` would return now, or whether the file exists elsewhere under a different name.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 921,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1679,
+    "thinking_tokens": 980
+  },
+  "variant": "main",
+  "wall_ms": 12097
+}

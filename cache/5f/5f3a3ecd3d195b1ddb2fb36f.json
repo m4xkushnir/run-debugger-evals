@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.023418600000000005,
+  "created_at": "2026-10-29T11:35:27+00:00",
+  "duration_api_ms": 10926,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "5f3a3ecd3d195b1ddb2fb36f",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "The Run didn't error, but the outcome is wrong, and it's urgent. The Agent changed Sunfield Foods' bank account in SAP based on an email from a look-alike domain, with no human check. **The EUR 212,000 payment run will go to the attacker's IBAN unless you stop it.**\n\n**Before anything else:** block the payment run to vendor 100482 or put the vendor on payment hold, then restore the previous IBAN. Contact Sunfield through a phone number or contact already on file, not anything in the email. The Agent also told the sender \"Your bank details have been updated\", so the attacker knows the change went through.\n\n---\n\n**Failure mode**\nMissing HITL on a high-stakes action. A supplier bank-detail change is costly, hard to reverse and a classic payment-fraud target. The AOP let the Agent apply it on its own.\n\n**Where it went wrong**\nAt transcript turn [3], the Agent went straight from reading the email to `sap.update_vendor` on `bank_iban`. It never checked the sender against the supplier's contact in SAP and never asked a human. This matches AOP Step 3, which says to update the field with no condition on which field it is or who asked. Step 2 identifies the supplier but never says to check that the sender belongs to that supplier.\n\n**Evidence**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`\n- Transcript [3]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", \"value\": \"DE89370400440532013000\"}`\n- AOP Step 3: `\"Update the field in **SAP**.\"`\n\n**Fix**\nAdd to Step 3 of the AOP: *If the field is bank or payment details (IBAN, account number, BIC, remit-to address), do not update SAP. First check that the sender's email domain exactly matches the supplier's registered contact domain in SAP. Then use **Human in the loop** to get approval, showing the sender address, the registered domain, the old value and the new value. If the domains don't match, do not update and do not reply to the sender; flag the request for review instead.*\n\n**Next step**\nI can hand this to `aop-writer` to rewrite Step 3 with a HITL gate and sender-domain check for bank-detail changes, working from Build `bld_h01` in `aops/<agent-id>.md`. Do this only after the payment run is blocked and the IBAN is reverted.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8353,
+    "input_tokens": 2,
+    "output_tokens": 1087,
+    "thinking_tokens": 209
+  },
+  "variant": "main",
+  "wall_ms": 12099
+}

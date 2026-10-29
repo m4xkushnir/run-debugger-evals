@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.00069299,
+  "created_at": "2026-10-29T11:32:41+00:00",
+  "duration_api_ms": 6368,
+  "input_hash": "1c85333d7be4398e",
+  "key": "9dadc3a23b43276ec48590ec",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Not a failure. The Run did what the AOP specifies. Step 2 says that if the PO is already marked received in SAP, the Agent should call `complete_case` and stop, without emailing the supplier.\n\n**Where it went wrong:** Nothing went wrong. The decision point is transcript [4]–[5]. SAP returned the PO as received, so the Agent took the early-exit branch of Step 2 instead of the chase branch in Step 3.\n\n**Evidence:**\n- Transcript [4]: `sap.get_po: {\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n\n**Fix:** None to the AOP or Setup. The branch behaved as written. If the supplier should have been chased, the problem is the SAP record, not the Agent. Check whether PO-61204's receipt is correct in SAP. A wrong \"received\" status would make the Agent skip a delivery that is still outstanding.\n\n**Next step:** Verify the SAP receipt for PO-61204 (received 2026-10-27). If it is accurate, no action is needed. If it is wrong, correct it in SAP and rerun the case. I can also check the case's history if you want to confirm that no earlier Run chased this supplier.\n\n```json\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 977,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 848,
+    "thinking_tokens": 340
+  },
+  "variant": "main",
+  "wall_ms": 7660
+}

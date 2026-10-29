@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.00111759,
+  "created_at": "2026-10-29T11:27:55+00:00",
+  "duration_api_ms": 9006,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "f38df1d9b876f250002aebea",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Batch / iteration leak. The Run completed without an error, but the AOP told each per-store case to process the whole fleet, so the outcome is wrong.\n\n**Where it went wrong:** Step 2 of the AOP, and the Snowflake query at transcript [3]. `claim_case` at [2] returned the case's store (`CZ-007`), but the Agent ignored it and queried `\"scope\": \"all stores\"`. It then submitted 412 lines across all 60 stores at [6] and [7].\n\n**Evidence:**\n- AOP Step 2: \"Use **Snowflake** to check **every store's** stock level and reorder anything below minimum\"\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [5]: \"Reordering 412 lines across 60 stores.\"\n\nBecause 60 cases ran, each one repeated the fleet-wide reorder, so the Replenishment portal likely holds up to 60 × 60 = 3,600 orders instead of one store's worth. Each case also closed as Completed, so the platform shows no error.\n\n**Fix:** Change AOP Step 2 to scope the work to the store the case was claimed for:\n\n> 2. Take the store from the `claim_case` result. Check that store's stock level in **Snowflake** and reorder only the items below minimum in the **Replenishment portal**.\n\n**Next step:**\n1. **Now, outside Duvo:** pause this Agent's queue so no more cases run, then cancel the duplicate orders in the Replenishment portal. Keep only each store's own below-minimum lines. I can't do this from here, and the correct cleanup depends on which orders were genuinely needed.\n2. Hand off to `aop-writer` with Build `bld_b03` and the file `aops/<agent-id>.md` to apply the Step 2 change above. Then re-run one case and confirm `snowflake.query` is scoped to the claimed store.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 990,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1692,
+    "thinking_tokens": 1008
+  },
+  "variant": "main",
+  "wall_ms": 11496
+}

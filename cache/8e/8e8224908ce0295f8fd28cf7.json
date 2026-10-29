@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0092979,
+  "created_at": "2026-10-29T11:26:57+00:00",
+  "duration_api_ms": 7447,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "8e8224908ce0295f8fd28cf7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Missing data. The AOP's Step 2 depends on the Setup input `safety_stock_days`, which was not set. The Run completed \"successfully\" with a silently degraded calculation, so the Run status hides the failure.\n\n**Where it went wrong** — Transcript turn [3], at the decision point before the calculation in AOP Step 2. The Agent found the input empty and defaulted it to 0 instead of stopping. That removed the whole safety-stock term, so the order only covered expected demand and left no buffer for variance. Turn [4] then produced a 34-unit order that left the store with essentially no cushion, consistent with the Thursday stockout.\n\n**Evidence**\n- Transcript [3]: `\"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"`\n- Transcript [4]: `\"SKU-1101: 294 + 0 - 260 = 34 units.\"`\n- AOP Step 2: `\"Order quantity = forecast weekly demand + (daily demand × Setup input safety_stock_days) − current stock.\"`\n\nWith daily demand of 42 and a typical safety stock of a few days, the buffer would have added roughly 42 × N units. The AOP never says what to do when the input is absent, so the Agent made up a default.\n\nNote: the \"294\" weekly demand (42 × 7) is a naive extrapolation of daily demand, not a forecast. The AOP says \"forecast weekly demand\", but Step 1 only reads sales and stock, and no forecast is shown in the transcript. I can't confirm from the data given whether this contributed to the stockout, so I treat it as secondary and not the root cause.\n\n**Fix** — Set the `safety_stock_days` Setup input to the intended value for this Agent (the one missing artifact). Setting it is the immediate repair. To keep this from recurring silently, the AOP also needs an explicit empty-input rule, which is a follow-up AOP change, not a second root cause.\n\n**Next step** — Set `safety_stock_days` in Setup for this Agent, then I can invoke `aop-writer` with Build `bld_d02` and the change request: \"In Step 2, if `safety_stock_days` is not set, do not default it; call `fail_case` / stop and use **Human in the loop** to request the value before submitting any order.\" The AOP file to edit is `aops/<agent-id>.md`. I don't have the Agent ID in what you shared, so that path needs filling in.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8339,
+    "input_tokens": 2,
+    "output_tokens": 846,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9714
+}

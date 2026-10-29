@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.00041307000000000003,
+  "created_at": "2026-10-29T11:24:22+00:00",
+  "duration_api_ms": 4305,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "08b2954aa6002b0d08f5eb99",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing terminal closure. The AOP's exception branch ends after the Slack post, so the Run finished without a terminal action, and the platform settled the case.\n\n**Where it went wrong:** Step 2, the \"PO not found\" branch. The Agent posted to #ap-exceptions at message [5] and then the Run ended at [7] with no `fail_case`, `postpone_case`, `request_handover`, or `complete_case`. Step 4 (`complete_case`) was never reached on this branch, and the AOP never says what to do with the case after the exception is raised.\n\n**Evidence:**\n- AOP Step 2: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions.\" (no terminal action)\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case evaluation: \"Invoice was never posted, but the case shows Completed.\"\n\n**Fix:** In AOP Step 2, add a terminal action to the not-found branch: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions, then call `fail_case` with reason 'PO-778812 not found in NetSuite'.\" Use `postpone_case` instead if the PO may appear later.\n\n**Next step:** Hand the Build `bld_t01` and this change to `aop-writer` to rewrite Step 2 in `aops/<agent-id>.md`. Then re-run case `case_t01` to confirm it closes with a real outcome.\n\nThe case reads as \"Completed\" because the platform auto-completes a case on a clean run end. The evaluation flagged the critical issue because the invoice was never posted. The Run was clean, so the platform's default closure was applied rather than an Agent decision. A `fail_case` on this branch would have made the outcome match what actually happened.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8437,
+    "input_tokens": 2,
+    "output_tokens": 657,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7609
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.00083749,
+  "created_at": "2026-10-29T11:32:42+00:00",
+  "duration_api_ms": 6000,
+  "input_hash": "1c85333d7be4398e",
+  "key": "36fa5eedf9db90ec0ed18997",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Not a failure. The Run completed correctly and followed the AOP as written.\n\n**Where it went wrong:** Nothing went wrong in the Run. At step 2 the Agent checked PO-61204 in SAP and found it already received, so the AOP's first branch applied: call `complete_case` and stop. Step 3, the Gmail email to the supplier, only runs when the PO is not received. It was correctly skipped.\n\n**Evidence:**\n- AOP step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [4]: `sap.get_po` returned `{\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n\n**Fix:** None to the AOP, Connections, or Setup. The Agent behaved as designed.\n\nOne thing to check, though. The AOP's GOAL is to chase a supplier whose delivery is *not yet received*, so this case should arguably not have been in the queue. Either the case was created for a PO that had already been received, or SAP's status is wrong or stale. Confirm PO-61204's receipt status in SAP directly. If SAP is correct, the question is why the case was created, which is an intake or queue-logic issue rather than a Run failure. If SAP is wrong, that is a data problem to fix in SAP.\n\n**Next step:** Verify PO-61204 in SAP. If the receipt is real, no action is needed on the Agent. If you want, I can help trace how case_n02 was created.\n\n```json\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 977,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1137,
+    "thinking_tokens": 578
+  },
+  "variant": "main",
+  "wall_ms": 7318
+}

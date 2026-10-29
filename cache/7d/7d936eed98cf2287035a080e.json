@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A03",
+  "cost_usd": 0.0011884200000000001,
+  "created_at": "2026-10-29T11:37:48+00:00",
+  "duration_api_ms": 9714,
+  "input_hash": "d5a2c038d277510f",
+  "key": "7d936eed98cf2287035a080e",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. The Run finished without a platform error, but it took the wrong branch because Step 2 gives no threshold.\n\n**Where it went wrong:** Step 2 of the AOP, \"If quantities don't match, handle it appropriately.\" Any mismatch triggers the same undefined branch, so the Agent chose its own action at [2]. The 5% rule your team uses lives outside the AOP, so the Agent could not apply it. The shortfall is 20 of 500 units, which is 4%, under your threshold, so the correct action was a WMS adjustment.\n\n**Evidence:**\n- AOP Step 2: \"If quantities don't match, handle it appropriately.\"\n- Transcript [2]: \"I'll handle it by asking the supplier to explain the shortfall.\"\n- Transcript [3]: `gmail.send_message {\"to\": \"edi@supplier.example\", ...}`, which sent an external email with no human checkpoint.\n\n**Fix:** Replace Step 2 with an explicit threshold rule:\n\n> 2. Compare DESADV and PO quantities per SKU. If the difference is under 5% of the PO quantity, adjust the received quantity on the goods receipt in the WMS and do not contact the supplier. If the difference is 5% or more, [action to be specified].\n\nThe transcript shows no WMS Connection, so confirm the Agent has one before this change goes live. The ≥5% branch also needs a concrete action. I'd gate any external email to the supplier behind a Human-in-the-loop checkpoint, since this Run sent one with no approval. That is a judgment call for you to confirm.\n\n**Next step:** Hand this to `aop-writer` with:\n1. Build ID `bld_d03`, so it works from the AOP that ran.\n2. The change request: \"Rewrite Step 2 to add the 5% rule above: under 5%, adjust on the WMS goods receipt without contacting the supplier; 5% or more, [your action].\"\n3. The AOP file, `aops/<agent-id>.md`. You didn't give me the Agent ID, so please supply it.\n\nSeparately, the email to edi@supplier.example has already been sent and can't be unsent. Someone should decide whether to follow up with the supplier or let it stand. The Slack post says \"Asked supplier\", so the #inbound channel is accurate about what happened, but it does not reflect the correct handling.",
+  "usage": {
+    "cache_creation_input_tokens": 1000,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1833,
+    "thinking_tokens": 1046
+  },
+  "variant": "no_json",
+  "wall_ms": 10785
+}

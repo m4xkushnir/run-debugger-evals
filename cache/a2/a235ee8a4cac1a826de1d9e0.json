@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.010536100000000001,
+  "created_at": "2026-10-29T11:25:59+00:00",
+  "duration_api_ms": 9422,
+  "input_hash": "89b60f1887533656",
+  "key": "a235ee8a4cac1a826de1d9e0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action. The Run technically completed and every tool call succeeded. The problem is that a costly, externally visible, hard-to-reverse action (a 30% price cut across 140 stores) was applied autonomously with no human checkpoint.\n\n**Where it went wrong**\nBetween transcript turns [2] and [3], and in AOP Step 2. The Snowflake result came back as a single aggregate (`\"rows\": 38, \"markdown_pct\": 30`). The Agent passed that figure straight into `pricing.apply_markdown` for all stores, with no check on whether the number was plausible. The AOP has no validation, no threshold, and no approval gate between reading the data (Step 1) and writing prices (Step 2). Step 2 also says \"for all stores\", so the blast radius was the whole chain at once.\n\n**Evidence**\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`\n- Transcript [4]: `{\"updated_prices\": 5320}`, which shows the change went live immediately.\n- Your report: \"The recommendation table had a bad row; 30% went live in every store before anyone looked.\"\n\nThe bad upstream row is the trigger, but the root cause is that nothing in the AOP would have caught it. The Agent did what the AOP said. Note that I can't see the 38 individual rows from the transcript, so I can't confirm which row was bad or how it produced 30%. That doesn't change the diagnosis: whatever the data error was, a gate would have given a human the chance to see it before it went live.\n\n**Fix**\nAdd a Human in the loop checkpoint between Steps 1 and 2 of the AOP, with a concrete rule. For example: *\"Before applying, use **Human in the loop** to show the category, the markdown %, and the store count, and wait for approval. If markdown_pct > 20, always require approval.\"* The exact threshold is yours to set, but it should be a number, not \"use judgment\". A secondary hardening would be to have Step 1 surface per-row values so the approver sees the outlier, but the single HITL gate is the one change that addresses the root cause.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_h02`, the file `aops/<agent-id>.md`, and the change request: \"Add a Human in the loop approval gate between Step 1 and Step 2 requiring approval when markdown_pct exceeds [threshold], showing category, percentage, and store count.\" Please confirm the threshold you want, and I'll hand it off. Separately, the 5,320 prices already updated will need to be reverted in the Pricing system, which is outside what I can do here.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 970,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11827
+}

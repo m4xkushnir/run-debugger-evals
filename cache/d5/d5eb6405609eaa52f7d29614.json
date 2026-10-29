@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.007563499999999999,
+  "created_at": "2026-10-29T11:24:50+00:00",
+  "duration_api_ms": 5794,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "d5eb6405609eaa52f7d29614",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure (queue-driven Run ended without a terminal action on the \"supplier asked for more time\" branch). Secondary: the AOP has no rule for what happens next after a delay is noted.\n\n**Where it went wrong**\nAfter transcript turn [6]–[7], the Run ended. The AOP's Step 2 branch (\"If the supplier has replied asking for more time: note the new date in the thread\") is a dead end. It never says to skip Step 3 and never says to `postpone_case` until the new date. The Agent did exactly what Step 2 said, then stopped at [7] without reaching Step 3 (Gmail) or Step 4 (`update_case` / `complete_case`). No terminal action was called, so the platform settled the case itself.\n\n**Evidence**\n- AOP: \"If the supplier has replied asking for more time: note the new date in the thread.\"\n- Transcript [7]: \"Noted the new date of 12 Nov in the thread.\"\n- Case state: \"Completed — reason: auto-completed on clean run end\"\n\nThe case looks healthy (Completed, Run \"completed\"), but that was the platform's settlement, not the Agent's. The date 12 Nov lived only in a Slack message, so nothing re-triggered the PO on that date and it dropped out of the reminder chain.\n\n**Fix**\nIn the AOP, change the Step 2 branch to end in a terminal action, e.g.: *\"If the supplier has replied asking for more time: note the new date in the thread, then call `postpone_case` with the new date as the resume time, and stop. Do not send the reminder.\"*\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t02` and the file `aops/<agent-id>.md` to make this edit to Step 2. Separately, PO-55120 needs a manual follow-up with Textima now, since 12 Nov has passed and the case was auto-completed rather than postponed.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8395,
+    "input_tokens": 2,
+    "output_tokens": 672,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8053
+}

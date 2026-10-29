@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.029675800000000002,
+  "created_at": "2026-10-29T11:35:53+00:00",
+  "duration_api_ms": 11085,
+  "input_hash": "0af3d12c460cedff",
+  "key": "cfc0f8aa8f0c91278bdd7b20",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "## Failure mode\n\n**Batch / iteration leak.** The AOP tells one Run to process every open approved return. Two Runs started 2 minutes apart, one scheduled and one from manual **Start Work**. Each read the same sheet and worked through the same rows, so 9 customers were refunded twice.\n\nThe Run shows `completed` because each Stripe call succeeded. The failure is the duplicate money movement, not an error.\n\n## Where it went wrong\n\n- **AOP Step 1**: \"for each open return marked 'approved'\". This makes the Run iterate over the whole sheet rather than handle one return.\n- **Transcript [1]–[3]**: the Agent reads all approved rows (`{\"rows\": 12}`) and starts a batch (\"Refunding 12 approved returns.\"). Nothing claims or locks a row before the refund is issued. Each row is only set to \"refunded\" after its refund, so the overlapping Run saw the same rows as still \"approved\".\n- **Transcript [5]–[6]**: Stripe reported \"a refund for this charge already exists (created 2 min ago)\". The Agent kept going (\"Continuing with the remaining 11 rows.\"). The AOP has no branch for this, so the Agent treated it as success. This is a secondary symptom. The root cause is the batch shape.\n\n## Evidence\n\n- AOP Step 1: *\"for each open return marked \"approved\", issue the refund in **Stripe** and set the row to \"refunded\".\"*\n- Transcript [5]: *\"a refund for this charge already exists (created 2 min ago)\"*\n\n## Fix\n\nRewrite the AOP so **one Run handles one return**. Each approved return becomes a case on a queue, and the platform does the iterating. The AOP should then:\n\n1. Check the case's row is still \"approved\".\n2. Issue the Stripe refund.\n3. Set the row to \"refunded\".\n4. End with `complete_case`.\n5. Use `fail_case` if Stripe reports an existing refund for the charge.\n\nWith a queue, a schedule run and a manual **Start Work** can no longer both pick up the same return.\n\n## Next step\n\nI can hand this to `aop-writer` with:\n\n- **Build:** `bld_b02`.\n- **Change request:** \"Rewrite the AOP to refund a single return per Run (queue case), recheck the row is still 'approved' before refunding, and `fail_case` when Stripe reports a refund already exists.\"\n- **File:** `aops/<agent-id>.md`.\n\nSeparately, the 9 double refunds already issued need manual reversal or reconciliation in Stripe.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 915,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1044,
+    "thinking_tokens": 164
+  },
+  "variant": "main",
+  "wall_ms": 12136
+}

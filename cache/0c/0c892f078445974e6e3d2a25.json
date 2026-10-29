@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.0083461,
+  "created_at": "2026-10-29T11:26:00+00:00",
+  "duration_api_ms": 6830,
+  "input_hash": "89b60f1887533656",
+  "key": "0c892f078445974e6e3d2a25",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Missing HITL on a high-stakes action. The Run did not error (status `completed`); it did exactly what the AOP said, and the AOP had no checkpoint before a costly, chain-wide price change.\n\n**Where it went wrong** — Between transcript [2] and [3]. The Agent received a single `markdown_pct: 30` for 38 rows, then applied it across all 140 stores with no validation or human review. This maps to AOP Step 2, which commits the price change straight after Step 1's read. A secondary contributor is that Step 1 never tells the Agent how to treat one recommendation row that is out of line. The bad row in the table was the trigger, but the missing gate is why it reached live prices.\n\n**Evidence**\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`, followed by [4] `{\"updated_prices\": 5320}`\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n\nThe transcript shows the query returning only an aggregate (`\"rows\": 38, \"markdown_pct\": 30`), so I can't see which row was bad or how 30 was derived from 38 rows. I'm not going to guess at that.\n\n**Fix** — Edit AOP Step 2 to add a gate before the Pricing call, for example: *\"If the markdown is above [your threshold, e.g. 20%], or the category touches more than [N] stores, use **Human in the loop** to confirm the percentage and store scope before applying. Do not call Pricing until it is approved.\"* The threshold is your business decision. Pick the value that matches how much markdown you're willing to see go live unreviewed.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_h02`, the change request \"add a HITL gate above a markdown threshold before Step 2,\" and the AOP file `aops/<agent-id>.md`. Separately, the price change is already live in 140 stores (5,320 prices updated), so someone should check whether those prices need to be reverted in the Pricing system. This diagnosis can't do that for you.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 751,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9681
+}

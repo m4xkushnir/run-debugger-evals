@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.00126371,
+  "created_at": "2026-10-29T11:28:35+00:00",
+  "duration_api_ms": 12773,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "b2dc6c80a214451ebb810a2c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Batch / iteration leak. The AOP has the Agent work through all 17 underperforming suppliers inside one Run, and the Enterprise Browser session ran out partway through that loop.\n\n**Where it went wrong:** AOP Step 3, at supplier 9 of 17 (transcript [5]–[7]). The Agent signed in to Agrofert's portal, the `browser.login` call failed, and the Run ended there.\n\n**Evidence:**\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\nThe session wasn't a Connection credential problem. It was a session lifetime problem. A single browser session lasting 55 minutes is not enough for 17 sequential portal sign-ins and downloads, and the AOP gives the Agent no re-authentication step and no per-supplier boundary. The Agent was doing a batch job that the platform should be iterating over.\n\n**Fix:** Change Step 3 so the Agent handles one supplier per case. Each supplier under 90% becomes its own queue item, and the Agent signs in to that one portal, downloads its open-order status, and closes the case with `complete_case` or `fail_case`. Each portal then gets a fresh session. The Agent no longer loops over the list.\n\n**Next step:**\n- Before re-running, check three things. Earlier portal logins are not visible in this transcript, which starts at [1] and only shows the Agrofert attempt, so confirm whether portals 1–8 downloaded anything. The Run also wrote the W43 scorecard tab at [3], so a re-run could create a duplicate. No Gmail calls appear in the transcript, so no supplier emails appear to have gone out. Confirm that against the sent folder.\n- I can hand this to `aop-writer` with Build `bld_w02`, the change request \"split Step 3 into a per-supplier queue item,\" and the AOP file `aops/<agent-id>.md`.\n- If the Enterprise Browser session still expires after a clean re-login on a single-supplier run, reclassify this as platform/infra and send it to Duvo support with run_w02, bld_w02, and the exact error.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8451,
+    "input_tokens": 2,
+    "output_tokens": 2358,
+    "thinking_tokens": 1563
+  },
+  "variant": "main",
+  "wall_ms": 14613
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0099801,
+  "created_at": "2026-10-29T11:23:25+00:00",
+  "duration_api_ms": 10298,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "6c1f5a3e797e56b6c28e19bd",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing data / wrong credential. The Login attached to the Agent (`Alpenfrisch portal`) is the CZ service account, but the Run was for an AT store. This is a Setup/Login mismatch rather than a Connection outage or a platform fault.\n\n**Where it went wrong**\nStep 2 of the AOP signed in successfully, but with the wrong account for the store's market. At the first market-dependent action in Step 3 (\"choose the store's market\"), the portal rejected AT. The AOP assumes that whichever Login is attached is authorised for every market, and it has no branch for a market the account can't access. The error summary \"access denied\" is the symptom; the root cause is the account/market mismatch upstream.\n\n**Evidence**\n- `[3] browser.login: Signed in as svc-replen-cz@retailco.eu`\n- `[5] browser.select: Page message: \"Access denied: this account is not authorised for market AT.\"`\n- Context: Login 'Alpenfrisch portal' is the CZ service account svc-replen-cz.\n\nLogin worked, so this isn't an expired credential. The portal's authorisation is per market, and the account is scoped to CZ.\n\n**Fix**\nGive the Agent a Login that is authorised for market AT (or a portal account covering all markets the Agent serves), and make the AOP choose the Login by market. Concretely, in Setup add an AT-authorised Login, and change Step 2 to: \"Sign in with the Login for the store's market (CZ → *Alpenfrisch portal CZ*, AT → *Alpenfrisch portal AT*).\" The minimal single-artifact change is the Login in Setup: the portal account needs AT authorisation. I'm not certain whether the portal supports multi-market accounts, so confirm with the portal admin. If the AOP stays as written, the same failure will recur for every non-CZ store.\n\nA secondary gap: the AOP has no failure branch. The Agent ended with plain text, \"The order was not placed\", with no escalation. If this Agent is queue-driven, add a `fail_case` or `request_handover` on access-denied. The transcript doesn't show a case, so I haven't assumed one.\n\n**Next step**\nFirst, have someone with portal admin rights grant svc-replen-cz access to market AT, or create an AT-authorised Login in Setup. Then I can invoke `aop-writer` with Build `bld_51e` and the request: \"In `aops/<agent-id>.md`, change Step 2 to select the Login by the store's market, and add a step that stops and requests handover if the portal denies access to a market.\" Store AT-114's order still needs to be placed once access is fixed.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8361,
+    "input_tokens": 2,
+    "output_tokens": 914,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 13877
+}

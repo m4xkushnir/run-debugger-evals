@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.008136099999999999,
+  "created_at": "2026-10-29T11:22:37+00:00",
+  "duration_api_ms": 6114,
+  "input_hash": "904fcbb04475a734",
+  "key": "1960342259de7fcc558446dc",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Connection failure (expired/revoked OAuth token on the Gmail Connection \"AP inbox\").\n\n**Where it went wrong** — At transcript turn [2], on the very first action. Step 1 of the AOP (\"Use **Gmail** to find the newest unread email in the AP inbox…\") called `gmail.search_messages`, and Gmail rejected the token. The Run never reached Step 2 (PDF extraction) or Step 3 (NetSuite). The root cause is upstream of the tool call: the Connection's authorisation lapsed, and the AOP has no branch for an auth failure.\n\n**Evidence**\n- Transcript [2]: `ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: Gmail Connection 'AP inbox' last authorised 2026-07-30, 91 days before this Run.\n\nCaveat: the 91-day gap fits an expired or revoked refresh token, but I can't tell from the data which one it was (e.g. a Google-side policy, a password change, or a manual revoke). Either way the remedy is the same.\n\n**Fix** — Reauthorise the Gmail Connection 'AP inbox' in Setup so it gets a fresh token. This is the one change that unblocks the Run. If it fails again straight after a clean reauthentication, that would point to a platform issue instead and should go to Duvo.\n\n**Next step** — Reauthorise the 'AP inbox' Connection in Setup, then Start Work again. Because today's date is 2026-10-29, a Connection authorised 2026-07-30 has also been silently dead for any Runs in between, so it's worth checking recent Runs of this Agent for the same 401. Optionally, once the Connection is healthy, I can hand off to `aop-writer` to add a step to the AOP for what to do on a Gmail auth error (e.g. use **Human in the loop** to notify the AP owner), so a lapsed token is surfaced rather than ending as a plain failed Run. That is a hardening step, not the cause of this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 730,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10557
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.0010288200000000002,
+  "created_at": "2026-10-29T11:39:31+00:00",
+  "duration_api_ms": 15806,
+  "input_hash": "1c85333d7be4398e",
+  "key": "831adccb193625ffea00725e",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** None. The Run did not fail. It completed as the AOP specifies. The Agent found the PO already received and took the early exit. No taxonomy category applies.\n\n**Where it went wrong:** Nothing went wrong in the Agent's logic. The case was routed to a supplier whose delivery SAP already records as received. Step 2 of the AOP is designed for exactly that case, and it sends the Agent straight to `complete_case` without emailing. The step 3 email only runs when SAP shows the PO is not received.\n\n**Evidence:**\n- Transcript [4]: `sap.get_po: {\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n- AOP step 2: \"If it is already marked received: call `complete_case` and stop.\"\n\n**Fix:** No change to the AOP is needed for this Run. Confirm the data instead:\n- If the delivery really was received on 2026-10-27, the correct outcome is no email, and the Run is working as intended.\n- If you expected a chase, check the PO's receipt record in SAP. The Agent trusted the `received` status, so an incorrect or partial receipt in SAP would produce exactly this result. That fix belongs in SAP, not the Agent.\n- If the case should never have reached this Agent, the problem is upstream in how cases are queued or filtered. That's a queue-configuration change, not an AOP change.\n- Only if you want the Agent to chase even when SAP shows a receipt would the AOP need a rewrite, for example adding a check that the received date falls after the expected delivery date. Don't make that change unless it's the intended behaviour, because it would send chasers for deliveries that have arrived.\n\n**Next step:** Check PO-61204's receipt record in SAP. If it shows a full receipt dated 2026-10-27, close this out as expected behaviour. If the receipt looks wrong or partial, tell me what SAP shows and I'll work out the next step. If you want to change the AOP, I can hand it to `aop-writer` with the specific change.",
+  "usage": {
+    "cache_creation_input_tokens": 977,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1523,
+    "thinking_tokens": 827
+  },
+  "variant": "no_json",
+  "wall_ms": 16837
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.00125639,
+  "created_at": "2026-10-29T11:34:00+00:00",
+  "duration_api_ms": 10587,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "d98e0e63a06587ddfa1ebc52",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (transient upstream 5xx from Gmail). The case reading \"Failed (no reason)\" comes from a second problem: the AOP has no terminal action on the error path.\n\n**Where it went wrong:** Step 3 of the AOP (email the supplier) with no error branch. The Run reached transcript [6], got a 503 from `gmail.send_message`, and at [7] the Agent stopped with a prose message. It never called `fail_case`, `postpone_case`, or `complete_case`. Because the Run errored, the platform settled the case as Failed with no reason. The NetSuite bill from step 2 was already posted at [4], so the case was left in a half-done state.\n\n**Evidence:**\n- [6] `ERROR 503 Service Unavailable: backend error, try again later`\n- [7] `Agent: Email failed with a temporary Gmail error.` (no terminal action follows)\n- [4] `{\"status\": \"posted\"}` from `netsuite.post_bill`, before the email step failed\n\n**Fix:** Change Step 3 of the AOP so the email step has an explicit failure branch:\n\n> If `gmail.send_message` returns a 5xx or any error, retry once after a short wait. If it still fails, call `postpone_case` with the reason \"Bill INV-5512 posted in NetSuite; payment-date email to ar@supplier.example not sent (Gmail 503). Resend email only; do not re-post the bill.\"\n\nThis gives the case a stated reason and makes the bill posting non-repeatable. The AP re-run happened because the case showed Failed with no explanation and nothing said the bill was already posted.\n\n**Next step:**\n- **Right now, separate from the AOP fix:** check NetSuite for the duplicate bill from the re-run and have AP reverse it. I can't do that from here.\n- **The AOP fix:** hand off to `aop-writer` with build `bld_g04` and the change request above, working in `aops/<agent-id>.md`. The agent ID wasn't in your message, so send it when you hand off.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 1004,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1964,
+    "thinking_tokens": 1251
+  },
+  "variant": "main",
+  "wall_ms": 12497
+}

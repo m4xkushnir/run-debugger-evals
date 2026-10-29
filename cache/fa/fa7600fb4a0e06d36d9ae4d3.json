@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0113219,
+  "created_at": "2026-10-29T11:30:56+00:00",
+  "duration_api_ms": 7952,
+  "input_hash": "f214809918538af8",
+  "key": "fa7600fb4a0e06d36d9ae4d3",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The 429 from Shopify is only the symptom.\n\n**Where it went wrong**\nAOP Step 2 tells the Agent to iterate the whole catalogue instead of looking up the requested products. The decision point is transcript [1], where the Agent chose to sweep all 2,300 SKUs. The Run then died at SKU-0181 [5-6], after about 180 sequential calls hit Shopify's 2 calls/second limit. The customer asked about only 3 products, so Step 1's output was never used to narrow the lookup.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix**\nRewrite AOP Step 2 so it checks stock only for the SKUs identified in Step 1 (the requested products), with no catalogue-wide loop. For example: \"For each product requested in the email (typically a handful), look up its SKU and check stock in **Shopify**. Never iterate the full catalogue.\" That is about 3 calls instead of 2,300, so the rate limit is no longer reachable in normal operation. A retry/backoff rule honouring `Retry-After` is a reasonable secondary safeguard, but it would only mask the real problem here.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, the change request \"rewrite Step 2 to check stock only for the SKUs requested in the email, not the whole catalogue\", and the target file `aops/<agent-id>.md`. I don't have the Agent ID in what you pasted, so that path needs filling in.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 961,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 674,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9421
+}

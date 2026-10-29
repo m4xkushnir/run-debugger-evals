@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.00127116,
+  "created_at": "2026-10-29T11:28:15+00:00",
+  "duration_api_ms": 11715,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "864ee8c16eb600499f1e11a6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Wrong decomposition. The AOP asks one Run to wait for days, which a single Run can't do.\n\n**Where it went wrong:** Step 6 of the AOP, \"Wait for the supplier's reply,\" with Steps 7 and 8 adding reminders at 3 and 7 days. At transcript [4), the Agent found no reply and wrote \"I'll keep checking,\" but nothing in the Run scheduled a later check. The Run then sat idle and was stopped at [5).\n\n**Evidence:**\n- Transcript [4]: \"No reply yet. I'll keep checking.\"\n- Transcript [5]: \"Run stopped after idle timeout.\"\n- AOP Step 7: \"If no reply after 3 days, send a reminder.\"\n\nThe `gmail.search_messages` result at [3] (`count: 0`) was a valid answer, not an error. The Agent handled it correctly for a single check. The problem is that the procedure has no way to span the waiting period, so the Agent had no next action once the check came back empty. The idle timeout enforced a limit that the design never accounted for, so it is not a platform fault.\n\n**Fix:** Split the AOP into two Agents:\n- **Agent A (Steps 1–5):** Read the claim, look up the delivery in SAP, download the photos, draft and send the claim email. It ends once the claim is sent, with a terminal action or `request_handover` that passes the case to Agent B.\n- **Agent B (Steps 6–14):** Runs on a queue or schedule. It checks for the supplier's reply, sends the reminder at 3 days, escalates at 7 days, then handles the credit note, tracker update, Slack notice, ServiceNow closure, and thread archive.\n\nI haven't verified whether `postpone_case` can re-queue a case for a later check. If it can, that might keep this inside one Agent, but confirm that before relying on it.\n\n**Next step:** Ask `aop-writer` to split the AOP at the boundary after Step 5, using the Build `bld_w01` and writing to `aops/<agent-id>.md`. I haven't rewritten the AOP here. To confirm the diagnosis, check whether this Run was queue-driven and whether the case's terminal state was set. You didn't include a case ID, so I couldn't check that.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 2374,
+    "thinking_tokens": 1581
+  },
+  "variant": "main",
+  "wall_ms": 13694
+}

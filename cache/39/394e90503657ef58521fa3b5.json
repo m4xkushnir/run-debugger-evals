@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.00127649,
+  "created_at": "2026-10-29T11:24:44+00:00",
+  "duration_api_ms": 10731,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "394e90503657ef58521fa3b5",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure. The Run ended with no terminal action, so the platform auto-completed the case.\n\n**Where it went wrong**\nAfter step 2 (the Slack read), the Run took the \"supplier asked for more time\" branch, posted the new date, and stopped at message [7]. It never reached step 3 (the Gmail reminder) or step 4 (`update_case`, then `complete_case`). The Run status is `completed` because it ended cleanly, so the platform closed the case with \"auto-completed on clean run end\" and no outcome from the Agent. From the Queue, that looks like a finished case. In practice the PO dropped out of the chain.\n\n**Evidence**\n- Transcript [4]: `\"Textima: We need until 12 Nov to ship, sorry for the delay.\"`\n- Transcript [7]: `\"Noted the new date of 12 Nov in the thread.\"`, the final message. No Gmail call, `update_case`, `complete_case`, or `postpone_case` appears anywhere after it.\n- AOP step 2: `\"If the supplier has replied asking for more time: note the new date in the thread.\"` This is the only instruction for that branch, and it has no next action. The AOP never says what the new date should trigger.\n\n**Fix**\nChange step 2 of the AOP so the \"more time\" branch ends in a terminal action. Replace the current wording with: *\"If the supplier has replied asking for more time: post the new date to the thread, then call `postpone_case` with the date from the reply and stop. Do not send the reminder on this Run.\"* This makes the Agent reschedule the case for 12 Nov instead of dropping it, and the case gets a real outcome. (If you want a reminder sent on the new date, that belongs in a separate follow-up Run triggered by the postponement.)\n\n**Next step**\nI can hand this to `aop-writer` with Build `bld_t02` and the change request above, so it rewrites step 2 in `aops/<agent-id>.md` and returns the changed passage. I'd also check the other open cases from this Agent for the same silent auto-completion, since any \"more time\" reply would have hit this branch.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1077,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1975,
+    "thinking_tokens": 1236
+  },
+  "variant": "main",
+  "wall_ms": 12932
+}

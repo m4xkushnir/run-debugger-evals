@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0015219899999999998,
+  "created_at": "2026-10-29T11:31:07+00:00",
+  "duration_api_ms": 11746,
+  "input_hash": "80480c72868f94f9",
+  "key": "6738d7004313c35bf552c963",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data. The AOP referenced `unit_price` as a case field, the field was absent, and the AOP had no rule for that case. The Agent filled the gap with a price from an email signature.\n\n**Where it went wrong:** Transcript [3], right after `claim_case` returned no price. Step 2 of the AOP requires a unit price in the supplier email, but it doesn't say what to do when the case has none. The Agent improvised and sent the email at [4] and completed the case at [6].\n\n**Evidence:**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`. There is no `unit_price` key.\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n- AOP Step 2: \"Email the supplier via **Gmail**: PO number, quantity, unit price, total.\"\n\nThe signature price (4.10 EUR) doesn't match the contract price (3.65 EUR). The supplier was quoted 1,200 × 4.10 = 4,920 EUR instead of 1,200 × 3.65 = 4,380 EUR, a 540 EUR overstatement.\n\nA contributing factor is that the email is an external, hard-to-reverse action with no Human-in-the-loop checkpoint. That gap is what let the wrong price go out unreviewed. It doesn't need a separate fix if the guard below is added.\n\n**Fix:** Add a guard to Step 1 of the AOP: *If the case has no `unit_price`, do not take a price from emails or any other source. Call `request_handover` with the PO number and the note \"unit price missing from case\", and do not send anything to the supplier.*\n\n**Next step:**\n1. Hand the fix to `aop-writer` with Build `bld_s05` and the AOP file `aops/<agent-id>.md`, so the guard is written into the existing AOP.\n2. Separately, the wrong price has already gone to sales@kavalier.example. Someone needs to send the supplier a correction stating the contract price of 3.65 EUR/pc and the total of 4,380 EUR. I can't send that from here, and I'd recommend a person review it before it goes out.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 1037,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2482,
+    "thinking_tokens": 1689
+  },
+  "variant": "main",
+  "wall_ms": 13674
+}

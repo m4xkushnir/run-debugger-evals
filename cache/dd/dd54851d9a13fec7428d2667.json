@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.012979899999999999,
+  "created_at": "2026-10-29T11:34:31+00:00",
+  "duration_api_ms": 7390,
+  "input_hash": "4a001beca9456e30",
+  "key": "dd54851d9a13fec7428d2667",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — AOP ambiguity. Step 1 doesn't say which VAT ID on the invoice to extract, so the Agent picked the wrong one. The Run's status is \"completed\", but the outcome is wrong: a bill of 8,412.00 EUR was created against our own entity.\n\n**Where it went wrong** — Transcript turn [1], extraction under AOP Step 1 (\"extract the supplier name, VAT ID and total\"). The invoice carries two VAT IDs, and the Agent took the bill-to customer's (CZ45272956, ours) instead of the supplier's (DE811203984). Step 2 then matched the vendor on that ID and returned our own entity. Turns [4]–[5] created the bill against vendor 200140 without any check.\n\n**Evidence**\n- AOP Step 1: \"extract the supplier name, VAT ID and total\"\n- Transcript [1]: \"supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\". The supplier name is right, but the VAT ID belongs to the bill-to party.\n- Transcript [3]: `\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"`. The lookup result flagged itself as our own entity, and the Agent created the bill anyway.\n\n**Fix** — Rewrite AOP Step 1 to name the supplier's VAT ID explicitly and add a guard before Step 2. For example:\n- Step 1: \"Extract the **supplier's** VAT ID, the one printed with the issuer's name and address. Never use the bill-to / customer VAT ID. Our own VAT IDs are: CZ45272956.\"\n- Step 2: \"If the vendor match is our own entity, or the supplier name and the matched vendor name don't agree, do not create the bill. Use **Human in the loop** to confirm.\"\n\nThis is one root cause with two parts in the same AOP: the ambiguous extraction and the missing sanity check on the vendor match. The own-entity VAT list could instead be a Setup input if you want to maintain it outside the AOP.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g05`, working in `aops/<agent-id>.md`, to rewrite Steps 1 and 2 as above. Separately, the bill already created against vendor 200140 in NetSuite needs to be reviewed and reversed by hand, since this skill doesn't touch it.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 953,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 843,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8567
+}

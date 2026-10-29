@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.0013395899999999999,
+  "created_at": "2026-10-29T11:27:39+00:00",
+  "duration_api_ms": 11797,
+  "input_hash": "0af3d12c460cedff",
+  "key": "25b8ab0507a0e984423cd485",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Named pattern: concurrent Runs with a non-idempotent side effect. Two Runs read the same \"approved\" rows before either wrote \"refunded\" back, so both issued refunds. This is not in the standard taxonomy. It is closest to AOP ambiguity, because the AOP has no duplicate check.\n\n**Where it went wrong:** Step 1 of the AOP, on the per-row refund loop. The AOP reads the sheet once and then refunds each row. It never re-checks the row's status or Stripe's refund state before calling `stripe.refund`, and it only writes \"refunded\" after the refund succeeds. That leaves a window in which a second Run sees the same row still marked \"approved.\" In this transcript, the first refund on #90011 (step [4]) returned a duplicate warning at step [5], and the Agent continued at step [6] without stopping or checking that row's status.\n\n**Evidence:**\n- Step [5]: `\"a refund for this charge already exists (created 2 min ago)\"`\n- Step [6]: `\"Continuing with the remaining 11 rows.\"`\n- AOP Step 1: \"for each open return marked 'approved', issue the refund in **Stripe** and set the row to 'refunded'.\"\n\n**Fix:** Change one artifact, the AOP's Step 1, so each row is checked before it is refunded:\n- \"Before refunding a row, re-read that row's status. If it is no longer 'approved', skip it. Then call Stripe. If the response says a refund already exists for the charge, do not retry or refund again. Set the row to 'refunded' and continue with the next row.\"\n\nNote that this fix alone will not stop the overlap. Two Runs can still race between the re-read and the refund. The stronger version also has the Agent set the row to a \"refunding\" status before calling Stripe, so a second Run skips it. Schedule overlap is a separate configuration question. If you want to prevent it entirely, stop the schedule from overlapping with manual Start Work, but that is a Setup change, not an AOP change.\n\n**Next step:**\n- I can hand this to `aop-writer` with Build `bld_b02` and the Agent's AOP file (`aops/<agent-id>.md`) to write the Step 1 change.\n- Separately, the 9 double-refunded customers need reconciling in Stripe now. This transcript only shows one of them (#90011). I don't have the other Runs, so I can't confirm their charges or amounts from here.\n- I also can't tell from this transcript whether the first refund was genuinely issued or whether Stripe only returned the duplicate note. The 9 customer cases will show whether money actually moved twice.\n\n```json\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 940,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2156,
+    "thinking_tokens": 1248
+  },
+  "variant": "main",
+  "wall_ms": 13945
+}

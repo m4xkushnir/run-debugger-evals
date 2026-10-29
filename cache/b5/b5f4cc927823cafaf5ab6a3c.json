@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.00085952,
+  "created_at": "2026-10-29T11:23:12+00:00",
+  "duration_api_ms": 8667,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "b5f4cc927823cafaf5ab6a3c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Connection failure (wrong account for the market). The Login in step 2 is authorised for a different market than the one the Run needed.\n\n**Where it went wrong:** Step 2, at messages [2]–[3]. The AOP hard-wires the Login \"Alpenfrisch portal\" with no check against the store's market. That Login is the CZ service account, but the run input was market AT (message [1]). The portal then rejected the AT selection at message [5].\n\n**Evidence:**\n- [3] `Signed in as svc-replen-cz@retailco.eu`\n- [5] `Access denied: this account is not authorised for market AT.`\n\n**Fix:** Point step 2 at a Login that the portal authorises for market AT. In practice that means a separate AT service account (for example, \"Alpenfrisch portal – AT\") set up in Setup, with the AT market granted by Alpenfrisch, and step 2 updated to use it. Do not change the market selection to CZ to get past the error, since that would place the order in the wrong market.\n\n**Next step:** Ask Alpenfrisch to grant market AT to an AT service account (or confirm which account they expect for AT), then update the Login in Setup. If you want the AOP to catch this earlier, I can hand off to `aop-writer` to add a step that selects the Login by the store's market and stops with a clear message if no matching Login exists.\n\nNothing was partly written: the order was not placed and no row was added to the Replenishment log, so the Run can be retried safely once the Login is fixed.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 1551,
+    "thinking_tokens": 1009
+  },
+  "variant": "main",
+  "wall_ms": 11535
+}

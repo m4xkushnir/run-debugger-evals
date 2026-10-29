@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.0076244,
+  "created_at": "2026-10-29T11:32:40+00:00",
+  "duration_api_ms": 7452,
+  "input_hash": "086079e1976a5bd5",
+  "key": "3c0768feb8e8f75a400abed3",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Not a failure. The Run is paused, waiting on a Human-in-the-loop request that nobody has answered yet.\n\n**Where it went wrong** — Nothing went wrong in the Run. At transcript turn [2] the Agent reached AOP Step 2 (\"If the amount exceeds EUR 1,000: use Human in the loop to get approval before issuing\") and correctly raised an approval request, since EUR 1,850 is above the threshold. Turn [3] shows that request is still open, so the Run is blocked on a person, not on a bug.\n\n**Evidence**\n- Transcript [3]: `{\"status\": \"pending\"}`\n- Run status: `waiting`\n- AOP Step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n\nThe Agent never reached Step 3, so no credit note was issued in NetSuite and no email went to the customer. That is the intended safeguard working: the high-value credit is held until someone approves it.\n\n**Fix** — Answer the pending approval request: \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\". Once it is answered, the Run resumes. On \"yes\" it issues the credit note and emails the customer; on \"no\", Step 3 shouldn't run. Note that the AOP doesn't say what to do on a \"no\" answer. If you want that handled explicitly, that's a separate, optional AOP improvement, not the cause of this stall.\n\nIf the request is sitting unanswered because the right person never saw it, the issue is who gets notified, which I can't see from this data. I can't tell from the transcript who the request was routed to or whether a notification was sent.\n\n**Next step** — Open the Run in the Duvo web app, find the pending Human-in-the-loop request, and approve or reject it (or ask whoever is responsible for approvals to do so). I'd only suggest `aop-writer` if you want the \"no\" branch defined.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8204,
+    "input_tokens": 2,
+    "output_tokens": 680,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9252
+}

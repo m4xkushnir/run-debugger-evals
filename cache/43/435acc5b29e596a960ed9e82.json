@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0134752,
+  "created_at": "2026-10-29T11:39:06+00:00",
+  "duration_api_ms": 7654,
+  "input_hash": "80480c72868f94f9",
+  "key": "435acc5b29e596a960ed9e82",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing data (category 5), with a contributing AOP gap: the AOP never says what to do when `unit_price` is absent. The Run itself did not technically fail; it completed and sent a wrong outcome.\n\n**Where it went wrong**\nTranscript turn [3], the decision point right after `claim_case` returned. The AOP's Step 1 asserts the case \"carries PO number, supplier, quantity and `unit_price`\", but the case had no `unit_price`. Step 2 then says to email the unit price and total, with no branch for a missing value. The Agent filled the gap on its own with a figure from an email signature, then went on to Step 3 and closed the case as complete.\n\n**Evidence**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}` (no `unit_price`)\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n- AOP Step 2: \"Email the supplier via **Gmail**: PO number, quantity, unit price, total.\"\n\nThe email went out at 4.10 EUR/pc (4,920 EUR) instead of the contract price of 3.65 EUR/pc (4,380 EUR), an overstatement of 540 EUR. I'm taking the 3.65 EUR figure from your report, not from the transcript.\n\n**Fix**\nChange AOP Step 1 so the Agent must check that `unit_price` is present before emailing, and fail the case if it isn't. For example: *\"If `unit_price` is missing or empty on the case, do not email the supplier and do not look for a price elsewhere. Call `fail_case` with the reason 'missing unit_price'.\"* This closes the gap that let the Agent improvise a price from an unreliable source.\n\nA secondary question I can't answer from the data given: why the case arrived without `unit_price`. That is probably an upstream problem in how the case was created (a missing field in the queue source or mapping). If this happens repeatedly, check there too. The AOP guard is still needed either way, since the AOP currently trusts the field blindly.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s05`, working in `aops/<agent-id>.md`, with the change request: \"Add a guard to Step 1: if `unit_price` is missing, call `fail_case` with reason 'missing unit_price' and do not email the supplier.\" Separately, you'll want to contact Sklárny Kavalier with a correction at 3.65 EUR/pc, since the wrong price has already been sent.",
+  "usage": {
+    "cache_creation_input_tokens": 1016,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 869,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 8796
+}

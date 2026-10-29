@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A03",
+  "cost_usd": 0.00084809,
+  "created_at": "2026-10-29T11:24:07+00:00",
+  "duration_api_ms": 8311,
+  "input_hash": "d5a2c038d277510f",
+  "key": "04d659b6e2a3d06eda3a6833",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity\n\n**Where it went wrong:** Step 2 of the AOP (\"If quantities don't match, handle it appropriately\") gave no rule for what \"appropriately\" means. At message [2] the Agent picked the supplier email, which is the costly path, and nothing in the AOP told it to check the size of the shortfall first. The run completed without a platform error. The wrong outcome came from the Agent's choice at that decision point.\n\n**Evidence:**\n- AOP Step 2: \"If quantities don't match, handle it appropriately.\"\n- Transcript [2]: \"I'll handle it by asking the supplier to explain the shortfall.\"\n\nThe shortfall was 20 of 500 units, or 4%, which is under your 5% threshold. Your rule, that shortfalls under 5% go on the goods receipt in the WMS and are not emailed to the supplier, appears nowhere in the AOP, so the Agent had no way to apply it. Nothing in the transcript refers to the WMS.\n\n**Fix:** Rewrite Step 2 to include the threshold, for example: \"If the shortfall is under 5% of the PO quantity, adjust the received quantity to the DESADV figure on the goods receipt in the WMS and do not contact the supplier. If the shortfall is 5% or more, email the supplier at edi@supplier.example asking them to explain it.\"\n\n**Next steps:**\n- Hand this to `aop-writer` with Build `bld_d03` as the base and the change request above. The AOP file for this Agent should be edited in place.\n- Check whether the Agent has a WMS Connection in Setup. The transcript doesn't show one. If it doesn't, the fix also needs that Connection, or the goods receipt step won't run.\n- The email to the supplier has already been sent (message [4]) and can't be recalled from here. Decide whether to follow up with edi@supplier.example. The Slack post in #inbound also says the supplier was asked about the shortfall, so the channel will need correcting too.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8339,
+    "input_tokens": 2,
+    "output_tokens": 1529,
+    "thinking_tokens": 822
+  },
+  "variant": "main",
+  "wall_ms": 10501
+}

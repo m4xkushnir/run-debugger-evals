@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.00076738,
+  "created_at": "2026-10-29T11:30:34+00:00",
+  "duration_api_ms": 7642,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "2f3abd3f0fda079a23e0770a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at the point where the Agent began matching the 611 unmatched lines in one Run (transcript turns [3]–[4]). The Run was built to process a whole batch, so it ran out of its 30-minute budget partway through and never reached Step 3.\n\n**Evidence:**\n- AOP Step 2: \"Reconcile **all unmatched lines** in the statement against open invoices in NetSuite.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\nAt roughly 230 lines per 30 minutes, 611 lines needed about 80 minutes, so this Run could not have finished. Today's statement is a larger batch than one Run can handle.\n\n**Fix:** Rewrite Step 2 so each Run reconciles a single unmatched line against NetSuite, and let the platform iterate over the lines. Step 3 then needs to aggregate the per-line results into one summary for #finance. This is the only change the diagnosis supports. Do not split the Agent or add a time limit, since the Run's work is per-line and the iteration belongs to the platform.\n\n**Next step:** I can hand this to `aop-writer` with:\n- Build `bld_s03`, so it starts from the AOP that actually ran.\n- The change request: \"Rewrite Step 2 to reconcile one unmatched statement line per Run instead of all unmatched lines, and update Step 3 to post an aggregated summary of the per-line results to Slack #finance.\"\n- The AOP file for this Agent (`aops/<agent-id>.md`). You didn't give me the Agent ID, so please confirm it.\n\nIf this Run was queue-driven, it may also have left a case in an unclear state, since it ended without a terminal action. You didn't include a case ID, so I can't check that. If you send it, I'll look at the case's closure as well.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8218,
+    "input_tokens": 2,
+    "output_tokens": 1370,
+    "thinking_tokens": 646
+  },
+  "variant": "main",
+  "wall_ms": 9158
+}

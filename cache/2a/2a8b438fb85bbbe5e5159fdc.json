@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0011068699999999998,
+  "created_at": "2026-10-29T11:31:27+00:00",
+  "duration_api_ms": 11639,
+  "input_hash": "8cdd082843487845",
+  "key": "2a8b438fb85bbbe5e5159fdc",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity. The Agent followed its procedure, but the procedure left the match decision undefined.\n\n**Where it went wrong:** Step 5 of the Run, where the Agent compared the two supplier names. Step 2 of the AOP says \"If unsure about the supplier match, call `fail_case`,\" but it never defines \"unsure\" or says how to match a supplier. The Agent treated a name difference as uncertainty and failed the case. The Run itself completed normally: the Agent chose `fail_case` deliberately, so this is not a platform error.\n\n**Evidence:**\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n\nThe Agent had a strong identifier available and didn't use it. SAP returned vendor 100311 with VAT DE811145120, which matches the invoice. The AOP never tells the Agent to match on VAT, so a legal-form variant (\"GmbH\" vs. \"Gesellschaft für Bau- und Hausbedarf mbH\") looked like doubt. The 31% failure rate this week fits this: the same name-variant gap is hitting many cases.\n\n**Fix:** Rewrite Step 2 of the AOP to make the match rule explicit:\n\n> Find the supplier in SAP by VAT number first. If exactly one vendor has the invoice's VAT ID, that is the match: go to Step 3. Only if no vendor matches the VAT, compare names; if no vendor is a clear name match either, call `fail_case` with reason \"no supplier match\".\n\n**One thing to verify before shipping:** The `claim_case` result in the transcript includes only `supplier_on_invoice`. It does not include the VAT number. You said the invoice shows DE811145120, but the Agent never saw it in the transcript, so it could not have matched on VAT in this Run. Check whether the `claim_case` payload carries the VAT field. If it doesn't, the fix also needs the VAT exposed to the Agent, either by adding it to the case data or by naming the field the Agent should read from the invoice File. Without that, the rewrite above would fail the same way.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_s06` and the change request above, working in `aops/<agent-id>.md`. First confirm whether VAT is in the claim payload, since that determines whether the AOP change is enough on its own.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8417,
+    "input_tokens": 2,
+    "output_tokens": 2045,
+    "thinking_tokens": 1192
+  },
+  "variant": "main",
+  "wall_ms": 13254
+}

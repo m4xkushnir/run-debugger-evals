@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.015548900000000001,
+  "created_at": "2026-10-29T11:34:03+00:00",
+  "duration_api_ms": 15223,
+  "input_hash": "cec074b757b36bc9",
+  "key": "e496d5795a651090dc1e8860",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nNamed pattern: external upstream outage with no AOP branch for it. The 504 comes from the retailer portal, not from Duvo or the Connection. It is close to *Connection failure* (upstream 5xx), but the Login and Connection are not the problem.\n\n**Where it went wrong**\nAt transcript [1]-[5], Step 1 of the AOP (\"open 'New ASN'\"). The portal was degraded, and the Agent retried once immediately, got the same 504, and stopped with a plain statement. The AOP says nothing about what to do when the portal is unavailable. Step 2 was never reached.\n\n**Evidence**\n- `[2] Tool result ← browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- `[5] Agent: The portal keeps timing out.`\n- Your context: other Agents on other portals run normally, and the portal's status page reports \"degraded performance\" today.\n\nWhy I ruled out the other causes:\n- **Platform/infra:** the error comes from the portal's load balancer, and unrelated Agents on other portals are fine.\n- **Login/Connection:** no 401/403 or auth error appears anywhere, so nothing points at the Tesco Partner Toolkit Login.\n- **Other causes:** no missing data or batch issue is visible.\n\nOne caveat: the call is `browser.open {\"url\": \"New ASN\"}`, where \"New ASN\" is a label rather than a URL. The 504 shows the request reached the portal's infrastructure, so it did not cause this failure. It is still worth checking that the Agent navigates to the page reliably once the portal recovers.\n\n**Fix**\nAdd an unavailable-portal branch to Step 1 of the AOP. For example: *\"If the portal returns a 5xx error or a timeout when opening 'New ASN', wait and retry up to 3 times with increasing delays. If it still fails, do not submit anything. Use `postpone_case` to retry later (or `request_handover` with the error if the work is not queue-driven).\"* Retrying later is safe here because no ASN was submitted. The Run only failed to open the page.\n\nI couldn't see whether this Run was queue-driven, so choose the terminal action that fits how the Agent is started.\n\n**Next step**\nFor today's ASN, re-run once the portal's status page shows it has recovered. To prevent a repeat, I can invoke `aop-writer` with Build `bld_g03`, working in `aops/<agent-id>.md`, to add the retry-and-postpone branch to Step 1.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8249,
+    "input_tokens": 2,
+    "output_tokens": 1472,
+    "thinking_tokens": 593
+  },
+  "variant": "main",
+  "wall_ms": 16720
+}

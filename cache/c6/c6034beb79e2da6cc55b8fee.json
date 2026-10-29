@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0007442999999999999,
+  "created_at": "2026-10-29T11:26:48+00:00",
+  "duration_api_ms": 8166,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "c6034beb79e2da6cc55b8fee",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing data. The Run completed without error, but the order was built on a Setup input that was never set, so the outcome was wrong.\n\n**Where it went wrong:** Transcript [3], the decision point. The AOP's Step 2 needs `safety_stock_days`, the Agent found it unset, and it silently substituted 0 instead of stopping or asking. Every later step inherited that value. Step 4 then produced an order of 34 units, which leaves no safety buffer, so the store ran out. The `replenishment.submit` call in [5] went through with that quantity.\n\n**Evidence:**\n- Transcript [3]: \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- Transcript [4]: \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n- User report: \"Store CZ-031 ran out of SKU-1101 on Thursday.\"\n\n**Fix:** Set the `safety_stock_days` Setup input to the value the replenishment policy calls for, so the AOP's Step 2 formula has a real value to use. With that set, the same stock and demand figures give 34 + 42 × `safety_stock_days` units, not 34. I don't know the correct policy value, so that needs to come from whoever owns the replenishment policy.\n\n**Next step:** Set `safety_stock_days` in Setup, then re-run CZ-031 and check that the SKU-1101 quantity includes the buffer. I'd also recommend a hardening change: have the AOP stop or request human input when a required Setup input is missing, instead of defaulting to 0. That is an AOP rewrite, so I can hand it to `aop-writer` if you want it. Separately, RP-99120 has already been submitted with the short quantity. Someone should check whether it can still be amended before the store's next delivery.\n\nI'm assuming the 294 in Step 4 is 42 × 7 (the forecast weekly demand), since the transcript doesn't show where the forecast came from. If the forecast is calculated differently, the buffer effect is the same, but the 34-unit figure would change.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8360,
+    "input_tokens": 2,
+    "output_tokens": 1321,
+    "thinking_tokens": 592
+  },
+  "variant": "main",
+  "wall_ms": 10517
+}

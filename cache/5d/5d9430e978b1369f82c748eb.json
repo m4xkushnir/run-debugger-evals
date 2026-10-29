@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.00050679,
+  "created_at": "2026-10-29T11:31:36+00:00",
+  "duration_api_ms": 3501,
+  "input_hash": "95d351598029029b",
+  "key": "5d9430e978b1369f82c748eb",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (expired Login session). This is a stale-credential problem on the Okta-backed Login, not an AOP logic error.\n\n**Where it went wrong:** Step 1 of the AOP, at the first `browser.open` call. The Enterprise Browser opened the reports page with the Login \"Coop portal (Okta)\", which redirected to Okta because the session had expired. The Agent then stopped at its turn [3] instead of recognising the sign-in prompt as a known blocker.\n\n**Evidence:**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: `Coop portal (Okta)` was last re-authenticated 94 days ago, and the portal enforces 90-day sessions.\n\n**Fix:** Re-authenticate the Login \"Coop portal (Okta)\" in Login settings. Sign in through the Okta flow once, which resets the 90-day session clock. This is a Login action, not an AOP change. The AOP itself is fine for this failure.\n\n**Next step:** Re-authenticate the Login, then start a new Run on the same Build. If you'd like a more durable fix, we can also add an AOP step that checks for the Okta redirect and fails the case with a clear \"re-authenticate Login\" reason, so the next expiry surfaces immediately instead of as an ambiguous stop. I can hand that to `aop-writer` if you want it.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 876,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 516,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 5404
+}

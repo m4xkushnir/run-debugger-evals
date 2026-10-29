@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.0314198,
+  "created_at": "2026-10-29T11:35:13+00:00",
+  "duration_api_ms": 9705,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "4f8afaf5500e2b61f0e9e730",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\nMissing terminal closure. The Run didn't error. The PO-not-found branch of the AOP has no terminal action, so the Agent stopped after the Slack post. The platform then settled the case as Completed (`auto-completed on clean run end`), even though the invoice was never posted.\n\n**Where it went wrong**\n\n- **Transcript:** At [4], NetSuite returned no PO. The Agent took the Step 2 exception branch at [5] and posted to Slack. At [7] it ended the Run without `fail_case`, `postpone_case`, `request_handover` or `complete_case`.\n- **AOP:** The Step 2 sub-bullet says to post to Slack but never says how to close the case. Steps 3 and 4 are written for the matched-PO path, so the Agent reasonably treated the Slack post as the end of the branch.\n- **Result:** The case shows Completed with a critical evaluation issue. The AOP never decided its outcome; the platform did.\n\n**Evidence**\n\n- AOP, Step 2: `- If the PO is not found: post the invoice number to **Slack** #ap-exceptions.`\n- Transcript [7]: `Agent: The PO was not found, so I posted the invoice to #ap-exceptions as instructed.`\n- Case evaluation: `'Invoice was never posted, but the case shows Completed.'`\n\n**Fix**\n\nMake the PO-not-found branch close the case itself. Change Step 2's sub-bullet to: *If the PO is not found: post the invoice number to **Slack** #ap-exceptions, then call `fail_case` with the reason \"PO <po_reference> not found in NetSuite\" and stop.*\n\nThe case would then show as failed and routed for review, matching the AOP's GOAL (\"…or route it for review\"), instead of a misleading Completed.\n\n**Next step**\n\nI can hand this to `aop-writer` with:\n1. Build `bld_t01`.\n2. The change request: \"rewrite Step 2's PO-not-found branch to call `fail_case` with a reason after the Slack post, and stop.\"\n3. The file `aops/<agent-id>.md`. Please share the Agent ID so it edits the right file.\n\nAlso check whether the Step 3 \"lines don't match within 1%\" path has the same gap. Step 3 only says what to do when lines match, so a mismatch currently falls through to `complete_case` too.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.92}",
+  "usage": {
+    "cache_creation_input_tokens": 1073,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1068,
+    "thinking_tokens": 241
+  },
+  "variant": "main",
+  "wall_ms": 11081
+}

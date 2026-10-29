@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.0145539,
+  "created_at": "2026-10-29T11:30:00+00:00",
+  "duration_api_ms": 11520,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "90dd529c7e75c271c5558fb7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nPlatform / infra failure. The platform's own `update_case` tool returns a 500 Internal Server Error, identically across retries and across every case on the queue since 14:00. Nothing in the AOP, Setup, or a Connection caused it.\n\n**Where it went wrong**\nAt transcript turn [5]–[6], AOP Step 3 (\"Call `update_case` with `credit_offered`, then `complete_case`\"). Steps 1 and 2 worked: the case was claimed (`CL-2210`) and the Gmail reply was read and parsed correctly (EUR 840). The write to the case then failed, and the Run ended without reaching `complete_case`. The case was settled as Failed with no reason because the Run errored.\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- Your context: \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\nWhat I ruled out:\n- **Connection failure:** the only Connection used (Gmail) succeeded, and `update_case` is a platform tool, not an upstream response from your own system.\n- **AOP ambiguity or missing data:** the extracted value (`840`) is concrete and the payload shape is simple. A failure that reproduces on different cases would not depend on case data.\n- **Missing terminal closure:** the AOP does call `complete_case`. It was never reached because of the error.\n\nA caveat: the AOP has no fallback for `update_case` failing, but no AOP wording would have prevented a platform-wide 500, so I'm not treating that as the root cause.\n\n**Fix**\nThere is no change to make in your artifacts. The fix is on the Duvo side: the `update_case` endpoint needs to be repaired. Once it is, the failed cases can be re-run.\n\n**Next step**\nRaise this with Duvo. If a support-escalation tool is available in this session, I can draft the escalation for you to review and send. Otherwise, contact Duvo support from the Duvo web app and include:\n- Run `run_p03`, Build `bld_p03`, Case `case_p03`\n- The error: `update_case` → `500 Internal Server Error`, request IDs `req_9a7c1e` and `req_9a7c52`\n- Scope: every Run on this queue since 14:00, across different cases\n- What you ruled out: Gmail worked, the payload is valid, and the failure is independent of case data\n\nI haven't reported this for you. After Duvo resolves it, re-run the affected cases. `CL-2210`'s credit offer (EUR 840) was never saved.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 1049,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 962,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12979
+}

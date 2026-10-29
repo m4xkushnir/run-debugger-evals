@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.028727799999999998,
+  "created_at": "2026-10-29T11:35:44+00:00",
+  "duration_api_ms": 10040,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "4d37e6b355cdd931d2fe58b0",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "The platform reports this Run as completed, but it posted a bill with a placeholder `cost_center`. That's a wrong outcome that looks like a success.\n\n**Failure mode**\nMissing data. The AOP assumes a case field (`cost_center`) that this case didn't have, and it gives no instruction for when that field is absent.\n\n**Where it went wrong**\n- **Decision point:** transcript turn [3]. The `claim_case` result at [2] has no `cost_center`.\n- **What the Agent did:** it improvised a placeholder value, then posted it at [4] and closed the case at [6].\n- **Matching AOP steps:** Step 1 asserts the field is always there. Step 2 relies on it, with no branch for when it's missing.\n- **Effect:** the unhandled gap went all the way through to a `complete_case`. The case shows \"Completed by Agent\", so the Queue looks healthy while NetSuite now holds a bill coded to \"TBD\".\n\n**Evidence**\n- Step 1 of the AOP: \"Call `claim_case` to get the invoice; it carries amount, supplier, and `cost_center`.\"\n- Transcript [3]: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- Transcript [4]: `netsuite.post_bill {\"invoice\": \"INV-7731\", \"cost_center\": \"TBD\"}`\n\n**Fix**\nUpdate the AOP to handle a missing `cost_center` explicitly: before Step 2, check for the field and stop the case if it's absent. For example:\n\n> If the case has no `cost_center` (missing or empty), do not post in NetSuite. Call `fail_case` with the reason \"missing cost_center\" (or `postpone_case` if cost centers are filled in later). Never post with a placeholder value.\n\n**Next step**\n- **Correct the bad posting:** INV-7731 (Hartmann Logistik, €4,120) is in NetSuite with cost center \"TBD\" and needs a manual correction there.\n- **Upstream data:** it's worth checking why this case arrived without `cost_center`.\n- **AOP rewrite:** I can invoke `aop-writer` with Build `bld_d03` and the file `aops/<agent-id>.md`. The change request would be: \"add a check before Step 2. If `cost_center` is missing, call `fail_case` instead of posting, and never post with a placeholder.\"\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 949,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 983,
+    "thinking_tokens": 157
+  },
+  "variant": "main",
+  "wall_ms": 11101
+}

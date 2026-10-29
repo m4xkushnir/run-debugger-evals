@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.00134669,
+  "created_at": "2026-10-29T11:25:42+00:00",
+  "duration_api_ms": 10809,
+  "input_hash": "89b60f1887533656",
+  "key": "c5614616c04403f87bc64e6e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing Human-in-the-loop on a high-stakes action. The Run completed without an error, but it made a costly, externally visible change autonomously.\n\n**Where it went wrong:** Step 2 of the AOP, between reading the recommendation (transcript [1]–[2]) and applying it (transcript [3]). The AOP has no check on the recommendation and no HITL gate before the Pricing write. The Agent read a single `markdown_pct: 30` and applied it to all 140 stores in one call.\n\n**Evidence:**\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`\n- Transcript [4]: `{\"updated_prices\": 5320}`\n\nThe query returned 38 rows but only one markdown value (transcript [2]), and nothing in the AOP or the transcript checks that value before the write. The Agent did not inspect the rows.\n\n**Fix:** Insert a Human-in-the-loop checkpoint before Step 2. The Agent should present the category, the `markdown_pct`, the row count, and the store count, and apply the markdown only after a person approves it.\n\n**Caveat:** The transcript doesn't show the contents of the 38 rows, so I can't confirm that the bad row produced the 30%. The data error is probably upstream in the Snowflake table. The AOP is still the part you control: a markdown that reaches 140 stores should not go live without a check.\n\n**Next step:**\n1. Check the Pricing system for the 5,320 price changes from this Run and revert them through your normal process. This is outside what I can do from here.\n2. Verify the bad row in the Snowflake recommendation table for Outdoor furniture.\n3. I can hand the AOP to `aop-writer` with the change request \"add a HITL approval gate before Step 2, showing category, markdown_pct, and row count.\"\n\n```json\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 1003,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2145,
+    "thinking_tokens": 1438
+  },
+  "variant": "main",
+  "wall_ms": 13501
+}

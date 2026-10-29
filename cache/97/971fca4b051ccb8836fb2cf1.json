@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.00106021,
+  "created_at": "2026-10-29T11:28:33+00:00",
+  "duration_api_ms": 10349,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "971fca4b051ccb8836fb2cf1",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "## Failure mode\nConnection failure: the Enterprise Browser login session expired partway through the run. The AOP has no re-login path, so the Run stopped at the first expired session.\n\n## Where it went wrong\nStep 3 of the AOP, the per-supplier portal loop. The Agent signed in to the Agrofert portal as supplier 9 of 17, about 55 minutes after the run started. The AOP treats the browser login as a one-time setup, so it never checks whether the session is still valid before each supplier.\n\n## Evidence\n- `[5] Agent: Signing in to portal 9 of 17 (Agrofert).`\n- `[7] Tool result ← browser.login: ERROR: browser session expired after 55 minutes`\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n\nThe transcript excerpt shows no sign-ins for suppliers 1–8, even though the Agent says it is on portal 9. I can't see how those eight were handled, so check whether their downloads completed.\n\n## Fix\nChange Step 3 so every supplier portal is signed in fresh inside the loop. Concretely: \"Before each supplier portal, call the browser login. If it fails with a session-expired error, sign in once more. If that also fails, mark that supplier 'portal unavailable', record it, and continue to the next supplier.\"\n\nThis is the only change I'd make. Steps 4 and 5 (drafting and sending emails) were never reached, so re-running the Run should not send duplicate emails to suppliers.\n\n## Next step\nI can hand this to `aop-writer` with Build `bld_w02` and the change request above, so it edits Step 3 in `aops/<agent-id>.md`. Before re-running, confirm the Agrofert portal Login still works on its own.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8451,
+    "input_tokens": 2,
+    "output_tokens": 1951,
+    "thinking_tokens": 1309
+  },
+  "variant": "main",
+  "wall_ms": 11917
+}

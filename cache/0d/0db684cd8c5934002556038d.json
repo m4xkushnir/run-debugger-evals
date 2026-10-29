@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0133752,
+  "created_at": "2026-10-29T11:38:41+00:00",
+  "duration_api_ms": 7540,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "0db684cd8c5934002556038d",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nWrong decomposition (primary), with a contributing AOP gap: no mechanism to wake the Agent after the wait. Related to Missing terminal closure only if this is queue-driven, which the data doesn't show.\n\n**Where it went wrong**\nAt transcript [5], after Step 4 (\"Request bank confirmation from the supplier\"). The Agent has no step that actually sends the request (there is no Gmail/send call between [4] and [5]) and then \"waits\" in its own turn. The Run ended with status `completed` right there. Steps 5–11 never executed because a Run cannot idle for 7 days; it just ends. The AOP combines a real-time onboarding phase (Steps 1–4) with a multi-day wait-and-follow-up phase (Steps 5–11) in one Agent, and nothing re-triggers the second phase.\n\n**Evidence**\n- AOP Step 5: \"Wait 7 days for the signed bank letter.\"\n- Transcript [5]: \"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n- No tool call for sending the request exists between [4] and [5], so even Step 4 was claimed, not done.\n\n**Fix**\nSplit the AOP at Step 4 into two Agents connected by a queue or `request_handover`:\n- Agent A (Steps 1–4): read the form, check VIES, create the vendor in SAP, and actually send the bank confirmation request. It then hands over / creates a case for the supplier, with the vendor number (100977) and supplier contact.\n- Agent B (Steps 5–11): triggered when the signed letter arrives (or by a scheduled check at 7 days). It activates payments, chases if missing, sends the welcome pack, adds the supplier to Coupa, notifies Slack, and schedules the review. It should end with explicit terminal actions: `complete_case` on activation, and `postpone_case` or `request_handover` on the chase branch.\n\nAlso make Step 4 explicit about the tool used (for example, \"Send the bank confirmation request to the supplier via **Gmail**\"), since the transcript shows no send.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w03`, working in `aops/<agent-id>.md`, to split the AOP at Step 4 as described and make Step 4 name its send action. Note that I only have the pasted excerpt: if you can share the case state or confirm whether this Agent is queue-driven, I can confirm the terminal-closure side. Also check Gmail for any outgoing bank-confirmation email to the supplier, since the transcript doesn't show one.",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 863,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 8555
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.00111367,
+  "created_at": "2026-10-29T11:23:53+00:00",
+  "duration_api_ms": 10698,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "854d80e4db217a1fb4676018",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity. Step 3 says \"seems too high\" with no threshold, so the Agent invented its own tolerance.\n\n**Where it went wrong:** Step 3 of the AOP, at the decision point in lines [1] and [2]. The Agent applied a loose, unstated tolerance. Line 1 (+1.9%, 40 CZK) was flagged, and line 2 (+9.0%, 2,600 CZK) was cleared. The flagging logic ran backwards from the business outcome. The run completed because nothing in the AOP defined what \"too high\" meant, so the run finished without an error.\n\n**Evidence:**\n- [1] \"Line 1 Prague-Brno pallet: charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- [2] \"Line 2 Prague-Vienna FTL: charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n- The AOP's only instruction is \"Flag any line where the charge seems too high compared with the rate card.\"\n\nLine 2 was not flagged because the Agent introduced a fuel-surcharge rationale the AOP never mentions. Nothing in the excerpt shows the rate card actually listed a fuel surcharge.\n\n**Fix:** Replace step 3 with an explicit rule, for example: \"For each line, compute variance = charged − rate card. Flag the line if variance > [X] CZK or > [Y]% of the rate. Do not make exceptions for surcharges unless the rate card lists them as a separate line item.\" The user needs to set X and Y. Your report (a 40 CZK flag and a missed 2,600 CZK overcharge) suggests the intended threshold lies between those, but I shouldn't guess the business number.\n\n**Next step:** Confirm the threshold values, then I can hand off to `aop-writer` with Build `bld_f02` and the change request. Please also give me the agent's AOP file path (`aops/<agent-id>.md`) so the edit lands in place.\n\nTwo caveats:\n- The excerpt doesn't show the step 1 invoice read or the step 2 rate card open. The rates (2,100 and 29,000 CZK) may be correct, but I can't verify them from what you pasted. Check the rate card against the Files entry before relying on the fix.\n- Run status \"completed\" doesn't mean the output was right. Since this isn't queue-driven, terminal closure doesn't apply here, and the sheets write returning `ok` means the append worked, not that the audit was correct.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8347,
+    "input_tokens": 2,
+    "output_tokens": 2060,
+    "thinking_tokens": 1140
+  },
+  "variant": "main",
+  "wall_ms": 14255
+}

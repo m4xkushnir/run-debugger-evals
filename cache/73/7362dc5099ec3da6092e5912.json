@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.00084329,
+  "created_at": "2026-10-29T11:29:52+00:00",
+  "duration_api_ms": 8298,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "7362dc5099ec3da6092e5912",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nPlatform / infra failure. The `update_case` tool returned HTTP 500 on every attempt, across different cases, since 14:00.\n\n**Where it went wrong**\nStep 3 of the AOP, at transcript [5]–[8]. The Agent extracted the right value (EUR 840) and called `update_case` with `credit_offered: 840`. The platform's case-update tool returned a 500 both times. The Agent retried once with an identical payload, got the same 500, and the Run failed. The case was left Failed with no reason.\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\nWhy this is not one of the other causes:\n- **Not AOP ambiguity or missing data.** The steps are concrete, and the credit amount was extracted correctly from the Gmail reply.\n- **Not a Connection failure.** Gmail succeeded at [4]. `update_case` is a platform tool, not a call to the user's own system, so there's no Connection to refresh or rescope.\n- **Not missing terminal closure.** The AOP does call `complete_case` after `update_case`. The Run never reached it because the earlier call kept failing.\n- **Not batch leak, decomposition, or HITL.** Nothing in the transcript points to these.\n\nThe identical error across unrelated cases, starting at a single time, points to a platform-side fault.\n\n**Fix**\nNo change to your AOP, Setup, or Connections will prevent this. The fix is on Duvo's side: the case-update service needs investigating. Include in the report:\n- Run `run_p03`, Build `bld_p03`, Case `case_p03`\n- Request IDs `req_9a7c1e` and `req_9a7c52`\n- Exact error: `500 Internal Server Error` from `update_case`\n- Scope: every Run on this queue since 14:00, across different cases\n- Ruled out: AOP content, missing input data, Gmail Connection, and the payload (the same `{\"credit_offered\": 840}` is valid for this case shape, and the failure doesn't depend on the data)\n\n**Next step**\nI can't file this with Duvo from here, so please raise it with Duvo support in the Duvo web app and paste the Fix section above into the report. Don't tell support it's been filed until you've sent it yourself.\n\nIf more Runs on this queue start before Duvo responds, they will likely fail the same way at `update_case`. You may want to hold the queue until support confirms a fix. Don't edit the AOP to work around this, because no AOP change will avoid the 500.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8409,
+    "input_tokens": 2,
+    "output_tokens": 1518,
+    "thinking_tokens": 538
+  },
+  "variant": "main",
+  "wall_ms": 9543
+}

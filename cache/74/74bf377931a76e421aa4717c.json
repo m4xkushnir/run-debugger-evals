@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.019019200000000003,
+  "created_at": "2026-10-29T11:33:34+00:00",
+  "duration_api_ms": 14528,
+  "input_hash": "82cebd8c79c09140",
+  "key": "74bf377931a76e421aa4717c",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing terminal closure. The trigger was a Connection-level 429 from DPD, but the AOP has no branch for a failed DPD call, so the Agent never called a terminal action.\n\n**Where it went wrong**\nAt transcript step [4]→[5], after `dpd.track` returned the 429, the Agent wrote a text message and stopped. AOP Step 2 (\"Get the latest status from the **DPD** Connection\") assumes the call succeeds. Step 3 is the only place a terminal action appears (`complete_case`), and it is reachable only on success. With no `postpone_case` or `fail_case` on the error path, the platform settled the case itself. That is why the case shows **Failed (no reason)** and the Run is failed.\n\n**Evidence**\n- Transcript [4]: `ERROR 429 Too Many Requests. Retry-After: 600`\n- Transcript [5]: `DPD is rate limiting. I can't get the status.`\n- AOP Step 2 has no error handling, and Step 3 is the only step with a terminal action: `Call update_case with the status, then complete_case.`\n\nA 429 with `Retry-After: 600` is a temporary condition, not a real failure for the shipment. During a 1,900-case Black Friday queue, with about 30% of Runs hitting it, each of those cases is being failed permanently when it should be retried later.\n\n**Fix**\nAdd a rate-limit branch to AOP Step 2. For example: *\"If the DPD Connection returns 429 (Too Many Requests), call `postpone_case` so the case is retried after the `Retry-After` interval (600 seconds). Do not call `fail_case`, and do not call `update_case` or `complete_case`.\"*\n\nThis fix does not change the DPD request rate, so some Runs will still hit the 429. They will now postpone and retry instead of failing. If the retries keep colliding, lowering the queue's concurrency is a separate change to consider afterwards.\n\n**Side observation (not the cause of this failure)**\n`claim_case` returned `\"0953 4412 8890\"`, but the Agent called `dpd.track` with `\"09534412 8890\"`, so the spacing was altered. The 429 came back before any validation, so I can't tell whether DPD would have accepted that value. If the first retry fails with a 400 or 404, check this next. You could also add a rule to pass the tracking number through exactly as claimed.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_g02`, the change request \"add a 429 / Retry-After branch to Step 2 that calls `postpone_case` instead of failing\", and the AOP file `aops/<agent-id>.md`. Then re-run or re-queue the cases that were failed by the 429.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8252,
+    "input_tokens": 2,
+    "output_tokens": 1819,
+    "thinking_tokens": 874
+  },
+  "variant": "main",
+  "wall_ms": 15989
+}

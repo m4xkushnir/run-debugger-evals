@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0125912,
+  "created_at": "2026-10-29T11:38:18+00:00",
+  "duration_api_ms": 10078,
+  "input_hash": "531aa89fc651bef5",
+  "key": "2ca35f41a8709699ae0c2162",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing data (a File the AOP depends on was absent), compounded by AOP ambiguity: the AOP has no branch for \"rate card not found,\" so the Agent improvised. The Run's status is `completed`, but the outcome is wrong: a silent false negative.\n\n**Where it went wrong**\nTranscript turns [2]–[4]. `files.search` returned no results for the rate card (AOP Step 2). Instead of stopping, the Agent substituted \"typical market rates\" and carried on through Step 3, then wrote an empty flag list to Google Sheets in Step 4. The audit was never actually performed against the rate card, but the sheet now records it as a clean audit.\n\n**Evidence**\n- Transcript [2]: `{\"results\": []}`\n- Transcript [3]: \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- AOP Step 2: \"Open the rate card in Files (\"Carrier rate card 2026.xlsx\").\" There is no instruction for what to do if it can't be found.\n\n**Fix**\nEdit AOP Step 2 to add an explicit failure branch, for example: *\"If 'Carrier rate card 2026.xlsx' is not found in Files, do not estimate or substitute other rates. Use **Human in the loop** to report the missing file and stop; do not write anything to 'Freight audit'.\"* This is the one change to make in the AOP. Separately, the file must be present in Files (see below) for the next Run to succeed.\n\nNote: I can't tell from the transcript whether the file was never uploaded, was renamed (for example the year or spelling differs), or the search just missed it. That needs a check in Files, but it doesn't change the AOP fix, since the AOP should handle the missing-file case either way.\n\n**Next step**\n1. Check Files for the rate card and re-upload or rename it so it matches \"Carrier rate card 2026.xlsx\".\n2. I can invoke `aop-writer` with Build `bld_d01`, the change request \"In Step 2, add a branch: if the rate card isn't found, don't substitute market rates, ask via Human in the loop and stop without appending to Google Sheets\", and the AOP file `aops/<agent-id>.md`. I don't have the agent ID in what you've shared, so that path needs to be filled in.\n3. Review the \"Freight audit\" sheet row this Run appended: it reports no flags, but no real comparison was done, so it shouldn't be trusted. Re-run the audit once the file is in place.",
+  "usage": {
+    "cache_creation_input_tokens": 900,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 827,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 11305
+}

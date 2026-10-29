@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.008877900000000001,
+  "created_at": "2026-10-29T11:26:54+00:00",
+  "duration_api_ms": 7625,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "5538107e152e13f7895d9a10",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Missing data (Setup input `safety_stock_days` not set), compounded by the AOP not handling the empty case.\n\n**Where it went wrong** — Transcript turn [3]: the Agent found `safety_stock_days` unset and silently substituted 0. This is the decision point. It maps to AOP Step 2, which multiplies daily demand by `safety_stock_days` but says nothing about what to do if the input is absent. The Run status is \"completed\" because nothing errored; the wrong outcome came from a quiet default.\n\n**Evidence**\n- Transcript [3]: `\"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"`\n- Transcript [4]: `\"SKU-1101: 294 + 0 - 260 = 34 units.\"`\n- AOP Step 2: `\"Order quantity = forecast weekly demand + (daily demand × Setup input safety_stock_days) − current stock.\"`\n\nWith the buffer zeroed out, the order covered exactly one week of forecast demand minus stock, leaving no margin. Any demand above forecast, or any delivery delay, means a stock-out, which matches the Thursday stock-out on SKU-1101 at CZ-031. (Note: the 294 figure is 42 × 7; the transcript shows daily demand, not a separate forecast, so I'm only noting that the Agent's number is consistent with that, not verifying the forecast source.)\n\n**Fix** — Set a value for the `safety_stock_days` Setup input on this Agent. That is the root artifact: the AOP depends on an input that was never populated. As a secondary hardening (the same change request, not a separate fix), Step 2 should state what happens when the input is missing, e.g. \"If `safety_stock_days` is not set, do not submit the order; use `request_handover` / fail the Run with the reason.\" This stops a silent 0 from reaching the Replenishment portal again.\n\n**Next step** — Populate `safety_stock_days` in Setup (the value is a business decision, so I can't pick it for you). Then I can invoke `aop-writer` with Build `bld_d02` and the request \"In Step 2, add a guard: if Setup input `safety_stock_days` is missing, stop and ask a human instead of defaulting to 0\", working in `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8339,
+    "input_tokens": 2,
+    "output_tokens": 804,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9120
+}

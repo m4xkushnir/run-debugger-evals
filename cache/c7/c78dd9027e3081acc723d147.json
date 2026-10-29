@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.00104912,
+  "created_at": "2026-10-29T11:25:50+00:00",
+  "duration_api_ms": 10288,
+  "input_hash": "89b60f1887533656",
+  "key": "c78dd9027e3081acc723d147",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed cleanly, so this is a wrong outcome rather than a platform error. The Agent applied a bulk price change autonomously when the AOP should have required a human check first.\n\n**Where it went wrong:** Step 2 of the AOP, \"Apply the recommended markdown in the Pricing system for all stores.\" Between the Snowflake read (call 1–2) and the Pricing write (call 3), nothing checked the recommendation. The Agent moved straight from reading one value to applying it to 140 stores.\n\n**Evidence:**\n- Call 2 returned `{\"rows\": 38, \"markdown_pct\": 30}`. The query covered 38 rows but produced a single `markdown_pct`. The transcript shows no check that the rows agreed, which fits your report of a bad row in the table.\n- Call 3 applied `\"pct\": 30, \"stores\": \"all (140)\"` with no preceding confirmation. The result was `{\"updated_prices\": 5320}`, so 5,320 prices changed.\n\n**Fix:** In Step 2 of the AOP, add a Human-in-the-loop gate before the Pricing call: \"Before applying, show the category, markdown %, and store count, and wait for approval. If the recommendation rows disagree on the markdown %, stop and ask rather than choosing one.\" A threshold rule such as \"if the markdown exceeds X% or covers all stores, require HITL\" would also work, but a blanket gate is the safer single change for a Pricing write across all stores.\n\n**Next step:**\n1. Revert the markdown now. I can't see the Pricing system from here, so check which of the 5,320 price updates need rolling back. This matters more than the AOP fix.\n2. Hand the AOP change to `aop-writer` with build `bld_h02` and the Agent's AOP file (`aops/<agent-id>.md`) so it edits the file in place. The change request is: \"rewrite Step 2 to add a HITL approval gate before `pricing.apply_markdown`, and stop if the Snowflake rows disagree.\"\n\nThis is an AOP fix, not a platform failure, so nothing needs escalating to Duvo.\n\nCaveat: I haven't seen the recommendation table itself, so I can't confirm which row was bad. The diagnosis rests on the transcript showing that the value was applied without any check.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8342,
+    "input_tokens": 2,
+    "output_tokens": 1931,
+    "thinking_tokens": 1114
+  },
+  "variant": "main",
+  "wall_ms": 12676
+}

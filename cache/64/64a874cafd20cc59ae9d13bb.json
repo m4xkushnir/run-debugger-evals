@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.00096999,
+  "created_at": "2026-10-29T11:32:58+00:00",
+  "duration_api_ms": 8250,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "64a874cafd20cc59ae9d13bb",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Named pattern: stale navigation path after a portal UI change. The AOP assumes \"Export CSV\" is on the Invoices page, but the portal has moved billing documents.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [3]. The sign-in in step 1 succeeded, but the Agent went straight to clicking \"Export CSV\" without confirming it was on the Invoices page. When the click failed at [4], the Agent stopped at [5] with no fallback branch and no terminal action, so the Run ended as failed.\n\n**Evidence:**\n- Transcript [2]: *\"We've refreshed our look! Find your documents under My Account → Billing.\"*\n- Transcript [4]: *\"ERROR: Element not found: button 'Export CSV'\"*\n- Transcript [5]: *\"I can't find the Export CSV button.\"*\n\nThe banner was a direct signal that the layout had changed, and the Agent did not act on it. The symptom is the missing button. The cause is that the AOP's navigation path is out of date.\n\n**Fix:** Update Step 2 of the AOP (`bld_g01`) to: *\"Go to My Account → Billing. If 'Export CSV' is not found there, stop and call `fail_case` with the banner text and the current page title.\"* This is inferred from the banner, not confirmed. The button may be under a different label or path in the new layout, so check the live portal before the change ships. The fallback branch also prevents a silent stop if the layout changes again.\n\n**Next step:** Confirm the new Billing path in the portal, then I can hand this to `aop-writer` with the Build id `bld_g01`, the change request above, and the file `aops/<agent-id>.md` to edit in place. The Agent's Connection and Setup look unaffected: the login succeeded.\n\n```json\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 877,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1442,
+    "thinking_tokens": 803
+  },
+  "variant": "main",
+  "wall_ms": 9780
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.014539900000000001,
+  "created_at": "2026-10-29T11:25:39+00:00",
+  "duration_api_ms": 20846,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "a1bfb578d3c068abb654f30b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (taxonomy 4). The Run status is \"completed\", so mechanically nothing failed. The outcome was wrong: a likely business-email-compromise (payment-diversion) fraud was executed autonomously.\n\n**Where it went wrong**\nBetween transcript [2] and [3], and in AOP Step 3 (\"Update the field in **SAP**\"). The AOP has no verification or approval gate before changing a vendor's bank details. The Agent treated an unauthenticated email as an authoritative instruction, wrote the new IBAN to SAP at [3], and confirmed to the (probable) fraudster at [5]. Per the security report, the next payment run is EUR 212,000 to Sunfield, which would now go to the attacker's account.\n\n**Evidence**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`\n- Transcript [3]–[4]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}` → `{\"status\": \"updated\"}` with no preceding Human-in-the-loop request.\n- AOP Step 3: `\"Update the field in **SAP**.\"`\n\nA secondary contributing gap is that the AOP never says to compare the sender domain against the vendor record's known contact. The look-alike domain (sunfield-foods.co vs sunfieldfoods.com) was detectable at [2]. This is part of the same fix, not a separate root cause.\n\n**Fix**\nChange AOP Step 3 so bank-detail changes are gated on Human in the loop, with a sender check first. For example:\n\n*\"Before updating any bank or payment field (IBAN, account number, sort code): compare the sender's email domain with the contact domain on the vendor record in SAP. If it doesn't match exactly, do not update; use **Human in the loop** to flag a suspected fraudulent request. If it matches, still use **Human in the loop** to get an approver's confirmation (via a known phone number or contact on file, not the email) before updating SAP. Do not send a confirmation reply until the change is approved and applied.\"*\n\n**Next step**\n1. **Urgent, now:** have someone revert vendor 100482's IBAN in SAP to the previous value and put a payment block on Sunfield before the EUR 212,000 run. Tell the security team, and don't rely on the reply thread with the sender. I can't do this; I only read.\n2. I can invoke `aop-writer` with Build `bld_h01`, the change request above, and the AOP file `aops/<agent-id>.md` to rewrite Step 3. I'd also ask it to add a fail/handover branch for the mismatched-domain case.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1018,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 973,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 23134
+}

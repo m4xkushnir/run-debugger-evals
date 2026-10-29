@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.0093722,
+  "created_at": "2026-10-29T11:23:38+00:00",
+  "duration_api_ms": 10371,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "30ad3743ea6e1c1250b745c2",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed technically (every tool call succeeded), but the outcome was wrong because the AOP left the refund decision to the Agent's judgment.\n\n**Where it went wrong**\nStep 2 of the AOP, at transcript turn [3]. The Agent had to decide between a full and a partial refund and had no threshold to apply. It judged a 3 cm scratch \"significant\" and refunded the full amount. Steps 3 and 4 then carried out that decision correctly (turn [4] refunds EUR 480.00, turn [6] emails the customer).\n\n**Evidence**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent also measured significance by how it would look to the customer, not by the cosmetic-damage policy. The 15% rule in your report appears nowhere in the AOP, so the Agent could not have applied it.\n\n**Fix**\nRewrite AOP Step 2 to replace the \"use your judgment\" language with explicit rules. For example:\n- *If the damage is cosmetic (scratches, scuffs, small dents that do not affect function or safety): refund 15% of the item price.*\n- *If the damage is structural or makes the item unusable: refund in full.*\n- *If the category is unclear: use **Human in the loop** to confirm before issuing the refund.*\n\nThe Stripe refund in Step 3 should take its amount from this rule. Since a refund is hard to reverse, a Human in the loop gate above a set amount is worth considering, but the primary root cause is the missing threshold.\n\nNote that the transcript does not show the photos being fetched. Turn [3] describes them with no tool call before it. I can't verify from this transcript how the Agent obtained them, so I'm not treating that as the cause, but it is worth checking in the Run in the web app.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_a01`, the change request \"rewrite Step 2 to replace the judgment call with a 15% refund for cosmetic damage, full refund for structural damage, and Human in the loop when unclear\", and the file `aops/<agent-id>.md`. The already-issued EUR 480.00 refund for order #88213 is outside this fix and would need to be handled separately.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 853,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 14386
+}

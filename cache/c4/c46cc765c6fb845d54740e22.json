@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.017772,
+  "created_at": "2026-10-29T11:35:21+00:00",
+  "duration_api_ms": 8454,
+  "input_hash": "d0dabf96580dd687",
+  "key": "c46cc765c6fb845d54740e22",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing terminal closure. The Run ended after a non-terminal action on the failure branch, so the platform settled the case instead of the AOP.\n\n**Where it went wrong**\nAt transcript turn [5]–[7], on the AOP's Step 2 failure sub-branch. The label failed and the Agent followed the sub-branch exactly: it posted to Slack. That sub-branch has no terminal action, and Step 4's `complete_case` only applies to the happy path. The Run then ended cleanly with no `complete_case`, `fail_case`, `postpone_case` or `request_handover`. Because of that, the platform auto-completed the case, and evaluation is now stuck in `evaluating`.\n\nThe result is that case_t03 shows as **Completed**, but the customer never got a label or an email. The Packeta 422 (`Return service not available for destination SK`) is the symptom, not the root cause. It is a real business limitation of the carrier for SK, not a broken Connection. What the AOP lacked is an instruction for how the case should end when this happens.\n\n**Evidence**\n- AOP Step 2: `- If the label can't be generated: post the order number to **Slack** #returns-ops.`\n- Transcript [7]: `Agent: Label could not be created; I alerted #returns-ops.` This was the last turn, with no case-lifecycle call after it.\n- Case: `auto-completed on clean run end; evaluation: stuck in evaluating`\n\n**Fix**\nAdd a terminal action to the Step 2 failure branch of the AOP. After posting to #returns-ops, call `fail_case` with the reason, for example \"Packeta return service unavailable for destination {country}\". If ops is expected to create the label manually, call `request_handover` to the returns-ops team instead. Either way, the Run must not fall through to the end without closing the case.\n\n**Next step**\nI can invoke `aop-writer` on Build `bld_t03` (file `aops/<agent-id>.md`) with this request: \"In Step 2, after posting to #returns-ops when the label can't be generated, call `fail_case` with the Packeta error as the reason (or `request_handover` to returns-ops if they handle these manually).\" You also need to reopen or handle case_t03 manually, because customer R-30112 (SK) is still waiting for a return label.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8320,
+    "input_tokens": 2,
+    "output_tokens": 805,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9496
+}

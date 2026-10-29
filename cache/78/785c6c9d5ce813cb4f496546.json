@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.0094356,
+  "created_at": "2026-10-29T11:24:38+00:00",
+  "duration_api_ms": 8631,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "785c6c9d5ce813cb4f496546",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nMissing terminal closure (taxonomy #3). The Run itself ended cleanly, so it doesn't look failed. The PO-not-found branch has no terminal action, so the platform settled the case as Completed with the reason \"auto-completed on clean run end\".\n\n**Where it went wrong**\nStep 2, the \"PO is not found\" branch. It tells the Agent to post to Slack and then stops giving instructions. Step 4 (`complete_case`) is written as the follow-on to the happy path in Step 3. The Agent never called `complete_case`, `fail_case`, `postpone_case`, or `request_handover`, and its transcript ends after the Slack post at [5]–[7]. The Agent followed Step 2 literally, which is why it said \"as instructed\". The platform then auto-completed the case, and the evaluation flagged the mismatch.\n\nA secondary gap: Step 3 has no else branch for lines that don't match within 1%, so that path would end the same way.\n\n**Evidence**\n- AOP, Step 2: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions.\"\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case: \"Completed — reason: auto-completed on clean run end\", evaluation comment: \"Invoice was never posted, but the case shows Completed.\"\n\n**Fix**\nEdit Step 2 of the AOP so the not-found branch closes the case with an explicit outcome. For example: \"If the PO is not found: post the invoice number to Slack #ap-exceptions, then call `fail_case` with reason 'PO not found' (or `request_handover` if AP should pick it up), and stop.\" Apply the same pattern to the Step 3 mismatch branch (\"if lines do not match within 1%: call `fail_case` / `request_handover` with the mismatch details\").\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t01`, working in `aops/<agent-id>.md`, and this change request: \"In Step 2, add a terminal action (`fail_case` or `request_handover`) after the Slack post on the PO-not-found branch, and add an explicit terminal branch in Step 3 for lines that don't match within 1%.\" Which terminal action fits your AP process is your call, `fail_case` or `request_handover`. This case itself will need to be reprocessed manually, since it is marked Completed but the invoice was never posted.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8416,
+    "input_tokens": 2,
+    "output_tokens": 859,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12572
+}

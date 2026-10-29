@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0165585,
+  "created_at": "2026-10-29T11:29:10+00:00",
+  "duration_api_ms": 12272,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "1e66d00e893a29780a5a437b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Wrong decomposition. One Agent is carrying a multi-week lifecycle (onboard, wait 7 days, activate or chase, 30-day review) inside a single Run. This Run is not a platform failure, and its `completed` status is misleading.\n\n**Where it went wrong:** The decision point is transcript turn [5], at AOP Step 5 (\"Wait 7 days for the signed bank letter\"). A Run can't sleep for 7 days. The Agent wrote a promise to check back and then ended the Run. Nothing was set up to resume it, so Steps 6-11 never ran. Vendor 100977 stayed created but not activated, as you reported.\n\n**Evidence:**\n- AOP Step 5: \"Wait 7 days for the signed bank letter.\"\n- Transcript [5]: \"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n\nThe AOP has 11 top-level steps with clear phase boundaries: intake and creation (1-3), a wait (4-5), activation or chase (6-8), catalogue and notification (9-10), and a 30-day review (11).\n\n**Secondary observation:** The transcript shows no tool call for Step 4. The Agent said \"Bank confirmation requested\", but no message to the supplier was sent. Step 1 (reading the supplier form from Gmail) is also absent, though the VAT number must have come from somewhere. If the transcript you pasted is complete, the supplier was never asked for the bank letter, so even a working wait would have had nothing to wait for. This follows from the same cause, because Step 4 has no concrete send action and nothing checks it. I would confirm it against the full Run transcript, not treat it as a separate fix.\n\n**Fix:** Split the AOP at Step 5 into two Agents.\n- **Agent A (Steps 1-4):** read the form, check VIES, create the vendor in SAP, and send the bank-confirmation request through an explicit Gmail send. It ends by handing off, or by postponing the case until the supplier replies, instead of promising to wait.\n- **Agent B (Steps 6-11):** triggered when the signed bank letter arrives. It activates payments in SAP, sends the welcome pack, adds the supplier to Coupa, notifies purchasing in Slack, and schedules the 30-day review. The \"not received\" chase branch (Step 7) belongs in a separate reminder Run or a postpone-and-retry on the case.\n\n**Next step:** Decide how the two Agents connect: `request_handover` or a queue. Then I can invoke `aop-writer` with Build `bld_w03` to write both AOPs. Each Agent's AOP should include the explicit send action for Step 4 and a terminal action on every branch. I don't have the Agent ID, so I can't name the `aops/<agent-id>.md` file for the handoff yet.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8345,
+    "input_tokens": 2,
+    "output_tokens": 1572,
+    "thinking_tokens": 588
+  },
+  "variant": "main",
+  "wall_ms": 14013
+}

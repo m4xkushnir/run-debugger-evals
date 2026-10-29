@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A03",
+  "cost_usd": 0.0090258,
+  "created_at": "2026-10-29T11:24:15+00:00",
+  "duration_api_ms": 6454,
+  "input_hash": "d5a2c038d277510f",
+  "key": "6742074b41f5017ee326f281",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — AOP ambiguity. The Run itself completed technically, but it produced the wrong outcome because the AOP left the key decision to the Agent's judgment.\n\n**Where it went wrong** — Transcript turn [2], the decision point after the mismatch was detected in [1]. The matching AOP is Step 2, which has no rule for what to do on a quantity mismatch. The Agent filled the gap by choosing the supplier-email path, which led to the Gmail send at [3].\n\n**Evidence**\n- AOP Step 2: \"If quantities don't match, handle it appropriately.\"\n- Transcript [2]: \"I'll handle it by asking the supplier to explain the shortfall.\"\n- Here the shortfall is 20 of 500 units, i.e. 4%, which is under the 5% threshold in your report (\"Shortfalls under 5% should just be adjusted on the goods receipt in the WMS, not emailed to the supplier\"). The AOP never encodes that rule, so the Agent had no way to know it.\n\n**Fix** — Replace Step 2 of the AOP with a concrete threshold rule, for example: \"If the DESADV quantity is less than the PO quantity by under 5%, adjust the quantity on the goods receipt in the WMS and do not contact the supplier. If the shortfall is 5% or more, [specify the action, e.g. email the supplier or use Human in the loop].\" You will need to decide the 5%-and-over branch, since your report does not cover it.\n\nTwo things to check alongside this change:\n- The transcript shows no WMS tool or Connection in use. If the Agent is expected to adjust the goods receipt, confirm a WMS Connection is attached to the Agent; otherwise the new Step 2 rule cannot be carried out. I can't tell from the transcript whether one exists.\n- The email to edi@supplier.example has already been sent for this case, so you may want to follow up with the supplier manually.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d03`, the change request \"rewrite Step 2 to adjust shortfalls under 5% on the WMS goods receipt without emailing the supplier, and define the 5%-and-over branch\", and the file `aops/<agent-id>.md`. Tell me what should happen at 5% and over, and whether a WMS Connection is attached, and I'll hand it off.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8318,
+    "input_tokens": 2,
+    "output_tokens": 819,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10988
+}

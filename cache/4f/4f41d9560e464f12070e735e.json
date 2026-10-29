@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.00113772,
+  "created_at": "2026-10-29T11:39:30+00:00",
+  "duration_api_ms": 9334,
+  "input_hash": "82cebd8c79c09140",
+  "key": "4f41d9560e464f12070e735e",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (upstream rate limit). The AOP has no branch for a 429, so the Agent stopped with no terminal action and the case closed as Failed with no reason.\n\n**Where it went wrong:** Transcript [4], the `dpd.track` call, and AOP Step 2 (\"Get the latest status from the **DPD** Connection\"). Step 2 assumes the call succeeds. When it returned a 429, the Agent had no instruction for that case, so it wrote a status message at [5] and ended the Run. Nothing in the AOP called `fail_case` or `postpone_case`, which is why the case has no reason.\n\n**Evidence:**\n- [4] `ERROR 429 Too Many Requests. Retry-After: 600`\n- [5] `DPD is rate limiting. I can't get the status.`\n- Case state: `Failed (no reason)`\n\n**Fix:** Add one branch to AOP Step 2: *\"If the DPD call returns 429, call `postpone_case` with the reason `DPD rate limited, Retry-After 600s`, and stop.\"* This turns a silent failure into a deferred case that retries after the carrier's window. It is the change that matters for the Black Friday load, since about 30% of Runs are hitting the same limit.\n\nTwo smaller observations:\n- The tracking number changed spacing between [2] and [3]: `0953 4412 8890` became `09534412 8890`. The digits are the same, but DPD may reject the malformed string. Step 1 should say to pass the tracking number exactly as returned, or to normalize it, and the fix should specify which.\n- The 429 is an upstream response, so this is not a platform fault. If DPD's limit is per-account rather than per-Run, reducing how many of these 1,900 cases run at once is a queue setting, not an AOP change. Treat that as a separate decision after the branch above is in place.\n\n**Next step:** Hand the Step 2 change to `aop-writer` with Build `bld_g02` and the AOP file for this Agent (`aops/<agent-id>.md`). I don't have the Agent ID, so I can't name the file exactly. Ask `aop-writer` to rewrite Step 2 with the 429 branch and to add the spacing rule to Step 1.",
+  "usage": {
+    "cache_creation_input_tokens": 934,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1758,
+    "thinking_tokens": 1014
+  },
+  "variant": "no_json",
+  "wall_ms": 10433
+}

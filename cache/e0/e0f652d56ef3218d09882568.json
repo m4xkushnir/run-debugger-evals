@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.0095535,
+  "created_at": "2026-10-29T11:29:42+00:00",
+  "duration_api_ms": 7589,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "e0f652d56ef3218d09882568",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Platform / infra failure. The Gmail Connection failed server-side on credential decryption, not because of anything in the Agent's configuration.\n\n**Where it went wrong** — Step 2 of the AOP (\"Send the confirmation via **Gmail**\"), at transcript turn [2]. The Run did read the order and attempted the send, so the AOP was followed. The platform's credential layer failed before Gmail was ever reached.\n\n**Evidence**\n- Transcript [2]: `gmail.send_message: ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Your context: re-authentication at 09:12 and a successful test send at 09:13, then this Run at 09:20 and the 2 after it failed with the same error.\n\n**Why this isn't a Connection failure you can fix:** an expired token or missing scope would be yours to fix, and a fresh re-authentication would clear it. Here the Connection was just re-authenticated and worked at 09:13. The failure is a 500 from the decryption layer (a KMS reference), it repeats identically across three Runs, and it doesn't depend on the case data (a single recipient and a trivial AOP). The AOP, the Setup, and the Connection's scopes were not the cause. Note the test send worked and the Runs didn't, so the credential decryption likely fails on the path Runs use and not on the path the test used. That is a hypothesis; I can't confirm it from this transcript.\n\n**Fix** — There is no change to your artifacts that would prevent this. Don't rewrite the AOP or re-authenticate again, since that has already been shown not to help. The fix belongs to Duvo.\n\n**Next step** — Raise this with Duvo support from the Duvo web app, and include this diagnosis:\n- Run IDs: `run_p02` plus the 2 later failed Runs (please add their IDs)\n- Build ID: `bld_p02`\n- Exact error: `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Ruled out: expired or invalid Connection (re-authenticated 09:12, test send OK at 09:13), AOP logic, case data\n- Timeline: test OK at 09:13, Runs failing from 09:20\n\nI have no support-escalation tool in this session, so nothing has been reported yet. You need to send it. In the meantime, if the confirmation is urgent, send it manually, since the Runs will likely keep failing until Duvo resolves it.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8195,
+    "input_tokens": 2,
+    "output_tokens": 873,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9136
+}

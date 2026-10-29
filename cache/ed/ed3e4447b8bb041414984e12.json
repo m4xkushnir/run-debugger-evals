@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.00070891,
+  "created_at": "2026-10-29T11:30:53+00:00",
+  "duration_api_ms": 7156,
+  "input_hash": "f214809918538af8",
+  "key": "ed3e4447b8bb041414984e12",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at the start of the Run. The step says \"For each SKU in the catalogue,\" so the Agent began checking all 2,300 SKUs instead of the 3 products the customer asked about. It reached SKU-0181 before Shopify returned the 429. Step 1 extracts the requested products, but Step 2 never uses that list.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\nThe 429 is the symptom. The Run hit Shopify's rate limit because it made about 180 calls to scan the whole catalogue when it needed about 3. The AOP has no pacing or retry logic, but adding that would only mask the problem. A 3-SKU check fits well within 2 calls per second.\n\n**Fix:** Change Step 2 in the AOP to: *\"For each SKU identified in Step 1, check stock in **Shopify** using `get_inventory`. Include it in the quote if it is available.\"*\n\n**Next step:** I can hand this to `aop-writer` with the Build `bld_s04` and this change request, so it rewrites Step 2 in the AOP file. After that, retest the Run with the same email. If the customer's email names products that aren't in the catalogue, have the AOP handle that case explicitly as a separate branch.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 1251,
+    "thinking_tokens": 655
+  },
+  "variant": "main",
+  "wall_ms": 8493
+}

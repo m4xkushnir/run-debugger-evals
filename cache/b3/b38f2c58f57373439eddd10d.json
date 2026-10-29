@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.0085761,
+  "created_at": "2026-10-29T11:22:50+00:00",
+  "duration_api_ms": 9113,
+  "input_hash": "904fcbb04475a734",
+  "key": "b38f2c58f57373439eddd10d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nConnection failure. The Gmail Connection 'AP inbox' had an expired or revoked token (`invalid_grant`). This is a user-fixable Connection problem, not a platform fault.\n\n**Where it went wrong**\nTranscript step [1]-[2]. The very first action in AOP Step 1 (\"Use **Gmail** to find the newest unread email in the AP inbox…\") hit a 401, and the Run ended at step [3]. Nothing downstream (PDF read, NetSuite bill, labelling) ran, so no partial invoice was registered.\n\n**Evidence**\n- `[2] Tool result ← gmail.search_messages: ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: the Connection was \"last authorised 2026-07-30 (91 days before this Run)\".\n\nRoot cause is upstream of the 401: the authorisation had lapsed (91 days old, consistent with expiry or revocation), and the Connection wasn't reauthorised. The AOP also has no branch for \"inbox unreachable\", so the Agent just stopped with a failed Run. The AOP's only failure branch is \"If none: stop\", which covers an empty inbox, not an access error. I can't tell from the data whether the token expired by policy or was revoked by someone; both give the same error and the same fix.\n\n**Fix**\nReauthorise the Gmail Connection 'AP inbox' in Setup (sign in again and grant the scopes the AOP relies on: read/search for Step 1 and label/modify for Step 4). Then start a new Run. The invoice email is still unread, so it will be picked up.\n\n**Next step**\nReauthorise the Connection now. If this recurs on a ~90-day cycle, say so and I can invoke `aop-writer` to add a step that, when Gmail returns an auth error, uses **Human in the loop** (or `request_handover`) to alert the AP owner instead of failing silently. That is optional hardening; the reauthorisation is the actual fix. If it fails again right after a clean reauthorisation, treat it as a possible platform issue and escalate to Duvo with Run `run_c01` and Build `bld_7a1`.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 774,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12942
+}

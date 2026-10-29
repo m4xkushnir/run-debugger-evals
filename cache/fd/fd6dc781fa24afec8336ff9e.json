@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.015848,
+  "created_at": "2026-10-29T11:36:56+00:00",
+  "duration_api_ms": 6751,
+  "input_hash": "086079e1976a5bd5",
+  "key": "fd6dc781fa24afec8336ff9e",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nNot a failure. This Run is **paused on Human in the loop**, not failed. Its status is `waiting`, and it is blocked on a pending approval request. The Agent did exactly what the AOP told it to do.\n\n**Where it went wrong**\nNothing went wrong in the Run itself. At transcript turn [1] the Agent read a EUR 1,850 credit request, saw it was above the EUR 1,000 threshold, and followed AOP Step 2. At turns [2]–[3] it sent the Human in the loop approval request, which came back `pending`. The Run is now waiting at the end of Step 2, before Step 3 (issue the credit note in **NetSuite** and email the customer). It has been \"stuck since yesterday\" only because nobody has answered the approval request yet.\n\n**Evidence**\n- AOP Step 2: *\"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"*\n- Transcript [3]: `Tool result ← human_in_the_loop.request: {\"status\": \"pending\"}`\n\n**Fix**\nNothing needs to change in the AOP, Connections, or Setup. The gate is working as intended on a high-value credit note. To unblock this Run, someone needs to answer the pending request *\"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"*. Once it's answered, the Run continues to Step 3.\n\nIf approvals regularly sit unanswered for a day, the gap is in who receives the requests and how quickly they act on them, not in this Run. The transcript doesn't show who the request was sent to, so check that the right approver is getting these requests.\n\n**Next step**\nOpen run_n01 in the Duvo web app and answer the pending Human in the loop request (yes or no). The Run will resume on its own. No AOP change and no `aop-writer` handoff are needed.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8200,
+    "input_tokens": 2,
+    "output_tokens": 710,
+    "thinking_tokens": 52
+  },
+  "variant": "main",
+  "wall_ms": 7857
+}

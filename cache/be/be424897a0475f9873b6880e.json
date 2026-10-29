@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00063245,
+  "created_at": "2026-10-29T11:32:33+00:00",
+  "duration_api_ms": 6558,
+  "input_hash": "086079e1976a5bd5",
+  "key": "be424897a0475f9873b6880e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Not a failure. The Run is paused, waiting on a human approval (Human-in-the-loop) that hasn't been answered.\n\n**Where it went wrong:** Nothing went wrong in the Agent's logic. At transcript [2] the Agent reached Step 2 of the AOP, correctly found that EUR 1,850 exceeds the EUR 1,000 threshold, and sent a HITL request. At [3] the request came back `pending`, and the Run has been waiting since. The transcript shows no response to the request, so the Run is blocked on a person, not on the platform or a Connection.\n\n**Evidence:**\n- Transcript [1]: \"Above EUR 1,000, asking for approval.\"\n- Transcript [3]: `{\"status\": \"pending\"}`\n- Run status: `waiting`\n\n**Fix:** No change to the AOP, a Connection, or Setup is needed. The AOP's threshold and HITL gate are working as designed. The Run needs an answer to the approval question: \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\".\n\n**Next step:** Find the approval request in Duvo and answer it. If the answer is yes, the Run should continue to Step 3 (issue the NetSuite credit note and email the customer). If no, the Run should stop without issuing anything. If you don't know who the request was routed to, check that first, because a request sent to someone who never saw it will sit pending indefinitely. The data you shared doesn't show the assignee, the notification history, or any expiry rule for pending requests, so I can't confirm those from here.\n\n```json\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8225,
+    "input_tokens": 2,
+    "output_tokens": 1100,
+    "thinking_tokens": 536
+  },
+  "variant": "main",
+  "wall_ms": 7833
+}

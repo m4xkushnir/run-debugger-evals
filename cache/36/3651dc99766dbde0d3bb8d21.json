@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0334638,
+  "created_at": "2026-10-29T11:35:41+00:00",
+  "duration_api_ms": 13027,
+  "input_hash": "531aa89fc651bef5",
+  "key": "3651dc99766dbde0d3bb8d21",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "# Why run_d01 produced a wrong result\n\nThe Run says **completed**, but its result is wrong. The Agent never audited the invoice against the rate card. It couldn't find the card, made up a substitute standard (\"typical market rates\"), and wrote a clean \"No flags\" row to **Freight audit**. No error was raised, so the Run looks healthy.\n\n**Failure mode**\nMissing data. The AOP relies on a File that wasn't found, and the AOP has no instruction for that case.\n\n**Where it went wrong**\n- **Transcript turn [2]:** the search for the rate card returned nothing.\n- **Turn [3] (the decision point):** the Agent had no rule to follow at that moment. It swapped in its own guess for the rate card and kept going.\n- **AOP Step 2:** it assumes the File always exists. Step 3's 3% threshold therefore ran against invented numbers.\n- **Turns [4]–[6]:** the false \"within range\" result went into the Google Sheet, where it now looks like a real audit.\n\n**Evidence**\n- Transcript [2]: `files.search: {\"results\": []}`\n- Transcript [3]: \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- AOP Step 2: \"Open the rate card in Files (\"Carrier rate card 2026.xlsx\").\"\n\n**Fix**\nAdd a rule to Step 2 of the AOP: *If \"Carrier rate card 2026.xlsx\" is not found in Files, or it is empty, stop. Do not estimate rates and do not append to \"Freight audit\". End the Run as failed with the reason \"rate card missing\".*\n\nThis turns a silent wrong answer into a visible failure the next time the File is missing.\n\n**Next step**\n1. I can hand this to `aop-writer` to rewrite Step 2, working from Build `bld_d01` in `aops/<agent-id>.md`.\n2. Separately, check in Files whether \"Carrier rate card 2026.xlsx\" is attached under that exact name. The transcript doesn't show whether it was removed, renamed, or never added.\n3. Treat the \"No flags\" row this Run added to **Freight audit** as invalid. Re-audit that invoice once the rate card is in place.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 896,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1241,
+    "thinking_tokens": 467
+  },
+  "variant": "main",
+  "wall_ms": 14060
+}

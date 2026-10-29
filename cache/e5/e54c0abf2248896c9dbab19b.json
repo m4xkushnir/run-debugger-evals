@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.009196600000000001,
+  "created_at": "2026-10-29T11:23:56+00:00",
+  "duration_api_ms": 8984,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "e54c0abf2248896c9dbab19b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — AOP ambiguity. The Run completed technically, but the outcome was wrong because the AOP left the flagging criterion to judgment.\n\n**Where it went wrong** — Step 3 of the AOP: \"Flag any line where the charge seems too high compared with the rate card.\" The Agent had no threshold, so at transcript turns [1] and [2] it applied its own inconsistent judgment. It flagged a +1.9% variance (40 CZK) and passed a +9.0% variance (2,600 CZK).\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"Seems too high, flagging.\"\n- Transcript [2]: \"Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe model turns read as guesses that echo the vague \"seems too high\" wording. The Agent also invented a justification (\"fuel surcharges vary\") that appears nowhere in the AOP, and the rate card is not shown to include any surcharge allowance. The Sheets append succeeded (`\"status\": \"ok\"`), so there is no Connection problem. This is a symptom of the AOP, not of the tools.\n\n**Fix** — Replace the judgment call in Step 3 with a concrete rule. The exact numbers are the user's business decision, but the shape would be:\n\n> For each line, compute `charged − rate`. If the difference exceeds [X]% of the rate or [Y] CZK, whichever is larger, flag the line. Do not excuse differences as fuel surcharges unless the rate card lists a surcharge for that lane.\n\nWith a 5% / 500 CZK threshold, for instance, line 1 (+1.9%, 40 CZK) would pass and line 2 (+9.0%, 2,600 CZK) would be flagged. I picked these only as an illustration; the real tolerance should come from the user. Also consider having Step 4 record every line's variance, not only the flagged lines, so the audit can be checked later.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_f02`, the change request \"rewrite Step 3 to use an explicit percentage/CZK tolerance and state how fuel surcharges are handled\", and the AOP file `aops/<agent-id>.md`. Please confirm the tolerance values (and whether fuel surcharges are allowed on top of the rate card) first.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8326,
+    "input_tokens": 2,
+    "output_tokens": 836,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11634
+}

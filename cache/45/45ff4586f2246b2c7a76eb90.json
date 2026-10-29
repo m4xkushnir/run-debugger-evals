@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0018621,
+  "created_at": "2026-10-29T11:37:33+00:00",
+  "duration_api_ms": 3017,
+  "input_hash": "b03fc180112aa5af",
+  "key": "45ff4586f2246b2c7a76eb90",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (missing OAuth scope on the Gmail Connection)\n\n**Where it went wrong:** Step 2 of the AOP, at the first tool call, `gmail.send_message` in transcript turn [2]. The Connection 'Purchasing' was granted only `gmail.readonly` and `gmail.labels`, so the send call was rejected before any email left. The Agent handled the failure correctly by stopping, but it did not reach Step 3, so no row was logged either.\n\n**Evidence:**\n> ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send\n\n> Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\n\n**Fix:** Re-authorize the Gmail Connection 'Purchasing' so it includes the `https://www.googleapis.com/auth/gmail.send` scope. Only the Connection needs changing; the AOP is fine as written.\n\n**Next step:** Re-grant the Gmail scope in Connections, then start a new Run. Once the Connection has `gmail.send`, Step 2 should succeed, and Step 3 will append the row. I can also check whether the AOP needs a fallback branch for a future scope loss, though I don't think one is needed for this failure.",
+  "usage": {
+    "cache_creation_input_tokens": 8202,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 443,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 5154
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00067095,
+  "created_at": "2026-10-29T11:32:29+00:00",
+  "duration_api_ms": 6956,
+  "input_hash": "086079e1976a5bd5",
+  "key": "d91e4c865b91f572970c12e9",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Not a failure. The Run is paused, waiting on a human approval.\n\n**Where it went wrong:** Nothing went wrong in the Run's logic. At step 2 of the AOP, the amount (EUR 1,850) exceeds the EUR 1,000 threshold, so the Agent correctly requested approval through Human-in-the-loop at transcript turn [2]. The request is still pending, so the Run has stopped at that gate and hasn't reached step 3 (issuing the credit note in NetSuite and emailing the customer). The \"stuck since yesterday\" is most likely the approval request waiting for a yes or no.\n\n**Evidence:**\n> Tool call → human_in_the_loop.request {\"question\": \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"}\n> Tool result ← human_in_the_loop.request: {\"status\": \"pending\"}\n\nThe Run status is `waiting`, not `failed`. The AOP is behaving as designed.\n\n**Fix:** None to the AOP, Connections, or Setup. The Run needs someone to answer the approval request. Once it's answered, the Run should continue to step 3.\n\n**Next step:** Find the pending approval for Hotel Praha's EUR 1,850 credit note in Duvo and answer it. If you don't know who the approver is, check the Agent's HITL configuration or ask whoever owns the credit-approval process. If the approval request was never delivered to anyone, or you can't find it, tell me. That would point to a delivery problem rather than a pending decision, and it should go to Duvo support, which I can help you draft from this diagnosis. I can't see the approval's routing or notification history from the data you've shared, so I can't confirm which of these applies.\n\n```json\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8225,
+    "input_tokens": 2,
+    "output_tokens": 1177,
+    "thinking_tokens": 560
+  },
+  "variant": "main",
+  "wall_ms": 8078
+}

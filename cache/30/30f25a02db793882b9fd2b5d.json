@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0073587999999999995,
+  "created_at": "2026-10-29T11:23:01+00:00",
+  "duration_api_ms": 7268,
+  "input_hash": "b03fc180112aa5af",
+  "key": "30f25a02db793882b9fd2b5d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Connection failure (missing scope on the Gmail Connection).\n\n**Where it went wrong** — Step 2 of the AOP. The Agent correctly read the input and called `gmail.send_message` at transcript turn [2]. The call was rejected at turn [3] because the **Purchasing** Gmail Connection was never granted the send scope. Step 3 (the Google Sheets log) never ran, because the Agent stopped after the send failed. That is correct behaviour, since the AOP only logs a reminder that was sent.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Context: Gmail Connection 'Purchasing' granted scopes: `gmail.readonly, gmail.labels.`\n\nThe AOP relies on sending email, but the Connection holds only read and label scopes. The 403 is the symptom. The root cause is the scope mismatch between what Step 2 needs and what the Connection was authorised for. This will fail on every Run until the scope is added, whatever the PO data is.\n\n**Fix** — Extend the **Gmail** Connection 'Purchasing' to include the `gmail.send` scope (https://www.googleapis.com/auth/gmail.send). This usually means reconnecting and re-authorising it with the send permission.\n\n**Next step** — Re-authorise the 'Purchasing' Connection with `gmail.send` in Setup, then re-run PO 4500918821. The reminder for that PO (due 2026-10-20) was never sent and nothing was logged to \"PO reminders\", so it still needs to go out. No AOP rewrite is needed, so there is no `aop-writer` handoff. You could optionally add a failure branch to Step 2 later, but the scope is the actual cause.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8348,
+    "input_tokens": 2,
+    "output_tokens": 652,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10964
+}

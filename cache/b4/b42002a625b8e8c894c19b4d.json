@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.008624,
+  "created_at": "2026-10-29T11:31:02+00:00",
+  "duration_api_ms": 7072,
+  "input_hash": "f214809918538af8",
+  "key": "b42002a625b8e8c894c19b4d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The 429 from Shopify is only the symptom.\n\n**Where it went wrong**\nThe decision point is transcript turn [1], where the Agent chose to walk the whole catalogue: \"Checking the catalogue: 2,300 SKUs.\" That follows directly from AOP Step 2. The Agent then made one call per SKU, sequentially, until it exceeded Shopify's limit of 2 calls per second at SKU-0181. It never reached Step 3 (the Gmail reply). Turn [7] (\"Shopify is rate limiting me.\") shows no recovery. The Agent did not wait the 30 seconds given in Retry-After, and the AOP gave it no instruction for that case.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n- Context: the customer asked about only 3 products, yet the Agent had checked about 180 SKUs when it failed.\n\n**Fix**\nRewrite AOP Step 2 so it checks only the SKUs named in the customer's request, not the whole catalogue. For example: \"Match each product in the email to its SKU, then check stock in Shopify for those SKUs only (expected: a handful).\" A secondary hardening step would be to add a rule for 429 responses: \"If Shopify returns 429, wait for the Retry-After duration and retry once; if it still fails, use Human in the loop.\" The main fix is the scoping change, because it removes the cause of the rate limit. The retry rule only covers the symptom.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, working in `aops/<agent-id>.md`, and the change request: \"Rewrite Step 2 to look up only the SKUs matching the products in the customer's email instead of iterating over the whole catalogue, and add a 429/Retry-After handling rule.\" You do not need to change the Shopify Connection. The rate limit is a property of the API client, and the corrected AOP should stay well under it.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8300,
+    "input_tokens": 2,
+    "output_tokens": 779,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8892
+}

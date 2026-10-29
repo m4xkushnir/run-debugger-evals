@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.00094569,
+  "created_at": "2026-10-29T11:31:21+00:00",
+  "duration_api_ms": 6942,
+  "input_hash": "8cdd082843487845",
+  "key": "c03a95e542d37ff38720607a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity\n\n**Where it went wrong:** Step 2 of the AOP, at the supplier match. The Agent had both a name and a VAT number, but the AOP gave it no rule for which to trust when the names differ.\n\n**Evidence:**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4] returned vendor 100311 with VAT `DE811145120`, and the invoice carries the same VAT.\n\nThe Agent treated a name mismatch as uncertainty and failed the case. The AOP never told it that a VAT match is a stronger identifier than a name, so the Agent fell back to the vague \"unsure\" escape hatch. The name difference is cosmetic: the invoice has the full legal name and the SAP record has a shortened one. The 31% failure rate this week points to the same gap in many cases.\n\n**Fix:** Rewrite Step 2 of the AOP to match on VAT first:\n\n> 2. Find the supplier in **SAP**. If the invoice VAT number matches a vendor's VAT in SAP, use that vendor. Otherwise, if exactly one vendor's name clearly matches the invoice supplier name (ignoring legal-form suffixes such as GmbH, mbH, and AG), use that vendor. Call `fail_case` only if neither rule identifies exactly one vendor.\n\nThis is one change to one step. The VAT rule handles this case directly, and the fail condition becomes concrete instead of a judgment call.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_s06` and the change request above, and point it at the AOP file for this Agent (`aops/<agent-id>.md`). I need the Agent ID to give you the exact path, so please send it. Before you ship the change, re-run one of the 31% of failed cases to confirm it now matches on VAT. If you can share one or two of those Runs, I can check whether they show the same pattern.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 1078,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1313,
+    "thinking_tokens": 588
+  },
+  "variant": "main",
+  "wall_ms": 8289
+}

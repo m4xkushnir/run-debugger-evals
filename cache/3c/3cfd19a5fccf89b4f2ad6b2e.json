@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0076088,
+  "created_at": "2026-10-29T11:23:01+00:00",
+  "duration_api_ms": 5403,
+  "input_hash": "b03fc180112aa5af",
+  "key": "3cfd19a5fccf89b4f2ad6b2e",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nConnection failure: the Gmail Connection \"Purchasing\" lacks the scope the AOP depends on.\n\n**Where it went wrong**\nTranscript turn [2]-[3], at AOP Step 2 (\"Use **Gmail** to send the supplier a reminder\"). The Agent made the correct call, but the Connection could not authorize it. Step 3 (Google Sheets log) never ran, because the Run stopped after the failed send. The Agent reported this honestly in turn [4], so there was no false success.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Context: Gmail Connection 'Purchasing' granted scopes: `gmail.readonly, gmail.labels`.\n\nThe root cause is upstream of the 403. The AOP requires sending email, but the Connection was only ever granted read and label scopes. Every Run of this Agent that reaches Step 2 will fail the same way until that changes. It is not a one-off glitch, and it is not platform or infra: the error is specific and deterministic, and it names the missing scope.\n\n**Fix**\nExtend the scopes of the **Gmail** Connection \"Purchasing\" to include `https://www.googleapis.com/auth/gmail.send`, then reauthorize the Connection so the new scope is actually granted.\n\n**Next step**\nIn Setup, reauthorize the \"Purchasing\" Gmail Connection with the `gmail.send` scope, then Start Work again with the same input. PO 4500918821 is still unreminded and unlogged, so it needs a re-run. No AOP rewrite is needed, so `aop-writer` is not required.\n\nOne optional hardening, separate from this fix: the AOP has no branch for a failed send. If you want that, I can hand it to `aop-writer` later, but it would not have prevented this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8348,
+    "input_tokens": 2,
+    "output_tokens": 677,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7613
+}

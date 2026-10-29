@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.00036289,
+  "created_at": "2026-10-29T11:22:56+00:00",
+  "duration_api_ms": 3516,
+  "input_hash": "b03fc180112aa5af",
+  "key": "57e4a9d7ccd577e6a479b327",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Connection failure (missing OAuth scope on the Gmail Connection)\n\n**Where it went wrong:** Step 2 of the AOP, at the first tool call, `gmail.send_message` (transcript [2]). The Connection 'Purchasing' has only `gmail.readonly` and `gmail.labels`, so the send was rejected before it reached Gmail. The Agent then stopped correctly and did not proceed to Step 3, so no sheet row was logged.\n\n**Evidence:**\n> ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send\n\n> Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\n\n**Fix:** Add the `https://www.googleapis.com/auth/gmail.send` scope to the 'Purchasing' Gmail Connection. This is a Connection change, not an AOP change. Re-authorize the Connection so the new scope is granted, then re-run the PO reminder.\n\n**Next step:** Re-authorize the 'Purchasing' Gmail Connection in Duvo with send permission, then start a new Run for PO 4500918821. Nothing in the AOP needs to change. I can also check the Connection's current scopes once you've re-authorized it, if you share them or give me access to look.\n\nNote that the Run failed cleanly and did not send a partial or incorrect email, so there is nothing to clean up on the supplier side. Confirm that no reminder went out through another channel before re-running.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8369,
+    "input_tokens": 2,
+    "output_tokens": 558,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 6553
+}

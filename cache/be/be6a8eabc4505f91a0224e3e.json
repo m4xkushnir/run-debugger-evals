@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.00134689,
+  "created_at": "2026-10-29T11:34:24+00:00",
+  "duration_api_ms": 11133,
+  "input_hash": "4a001beca9456e30",
+  "key": "be6a8eabc4505f91a0224e3e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. The Agent picked the wrong VAT ID at the decision point, and the AOP gave it no rule for telling the supplier's VAT ID from the bill-to customer's.\n\n**Where it went wrong:** Step 1 of the AOP, at transcript turn [1]. The Agent extracted `CZ45272956` as the supplier's VAT ID. Per the invoice context, that is the bill-to customer's VAT ID, which belongs to us. The supplier's VAT ID is `DE811203984`. Step 2 then matched on that value, so the lookup returned our own entity (vendor 200140) and the bill was created against it.\n\n**Evidence:**\n- Transcript [1]: \"Extracted: supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\"\n- Transcript [3]: \"{\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"}\"\n- Transcript [5]: \"{\"status\": \"created\"}\"\n- Other context: \"the supplier's (DE811203984) and the bill-to customer's (CZ45272956, ours)\"\n\nThe Run reports `completed` because no step errored. The result is still wrong: a supplier bill was booked to our own entity. The status hides the failure, so check the outcome, not just the status.\n\n**Fix:** Change Step 1 of the AOP to: \"Extract the supplier's VAT ID from the supplier (seller) block only. Do not use the bill-to customer's VAT ID. Our own VAT ID is CZ45272956, so never use it as the supplier's.\" This is one change, and it addresses the decision point that caused the error.\n\n**Next step:**\n1. In NetSuite, check bill-related records for vendor 200140 and void or reverse the bill created by this Run, since it sits against our own entity. I can't do this from here, and I'd verify the amount (8,412.00 EUR) before acting.\n2. Hand the Build (`bld_g05`) and this diagnosis to `aop-writer` to rewrite Step 1. Optionally, have the rewrite also stop before `create_bill` if the matched vendor is our own entity, so this can't recur even if extraction slips again.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 974,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2157,
+    "thinking_tokens": 1383
+  },
+  "variant": "main",
+  "wall_ms": 12267
+}

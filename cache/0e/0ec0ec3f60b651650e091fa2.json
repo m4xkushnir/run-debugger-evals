@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0010201700000000001,
+  "created_at": "2026-10-29T11:23:51+00:00",
+  "duration_api_ms": 9853,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "0ec0ec3f60b651650e091fa2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** AOP ambiguity\n\n**Where it went wrong:** Step 3 of the AOP (\"Flag any line where the charge seems too high compared with the rate card\") has no threshold. In the Run, the agent applied its own judgment at transcript [1] and [2], and the judgment came out backwards. It flagged the line with the smaller overcharge (+1.9%, 40 CZK) and excused the larger one (+9.0%, 2,600 CZK).\n\n**Evidence:**\n- [1] \"Line 1 Prague-Brno pallet: charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- [2] \"Line 2 Prague-Vienna FTL: charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe agent's reason for not flagging line 2, \"fuel surcharges vary,\" is not in the AOP. The agent invented an allowance and used it to excuse the line. This matches the user's report: the 40 CZK difference was flagged and the 2,600 CZK overcharge was missed.\n\nThe Run's `completed` status is not evidence of a correct outcome. The Run finished normally, and the wrong result came from the flagging decision in Step 3.\n\n**Fix:** Replace Step 3 with a concrete rule, for example: \"Flag any line where the charged amount is greater than the rate card rate for that lane and service type. Record the CZK difference and the percentage. Do not excuse a difference based on fuel surcharges or any other reason unless the rate card states a specific surcharge allowance; if it does, subtract only that stated allowance before comparing.\" The threshold is your decision. Zero tolerance fits an overcharge audit. A tolerance band would also need a value.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_f02` and the AOP file `aops/<agent-id>.md`, asking it to rewrite Step 3 as above. Before that, check the \"DHL Freight rate card 2026\" file for a fuel surcharge allowance. If one exists, the rule should reference it explicitly. If none exists, the rule should not allow any fuel-based excuse.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8347,
+    "input_tokens": 2,
+    "output_tokens": 1873,
+    "thinking_tokens": 1079
+  },
+  "variant": "main",
+  "wall_ms": 13362
+}

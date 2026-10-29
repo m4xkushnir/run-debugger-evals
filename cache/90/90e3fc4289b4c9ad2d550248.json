@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.0080948,
+  "created_at": "2026-10-29T11:28:06+00:00",
+  "duration_api_ms": 6436,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "90e3fc4289b4c9ad2d550248",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Batch / iteration leak (taxonomy #6). The Run \"completed\" cleanly, but the outcome is wrong: each per-store case did the work of all stores.\n\n**Where it went wrong** — Step 2 of the AOP. The case was claimed for one store (`{\"store\": \"CZ-007\"}`), but the Agent ignored it and queried and ordered for every store at transcript turns [3] to [6].\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [5]: \"Reordering 412 lines across 60 stores.\"\n- Context: 60 cases ran, and each placed orders for all 60 stores. That is 60 times the intended ordering, with duplicate orders across stores.\n\nThe Agent followed the AOP literally. The AOP is queue-driven (it claims a case) but its Step 2 is written as a batch job, and it never refers to the claimed case's `store`. The platform already iterates one case per store, so the \"every store\" language is the root cause. The symptom is the duplicate orders. The `complete_case` status of \"completed\" is not a signal of success here.\n\n**Fix** — Rewrite Step 2 of the AOP to scope work to the claimed case's store only, e.g.: \"Use **Snowflake** to check stock levels for only the store in the claimed case (`store` field) and reorder items below minimum for that store only in the **Replenishment portal**. Never query or order for other stores.\" Optionally add a guard: \"If the case has no `store`, call `fail_case`.\"\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b03`, the file `aops/<agent-id>.md`, and the change request above to rewrite Step 2. Separately, the duplicate orders already placed today (about 60 per store) need to be reviewed and cancelled in the **Replenishment portal**. That is outside this fix and I cannot do it from here.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8308,
+    "input_tokens": 2,
+    "output_tokens": 726,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8273
+}

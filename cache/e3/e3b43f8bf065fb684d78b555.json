@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.014425899999999998,
+  "created_at": "2026-10-29T11:31:29+00:00",
+  "duration_api_ms": 8443,
+  "input_hash": "8cdd082843487845",
+  "key": "e3b43f8bf065fb684d78b555",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — AOP ambiguity (Step 2: \"If unsure about the supplier match, call `fail_case`\" gives no criterion for what counts as a match).\n\n**Where it went wrong** — Transcript turn [5], the decision point after `sap.search_vendor` returned. The Agent had one result and compared only names, then failed the case at [6]. The Run itself completed normally and closed the case; the Agent's judgment call was the failure, not a tool or Connection error. The AOP never says which fields establish identity, so the Agent defaulted to name similarity, which fails for legal-name variants like \"BAUHAUS Gesellschaft für Bau- und Hausbedarf mbH\" vs \"Bauhaus GmbH\".\n\n**Evidence**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4] vs. your context: SAP returned `\"vat\": \"DE811145120\"`, and the invoice VAT is identical. A deterministic identifier matched, but the AOP never told the Agent to use it. (The invoice VAT is from your context, not visible in the claim_case result at [2], which only shows the supplier name. The Agent may not have had it at all, see below.)\n\nAlso worth noting: the `claim_case` result at [2] only contains `supplier_on_invoice`. If the VAT is not in the case payload the Agent saw, then the Agent could not have compared it, and the gap is partly missing data. I can't confirm that from the transcript. Your 31% figure suggests a systematic cause either way, but I have only this one Run's transcript, so I haven't verified the other failures share this shape.\n\n**Fix** — Rewrite AOP Step 2 to define a match concretely, e.g.: *\"Search SAP by VAT ID first. If the invoice VAT equals a vendor's VAT, treat it as a match regardless of name differences. Only if there is no VAT match, or VAT is absent from the invoice, compare names; call `fail_case` only if neither identifies exactly one vendor.\"* Before landing it, check that the invoice VAT is actually returned by `claim_case` (or extractable from the invoice); if not, that field has to be added to the case data as well.\n\n**Next step** — I can hand off to `aop-writer` with Build `bld_s06`, the change request \"rewrite Step 2 to match suppliers on VAT ID first, falling back to name comparison, and fail only when no unique vendor is identified\", and the file `aops/<agent-id>.md`. Separately, once the fix is live, re-check the failed cases from this week, since they were closed as Failed and won't be reprocessed automatically.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 1057,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 946,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10177
+}

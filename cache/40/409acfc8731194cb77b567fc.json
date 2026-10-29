@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.00054762,
+  "created_at": "2026-10-29T11:22:36+00:00",
+  "duration_api_ms": 4577,
+  "input_hash": "904fcbb04475a734",
+  "key": "409acfc8731194cb77b567fc",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Connection failure (expired or revoked OAuth token)\n\n**Where it went wrong:** Step 1 of the AOP, on the first tool call. The Run called `gmail.search_messages` against the AP inbox, and Gmail rejected the request before any invoice was read. Steps 2 to 4 never ran.\n\n**Evidence:**\n> ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}\n\nThe Gmail Connection 'AP inbox' was last authorised 91 days before this Run. The token has most likely lapsed, which is consistent with the error.\n\n**Fix:** Reauthorise the Gmail Connection 'AP inbox' in Setup, then start the Run again. No AOP change is needed. The Agent handled the failure correctly: it stopped, reported the access problem, and did not guess at the invoice data.\n\n**Next step:** I can't check the Connection's current state from here. In Setup, confirm that 'AP inbox' shows as disconnected or needing reauthorisation, reconnect it with the AP mailbox account, and start a new Run. If the Connection still fails straight after a successful reauthorisation, that points to a platform issue rather than a configuration problem, and I'd diagnose it differently.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8342,
+    "input_tokens": 2,
+    "output_tokens": 928,
+    "thinking_tokens": 461
+  },
+  "variant": "main",
+  "wall_ms": 8907
+}

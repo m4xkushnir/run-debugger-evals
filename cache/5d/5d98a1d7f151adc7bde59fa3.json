@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.026327800000000005,
+  "created_at": "2026-10-29T11:37:21+00:00",
+  "duration_api_ms": 7955,
+  "input_hash": "4a001beca9456e30",
+  "key": "5d98a1d7f151adc7bde59fa3",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity. The Run shows status `completed`, but it produced the wrong outcome. The vendor bill was created against your own entity instead of the supplier.\n\n**Where it went wrong**\nThe decision point is transcript turn [1], under AOP Step 1. The invoice carries two VAT IDs: the supplier's (DE811203984) and the bill-to customer's (CZ45272956, which is yours). Step 1 says to extract \"the VAT ID\" without saying whose, and the Agent picked the bill-to one. Everything after that followed correctly from the wrong input:\n\n- In Step 2, the lookup in [2]–[3] matched your own entity.\n- In [4]–[5], the bill was created against vendor 200140.\n\nNothing in Step 2 caught the mismatch. The extracted supplier name was \"Frischeparadies KG\", but the matched vendor was \"RetailCo CZ s.r.o. (our own entity)\", and the Agent never compared the two.\n\n**Evidence**\n- AOP Step 1: \"Read the invoice PDF and extract the supplier name, VAT ID and total.\"\n- Transcript [3]: `{\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"}`\n\n**Fix**\nChange AOP Step 1 to state which VAT ID to extract: \"Extract the **supplier's (issuer's)** VAT ID, not the bill-to/customer VAT ID. If the extracted VAT ID is CZ45272956 (our own entity), discard it and use the other VAT ID on the invoice.\"\n\n**Next step**\n1. Bill 8,412.00 against vendor 200140 now exists in NetSuite and is wrong. Void or correct it manually.\n2. I can invoke `aop-writer` against Build `bld_g05` (file `aops/<agent-id>.md`) to rewrite Step 1 so it extracts the supplier's VAT ID, not the bill-to VAT ID.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 949,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 863,
+    "thinking_tokens": 167
+  },
+  "variant": "main",
+  "wall_ms": 9384
+}

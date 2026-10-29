@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.00078736,
+  "created_at": "2026-10-29T11:32:48+00:00",
+  "duration_api_ms": 7858,
+  "input_hash": "1c85333d7be4398e",
+  "key": "a6a1648598a13dfe58b8cea7",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Not a failure. The Run behaved as the AOP specifies. The user's expectation of an email doesn't match what the Agent found in SAP.\n\n**Where it went wrong:** Nothing went wrong in the Run. At step 2, `sap.get_po` returned PO-61204 as already received, so the AOP's skip branch applied: the Agent should call `complete_case` and stop, without emailing. That is what happened at transcript turns [5]–[7].\n\n**Evidence:**\n- Transcript [4]: `sap.get_po: {\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Case state: Completed by Agent, with a clean `complete_case` at [6]–[7]. Terminal closure is correct, so this is not a missing-closure problem.\n\n**Fix:** None to the AOP. The branch did what it was written to do. Two things are worth checking:\n- **If SAP is correct,** the case was a poor candidate for chasing. The queue sent a PO that had already been received on 2026-10-27, so the upstream intake may need a filter for POs that are already received. That's a queue or data question, not an AOP defect.\n- **If SAP is wrong** (the goods haven't actually arrived), the problem is the SAP record, not the Run. Get it corrected at the source and the Agent will chase correctly next time.\n- **If you want the supplier emailed regardless of SAP status,** that's a deliberate change to Step 2 that removes the skip. I can hand that to `aop-writer`, but I wouldn't change it unless you intend that behaviour, since it would email suppliers whose deliveries are already in.\n\n**Next step:** Confirm whether PO-61204 was actually received on 2026-10-27. If it was, no action is needed on the Agent. If it wasn't, check the SAP record. Tell me which applies and I can help with the next step, including the `aop-writer` handoff if you want the AOP changed.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8316,
+    "input_tokens": 2,
+    "output_tokens": 1408,
+    "thinking_tokens": 670
+  },
+  "variant": "main",
+  "wall_ms": 9443
+}

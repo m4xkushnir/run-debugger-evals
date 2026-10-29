@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0010284200000000002,
+  "created_at": "2026-10-29T11:38:23+00:00",
+  "duration_api_ms": 7778,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "6041a20b881337bbbca0d842",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Batch / iteration leak. The AOP's scope is the whole inbox, but the platform gave the Run a single case.\n\n**Where it went wrong:** Step 2 of the AOP. `claim_case` returned one case, \"Invoice from Brenntag CZ\" (transcript [2]). Step 2 then tells the Agent to process \"all pending supplier invoices in the AP inbox,\" so the Agent searched the full inbox (47 unread AP messages, [4]) and set out to clear it. The Run hit the 30-minute cap after 19 of 47 bills (transcript [6]–[7]).\n\n**Evidence:**\n- AOP Step 2: \"process all pending supplier invoices in the AP inbox\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\nThe timing supports this. Nineteen bills in about 30 minutes is roughly 1.5 to 1.6 minutes per invoice (my estimate), so 47 would need about 70 to 75 minutes. The Run could not have finished within its limit.\n\nThe Failed case status is a consequence, not a separate cause. The Run ended before `complete_case`, and because it errored, the platform marked the case Failed. The AOP never handled the single-case scope it was actually given.\n\n**Fix:** Rewrite Step 2 so the Agent handles only the invoice behind the claimed case. For example: \"Find the supplier invoice email for this case (match on the case's vendor and invoice details). Extract the fields and create one vendor bill in NetSuite. Do not process other invoices in the inbox.\" The platform iterates over cases, so the Agent should not loop over the inbox.\n\n**Next step:**\n- Before re-running, check NetSuite for the 19 bills already created. The AOP has no duplicate check, so a re-run could create them again.\n- Also check whether the claimed case's invoice is among the 19. The transcript doesn't show which invoices were processed.\n- I can hand this to `aop-writer` to rewrite Step 2. It needs Build `bld_b01`, the AOP file for this Agent (`aops/<agent-id>.md`; I don't have the Agent ID, so please confirm the path), and the change request above.",
+  "usage": {
+    "cache_creation_input_tokens": 955,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1531,
+    "thinking_tokens": 771
+  },
+  "variant": "no_json",
+  "wall_ms": 8988
+}

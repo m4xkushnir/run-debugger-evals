@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.00100817,
+  "created_at": "2026-10-29T11:23:44+00:00",
+  "duration_api_ms": 9222,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "30b03128f5cd995cafd353d7",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. Step 3 says \"flag any line where the charge seems too high,\" with no threshold, so the Agent applied its own judgment and got the answer wrong.\n\n**Where it went wrong:** Step 3 of the AOP, at transcript turns [1] and [2]. The Agent flagged a 40 CZK (+1.9%) difference and dismissed a 2,600 CZK (+9.0%) difference. The Run completed without error, so the failure is in the audit decision, not in execution.\n\n**Evidence:**\n- Turn [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Turn [2]: \"charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe decision is not consistent with any rule the transcript shows. The Agent flagged the smaller percentage and passed the larger one. The fuel-surcharge explanation also doesn't appear in the AOP, and the transcript doesn't show the rate card containing a fuel-surcharge line. The write at [3] recorded only `\"flags\": [\"line 1\"]`, so the sheet has no record of the 2,600 CZK overcharge. The `status: ok` at [4] confirms the append succeeded, not that the audit was right.\n\n**Fix:** Replace the Step 3 wording with an explicit rule, for example: \"Flag any line where the charged amount exceeds the rate-card amount by more than 2% or 500 CZK, whichever is lower. Do not net out surcharges or make exceptions for them. If a surcharge appears on the invoice, list it as a separate line and compare it to the rate card on its own.\" Set the numbers to whatever your team's tolerance actually is. The point is that the Agent should not have to decide what \"too high\" means.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_f02` and the change request above, so it rewrites Step 3 in the Agent's AOP file. Before that, confirm two things: the real tolerance threshold, and whether the DHL rate card has a fuel-surcharge line. Neither is visible in the transcript.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8347,
+    "input_tokens": 2,
+    "output_tokens": 1849,
+    "thinking_tokens": 1059
+  },
+  "variant": "main",
+  "wall_ms": 11963
+}

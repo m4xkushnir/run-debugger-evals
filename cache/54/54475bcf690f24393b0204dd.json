@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0091015,
+  "created_at": "2026-10-29T11:28:23+00:00",
+  "duration_api_ms": 6625,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "54475bcf690f24393b0204dd",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nWrong decomposition. One Agent is carrying a real-time phase (steps 1–5: read claim, SAP lookup, photos, draft, send) and a multi-day wait-and-follow-up phase (steps 6–14: 3-day reminder, 7-day escalation, credit entry, tracker, Slack, ServiceNow, archive). The Run is stopped by the idle timeout while it sits in the wait.\n\n**Where it went wrong**\nTranscript turn [1]–[4], at AOP Step 6 (\"Wait for the supplier's reply\"). The Agent has no way to wait days inside a single Run. It polls Gmail once, finds nothing, says it will \"keep checking\", and goes idle until the platform stops it. Steps 7–14 never execute, so the reminder and escalation timers never fire either.\n\n**Evidence**\n- AOP: \"6. Wait for the supplier's reply.\" / \"7. If no reply after 3 days, send a reminder.\" / \"8. If no reply after 7 days, escalate to the category manager.\"\n- Transcript: \"No reply yet. I'll keep checking.\" followed by \"Run stopped after idle timeout.\"\n\nThe Gmail search returning `{\"count\": 0}` is not a Connection problem; it is the expected result right after sending. The symptom is the timeout; the cause is that the AOP asks a single Run to span 3–7+ days.\n\n**Fix**\nSplit the AOP at Step 6 into two Agents connected by a queue or `request_handover`:\n- Agent A (Steps 1–5): read the claim, look up SAP, fetch photos, draft, send, then end with a terminal action that hands the claim off to the follow-up stage (with the thread id and send date).\n- Agent B (Steps 7–14): triggered by the supplier's reply, or by the 3-day / 7-day timers, to send the reminder, escalate, or process the credit (SAP, Sheets, Slack, ServiceNow, archive).\n\nStep 6 as a \"wait\" disappears from both AOPs.\n\n**Next step**\nDecide how Agent B is triggered (reply arrival vs. scheduled check). Once you've chosen, I can invoke `aop-writer` with Build `bld_w01` to write the split. Note that I only had the pasted excerpt, so I haven't verified whether a case or queue was involved or whether the run was queue-driven.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8375,
+    "input_tokens": 2,
+    "output_tokens": 826,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8058
+}

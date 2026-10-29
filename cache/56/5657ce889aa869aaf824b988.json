@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.026863800000000004,
+  "created_at": "2026-10-29T11:35:38+00:00",
+  "duration_api_ms": 9233,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "5657ce889aa869aaf824b988",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "## Failure mode\n\n**Missing data.** The Run finished as `completed` and submitted order `RP-99120`, but the order was too small. The AOP depends on the Setup input `safety_stock_days`, which was not set. The Agent replaced it with 0 and kept going, so the order had no safety stock in it.\n\n## Where it went wrong\n\n- **Transcript turn [3]**, which corresponds to **AOP Step 2**. Step 2 calls for `(daily demand × Setup input safety_stock_days)`. The Agent found the input empty and quietly defaulted it to 0 without stopping or flagging it.\n- That zero carried into turn [4]. The quantity became forecast only: 294 (42 × 7) − 260 stock = 34 units. This covers exactly one average week with no buffer, so any demand above average in that week would cause a stockout. That matches the report that CZ-031 ran out of SKU-1101 on Thursday.\n- The calculation and the portal submission both ran correctly. The input fed into them was the problem.\n\n## Evidence\n\n- Transcript [3]: `Agent: Setup inputs: safety_stock_days = (not set). Treating it as 0.`\n- AOP Step 2: `Order quantity = forecast weekly demand + (daily demand × Setup input safety_stock_days) − current stock.`\n\n## Fix\n\nSet the Setup input `safety_stock_days` on this Agent to the store's intended buffer. For example, 3 days would add 42 × 3 = 126 units to SKU-1101, giving an order of 160 instead of 34.\n\n## Next step\n\n1. Open the Agent's **Setup**, fill in `safety_stock_days`, and resubmit or top up CZ-031's order for SKU-1101.\n2. As a follow-up, the AOP should stop rather than assume 0 when this input is empty. Step 2 could say: \"If `safety_stock_days` is not set, stop and do not submit.\" I can hand that change to `aop-writer` against Build `bld_d02` (`aops/<agent-id>.md`) if you want it.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 996,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 871,
+    "thinking_tokens": 150
+  },
+  "variant": "main",
+  "wall_ms": 10530
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.008463499999999999,
+  "created_at": "2026-10-29T11:24:53+00:00",
+  "duration_api_ms": 6643,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "2fc8723cd8fa3ba08b901524",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing terminal closure (with a related AOP gap). The case was auto-completed by the platform (`auto-completed on clean run end`), not closed by the Agent. The Run looks healthy, but the branch it took never did the rest of the job.\n\n**Where it went wrong**\nAfter step [7] the Run ended. In the \"supplier asked for more time\" branch of Step 2, the AOP says only \"note the new date in the thread\". It never says to skip Step 3, and it has no terminal action (`postpone_case` until the new date, or `update_case` + `complete_case`). The Agent did exactly what Step 2 said and stopped. Steps 3 and 4 never ran: no Gmail reminder, no `second_reminder_sent_at`, no `complete_case`. The platform then settled the case as Completed on a clean end. The new date lived only in a Slack post, so nothing was scheduled to bring the PO back on 12 Nov.\n\n**Evidence**\n- Transcript [4]: `\"Textima: We need until 12 Nov to ship, sorry for the delay.\"`\n- Transcript [7]: `\"Noted the new date of 12 Nov in the thread.\"` (last turn; no further tool calls)\n- AOP Step 2: `\"If the supplier has replied asking for more time: note the new date in the thread.\"`\n- Case state: `Completed — reason: auto-completed on clean run end`\n\n**Fix**\nChange AOP Step 2 so the \"more time\" branch ends in a terminal action that carries the date. For example: *\"If the supplier has replied asking for more time: note the new date in the thread, then call `postpone_case` until that date and stop. Do not send the reminder.\"* The postponement is what makes the case come back on 12 Nov and puts the PO back in the reminder chain.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t02`, working in `aops/<agent-id>.md`, to rewrite Step 2 as above. I haven't seen the case's full terminal record, so I'd confirm `postpone_case` accepts a resume date in your setup. If it doesn't, the alternative is to store the date with `update_case` and `request_handover` to a person.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8395,
+    "input_tokens": 2,
+    "output_tokens": 762,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9148
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.00057135,
+  "created_at": "2026-10-29T11:31:44+00:00",
+  "duration_api_ms": 5411,
+  "input_hash": "95d351598029029b",
+  "key": "64e0c37967b081519e422391",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Connection failure. The Login's session expired, so Okta blocked the sign-in.\n\n**Where it went wrong:** Step 1, at the first `browser.open` call (transcript [1]). The Enterprise Browser used the Login \"Coop portal (Okta)\" to reach the reports page, and the portal redirected to Okta before the page loaded. The Run stopped at that point, so Step 2 (downloading the CSV) never started.\n\n**Evidence:**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Run error summary: `Okta sign-in required`\n- Login context: last re-authenticated 94 days ago, and the portal enforces 90-day sessions.\n\nThe 94-day gap is more than the 90-day limit, so the session expired and the Run failed. This is a credential-lifecycle problem, not an AOP problem. The AOP correctly asked for the reports page, and the Agent correctly reported that it could not sign in.\n\n**Fix:** Re-authenticate the \"Coop portal (Okta)\" Login in Duvo's Login settings, then re-run the Agent. No AOP change is needed for this failure.\n\nTo avoid a repeat, re-authenticate on a schedule shorter than 90 days (for example, every 80 days) or set a reminder to do so before the session lapses.\n\n**Next step:** Re-authenticate the Login now and start a new Run. If the Run fails with the same Okta message right after a successful re-authentication, stop treating it as a Connection problem. That would point to a platform issue, and the diagnosis should go to Duvo support with run_x01 and bld_x01.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8215,
+    "input_tokens": 2,
+    "output_tokens": 978,
+    "thinking_tokens": 391
+  },
+  "variant": "main",
+  "wall_ms": 7496
+}

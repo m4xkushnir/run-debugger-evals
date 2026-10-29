@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.0099632,
+  "created_at": "2026-10-29T11:34:42+00:00",
+  "duration_api_ms": 9812,
+  "input_hash": "4a001beca9456e30",
+  "key": "360455a1ab81b9721c8768fd",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — AOP ambiguity. The Run status is \"completed\", but the outcome is wrong: the bill was booked against the wrong vendor, our own entity.\n\n**Where it went wrong** — Transcript [1], and Step 1 of the AOP. The Agent extracted the bill-to customer's VAT ID (ours) as the supplier's VAT ID. Everything after that followed from it: `find_vendor` matched our own entity at [3], and `create_bill` created the bill at [4]–[5] with no check.\n\n**Evidence**\n- AOP Step 1: \"extract the supplier name, VAT ID and total.\" It doesn't say which of the invoice's VAT IDs is the supplier's.\n- Transcript [1]: \"supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\". The invoice's supplier VAT ID is DE811203984, and CZ45272956 is the bill-to customer's.\n- Transcript [3]: `\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"`. The lookup result shows the mismatch, and the Agent went ahead anyway.\n\n**Root cause** — The symptom is a bill booked to our own entity. The cause is upstream. The AOP says \"the VAT ID\" when the invoice carries two, and gives no rule for telling them apart. Step 2 also has no sanity check, so a lookup result that doesn't match the extracted supplier name (or that is our own entity) is accepted silently.\n\n**Fix** — Change Step 1 and Step 2 of the AOP:\n- Step 1: extract the VAT ID that belongs to the supplier (the issuer, next to the supplier name and address), never the bill-to customer's. Our own VAT ID is `CZ45272956`.\n- Step 2: before creating the bill, check that the vendor returned by `find_vendor` matches the extracted supplier name and is not our own entity. If it doesn't match or no vendor is found, do not create the bill; use **Human in the loop** or `fail_case` instead.\n\nThis is one root cause, an under-specified extraction rule, with the Step 2 check as the guard that would have caught it.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g05`, the change request above (\"rewrite Step 1 to specify the supplier's VAT ID and exclude ours, `CZ45272956`; add a vendor-match check to Step 2\"), and the file `aops/<agent-id>.md`. The bill already created against vendor 200140 should be reviewed and corrected in NetSuite manually, since this diagnosis doesn't change it.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8292,
+    "input_tokens": 2,
+    "output_tokens": 913,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10995
+}

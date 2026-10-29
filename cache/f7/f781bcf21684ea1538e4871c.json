@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.006123399999999999,
+  "created_at": "2026-10-29T11:31:45+00:00",
+  "duration_api_ms": 5584,
+  "input_hash": "95d351598029029b",
+  "key": "f781bcf21684ea1538e4871c",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure. The Login **Coop portal (Okta)** has an expired session, so the portal redirected to Okta sign-in. The cause is a stale Login, not a bug in the Agent's logic.\n\n**Where it went wrong**\nStep 1 of the AOP. The Agent opened the reports page with the Login, and the portal rejected the session before Step 2 (download) could start. The Agent stopped correctly, because it had no way to re-authenticate on its own.\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: the Login was last re-authenticated 94 days ago, and the portal enforces 90-day sessions. The session expired about 4 days before this Run.\n\n**Fix**\nRe-authenticate the Login **Coop portal (Okta)** in Duvo. Because the portal enforces a 90-day session, this will recur about every 90 days unless the Login is refreshed on a schedule shorter than that (for example every 60 days).\n\n**Next step**\nRe-authenticate the Login now and start a new Run to confirm it gets past Step 1. If you want the AOP to handle this more gracefully, I can invoke `aop-writer` to add a branch to Step 1 such as: *If the portal redirects to Okta sign-in, use **Human in the loop** to request re-authentication of the Login, then retry.* That is optional hardening and not the root cause. The root cause is the expired Login.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8194,
+    "input_tokens": 2,
+    "output_tokens": 530,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7783
+}

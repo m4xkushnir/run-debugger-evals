@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X03",
+  "cost_usd": 0.0132526,
+  "created_at": "2026-10-29T11:32:25+00:00",
+  "duration_api_ms": 10400,
+  "input_hash": "81884e18921f1d60",
+  "key": "2da4cdc41ee4714a5b3bfdff",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nConnection failure (missing scope). The Gmail Connection only holds `gmail.readonly`, but the AOP needs to send mail.\n\n**Where it went wrong**\nAt transcript step [1], the Agent called `gmail.send_message`. That is the correct call for AOP Step 2 (\"Send the RFQ via **Gmail**\"). The Connection can't authorize it, so the call fails at [2]. The Agent's \"Sending failed.\" at [3] is only the symptom. The AOP is fine for the happy path, and the Run input and recipient look fine.\n\n**Evidence**\n- Transcript [2]: `gmail.send_message: ERROR 403: Request had insufficient authentication scopes.`\n- Your context: \"Connection granted scopes after re-authentication: gmail.readonly.\"\n- AOP Step 2: \"Send the RFQ via **Gmail**.\"\n\nRe-authenticating didn't fix it because it re-issued the same read-only grant. That is why the failure repeated identically afterwards.\n\n**Fix**\nGive the Gmail Connection a send scope (`gmail.send`, or a broader scope that includes sending). Reconnect it and make sure the consent screen grants \"send email on your behalf\", not just read access. Then confirm the granted scopes list includes send before re-running.\n\nIf the consent screen never offers a send permission, or you approve it and the Connection still comes back as `gmail.readonly`, the Connection itself is requesting the wrong scope. That would be a platform issue, and you should raise it with Duvo support. Include Run `run_x03`, Build `bld_x03`, the 403 error, and the granted scopes after reauthentication. Nothing in your data shows that, so I'm treating this as a scope problem on your side.\n\n**Next step**\nReconnect the Gmail Connection in Setup with send permission, then start a new Run. No AOP rewrite is needed now. Later, you could ask `aop-writer` to add a fallback for send failures, such as `request_handover` to a human. That is a separate improvement, not the cause of this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8186,
+    "input_tokens": 2,
+    "output_tokens": 1243,
+    "thinking_tokens": 521
+  },
+  "variant": "main",
+  "wall_ms": 11841
+}

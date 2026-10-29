@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0090336,
+  "created_at": "2026-10-29T11:31:37+00:00",
+  "duration_api_ms": 7234,
+  "input_hash": "8cdd082843487845",
+  "key": "fed5264e44d96ec0c6e67a3e",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity. Step 2 says \"If unsure about the supplier match, call `fail_case`\" with no definition of what counts as a match. The Agent followed the AOP correctly, and the Run is \"completed\" because it did what the AOP told it to.\n\n**Where it went wrong:** Transcript turn [5], at AOP Step 2. The Agent searched SAP by a truncated name, got one candidate, judged it only on the name, and failed the case. It never compared the VAT number, which was available in both the invoice context and the SAP result.\n\n**Evidence:**\n- AOP: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4]: `\"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"`. You report the invoice VAT is identical.\n\nNote that the transcript as pasted shows the invoice payload containing only `supplier_on_invoice` (turn [2]), with no VAT field. So the VAT may not have reached the Agent at all. I'm relying on your statement that the invoice shows that VAT. If the claim_case payload really lacks it, there is a second, data-side gap (see Fix). The 31% weekly failure rate is consistent with a systematic rule gap, not a one-off, since legal-name vs. trade-name mismatches would recur for many suppliers.\n\n**Fix:** Replace the \"unsure\" clause in AOP Step 2 with an explicit matching rule: *If the invoice VAT number exactly equals the VAT of exactly one SAP vendor, treat it as a match and proceed, regardless of name differences. If no VAT match, or multiple vendors match, call `fail_case`.* Also have the search try the VAT number, not just a truncated name. Confirm that the invoice's VAT is actually delivered by `claim_case`; if it isn't, it needs to be added to the case data, otherwise the rule can't be applied.\n\n**Next step:** I can invoke `aop-writer` with Build `bld_s06` and `aops/<agent-id>.md` to rewrite Step 2 with the VAT-first matching rule. Separately, check that `claim_case` returns the invoice VAT. Once the AOP is fixed, the already-failed cases from this week can be re-queued.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.86}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 819,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8573
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.013211200000000001,
+  "created_at": "2026-10-29T11:38:17+00:00",
+  "duration_api_ms": 8374,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "19a33ebc3401afbddc52e518",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing data (Setup input `safety_stock_days` not set), compounded by AOP ambiguity about the empty case.\n\n**Where it went wrong**\nTranscript turn [3]: the Agent found `safety_stock_days` unset and silently substituted 0. This feeds AOP Step 2, where the safety-stock term `daily demand × safety_stock_days` was zeroed out. The Run then submitted at [5] and finished as \"completed\", so nothing flagged the problem. Step 2 also doesn't say what to do if the input is missing, so the Agent chose a default itself.\n\n**Evidence**\n- Transcript [3]: \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- Transcript [4]: \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n- AOP Step 2: \"Order quantity = forecast weekly demand + (daily demand × Setup input `safety_stock_days`) − current stock.\"\n\nWith the buffer at 0, the order only covered the forecast week minus stock on hand (34 units). Any demand above forecast, or any delay in delivery, had no cushion, which fits the stockout on Thursday.\n\nCaveat: the transcript doesn't show how the 294 forecast was derived (42 × 7 = 294 matches the daily demand), and it doesn't show the intended value of `safety_stock_days`, delivery lead time, or Thursday's actual sales. I can't confirm from this data that the safety stock alone would have prevented the stockout, only that the order was built without any buffer because of the missing input.\n\n**Fix**\nEdit AOP Step 2 so a missing `safety_stock_days` is never defaulted silently. Suggested change request: *\"If Setup input `safety_stock_days` is not set, do not calculate or submit the order. Use **Human in the loop** to ask for the value (or fail the Run), instead of treating it as 0.\"* Separately, set `safety_stock_days` in Setup to the intended value (that number is a business decision I can't infer from this Run).\n\n**Next step**\n1. Set `safety_stock_days` in the Agent's Setup now, otherwise every Run keeps ordering with no buffer.\n2. I can invoke `aop-writer` with Build `bld_d02` and the change request above to edit the AOP (`aops/<agent-id>.md`) so a missing input stops the Run rather than defaulting to 0.\n3. Check other stores' recent Runs for the same `(not set)` message, since the unset input would affect every order this Agent has placed.",
+  "usage": {
+    "cache_creation_input_tokens": 1000,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 849,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9534
+}

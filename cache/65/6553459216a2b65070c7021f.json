@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.0124679,
+  "created_at": "2026-10-29T11:25:11+00:00",
+  "duration_api_ms": 7288,
+  "input_hash": "d0dabf96580dd687",
+  "key": "6553459216a2b65070c7021f",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Missing terminal closure. The AOP's failure branch (label can't be generated) posts to Slack but never says to `fail_case`, `postpone_case`, or `request_handover`. The Run therefore ended cleanly after a non-terminal action, and the platform auto-completed the case.\n\n**Where it went wrong** — Transcript [7], right after the Slack post at [5]–[6]. The Agent stopped after the Step 2 sub-bullet. The Step 2 branch has no terminal action, and Step 4 (`complete_case`) was never reached. The case was left Completed (\"auto-completed on clean run end\"), with the evaluation stuck in `evaluating`. The customer got no label, but the case looks healthy in the Queue.\n\n**Evidence**\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Label could not be created; I alerted #returns-ops.`\n- AOP Step 2: `If the label can't be generated: post the order number to **Slack** #returns-ops.` There is no closing action after this line.\n\nThe 422 is the symptom. It is a legitimate business response (Packeta doesn't offer returns to SK), not a Connection fault. The root cause is that the AOP never says how the case should end when no label can be made.\n\n**Fix** — In AOP Step 2, add a terminal action to the failure branch. For example: *\"If the label can't be generated: post the order number to Slack #returns-ops, then call `fail_case` with the Packeta error as the reason, and stop. Do not continue to Step 3.\"* Use `request_handover` instead if ops should pick the case up and arrange a label manually. The AOP should also state explicitly that Steps 3–4 are skipped on this branch.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_t03`, working in `aops/<agent-id>.md`, to make this change to Step 2. Separately, the SK destination will keep failing until it is handled. Whether to add a fallback carrier or route SK returns elsewhere is a business decision for you. Also check case `case_t03` itself: it is marked Completed but no label was sent, so it likely needs to be reopened or handled manually.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 985,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 779,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10388
+}

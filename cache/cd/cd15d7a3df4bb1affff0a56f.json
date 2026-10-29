@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0010993599999999997,
+  "created_at": "2026-10-29T11:28:56+00:00",
+  "duration_api_ms": 10636,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "cd15d7a3df4bb1affff0a56f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Wrong decomposition. The AOP packs a same-day onboarding phase and a 7-day wait into one Run, and this Agent has no way to hold a Run open for a week.\n\n**Where it went wrong:** Step 5 of the AOP (\"Wait 7 days for the signed bank letter\"), which the Agent reached at transcript message [5]. The Run ended immediately after that message, with no wait, postponement, or handover. The Run is marked `completed` because the Agent finished its turn, not because the onboarding finished. Steps 6–11 never ran.\n\n**Evidence:**\n- Transcript [5]: *\"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"* Nothing in the transcript schedules that check-back. The Agent promised a follow-up it had no mechanism to perform.\n- AOP Step 5: *\"Wait 7 days for the signed bank letter.\"* The AOP asks for a wait but doesn't say how the wait happens.\n\n**Fix:** Split the AOP at Step 5 into two Agents:\n- **Agent 1 (Steps 1–4):** Read the form from Gmail, check VIES, create the vendor in SAP, and request bank confirmation. It ends with `request_handover` to Agent 2, or with `postpone_case` set to 7 days out if the work runs as a queue case.\n- **Agent 2 (Steps 6–11):** Starts when the signed letter arrives or the 7-day window closes. If the letter is in, it activates payments, sends the welcome pack, adds the Coupa catalogue entry, notifies purchasing in Slack, and schedules the 30-day review. If not, it chases the supplier.\n\n**Next step:** Hand the split to `aop-writer` with Build `bld_w03` and the Step 5 change request, so it edits `aops/<agent-id>.md` in place.\n\nSeparately, vendor 100977 is stuck at step 4 in SAP. Activating it, or running Steps 6–11 manually, is the recovery action for this supplier, and it's outside this diagnosis.\n\nAlso check the Run's inputs. The transcript shows no Gmail read (Step 1), yet the VAT number and vendor name appear, so the form data may have been supplied another way. If Gmail was never read, the form data may not match the supplier's actual form.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8366,
+    "input_tokens": 2,
+    "output_tokens": 2031,
+    "thinking_tokens": 1217
+  },
+  "variant": "main",
+  "wall_ms": 12152
+}

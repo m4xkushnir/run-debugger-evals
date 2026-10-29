@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0255638,
+  "created_at": "2026-10-29T11:35:37+00:00",
+  "duration_api_ms": 8157,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "cfaa8794eb84706393349937",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing data. The Run completed and submitted an order, but the order was too small because the Setup input `safety_stock_days` was never set.\n\n**Where it went wrong:** Transcript turn [3], at AOP Step 2. Step 2 requires `safety_stock_days`. The input was empty, so the Agent silently treated it as 0 and calculated the order with no safety buffer. In turn [4] it calculated 294 (42/day × 7) + 0 − 260 = 34 units. That covers only the expected week's demand, so any above-average sales would leave CZ-031 short. That matches the stock-out on Thursday.\n\n**Evidence:**\n- Transcript [3]: `Setup inputs: safety_stock_days = (not set). Treating it as 0.`\n- AOP Step 2: `Order quantity = forecast weekly demand + (daily demand × Setup input `safety_stock_days`) − current stock.`\n\n**Fix:** Set a value for the `safety_stock_days` Setup input on this Agent, such as your standard buffer for this store or category. At 42/day, each safety-stock day adds 42 units to the order. For example, 2 days would have produced 118 units instead of 34.\n\n**Next step:** Open the Agent's Setup and fill in `safety_stock_days`, then Start Work again for CZ-031 or top up order RP-99120 manually. Separately, the AOP doesn't say what to do when the input is empty, which is why the Agent guessed 0. If you also want the Agent to stop and report a missing value instead of assuming 0, I can hand that to `aop-writer` as a Step 2 change.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 996,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 806,
+    "thinking_tokens": 226
+  },
+  "variant": "main",
+  "wall_ms": 9560
+}

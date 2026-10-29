@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.0103079,
+  "created_at": "2026-10-29T11:32:35+00:00",
+  "duration_api_ms": 6709,
+  "input_hash": "086079e1976a5bd5",
+  "key": "422024ab09152d1c59878b00",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Not a failure. The Run is paused on Human-in-the-loop (status `waiting`), working as designed.\n\n**Where it went wrong** — Nothing went wrong in the Run. It stopped at AOP Step 2 (amount over EUR 1,000 requires approval). The transcript ends at message [3], where the approval request is still unanswered. Steps 3 (issue the credit note in NetSuite and email the customer) hasn't started because it depends on that approval.\n\n**Evidence**\n- AOP Step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n- Transcript [2]–[3]: `human_in_the_loop.request {\"question\": \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"}` → `{\"status\": \"pending\"}`\n\nThe Run didn't error. It is blocked on a pending human request, and the credit note was correctly not issued.\n\n**Fix** — No change to the AOP, Connections, or Setup is needed. Someone has to answer the pending approval request (\"Approve credit note EUR 1,850 for Hotel Praha?\") in Duvo. Once answered, the Run resumes: yes leads to Step 3, no ends the credit request without issuing.\n\nIf this Run sits unanswered often, the likely cause is that the right person isn't being notified. Check who the HITL request is routed to in the Agent's Setup. That is an assumption, since the transcript doesn't show who was notified or how, so verify it rather than treating it as confirmed.\n\n**Next step** — Open Run `run_n01` in the Duvo web app, find the pending approval request, and respond to it. No handoff to `aop-writer` is needed.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 865,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 611,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7931
+}

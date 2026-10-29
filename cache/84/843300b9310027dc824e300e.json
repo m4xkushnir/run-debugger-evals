@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.00076052,
+  "created_at": "2026-10-29T11:23:11+00:00",
+  "duration_api_ms": 7340,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "843300b9310027dc824e300e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Connection failure. The Login is authorised for the wrong market.\n\n**Where it went wrong:** Step 2 signs in with the Login \"Alpenfrisch portal\", which is the CZ service account `svc-replen-cz`. Step 3 then selects market AT, which this account isn't permitted to order for. The Run's market was AT (`[1]`), so the account and the store were mismatched from the start.\n\n**Evidence:**\n- `[3] Tool result ← browser.login: Signed in as svc-replen-cz@retailco.eu`\n- `[5] Tool result ← browser.select: Page message: \"Access denied: this account is not authorised for market AT.\"`\n\n**Fix:** Give the AT orders an Alpenfrisch Login that is authorised for market AT. Concretely, add a Login such as \"Alpenfrisch portal (AT)\" in Setup, using an account the portal admin has granted AT access, and point Step 2 at it. You'll need to confirm with Alpenfrisch or your portal admin that an AT-authorised account exists. I can't verify that from here.\n\nIf you want one Agent to handle both markets, Step 2 will also need to choose the Login by the market in the run input. That is an AOP change, so it would go to `aop-writer`. The root cause is the Login, though, so fix that first.\n\n**Next step:** Create or re-scope the AT Login in Setup, then re-run store AT-114. No order was placed in this Run (`[6]`), so there's nothing to reverse. If you want the market-based Login routing, I can hand the current Build to `aop-writer` with that change request.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 1353,
+    "thinking_tokens": 785
+  },
+  "variant": "main",
+  "wall_ms": 10122
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.0088237,
+  "created_at": "2026-10-29T11:30:47+00:00",
+  "duration_api_ms": 9192,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "8689e9a14b52680b6e86237a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The AOP asks one Run to reconcile \"all unmatched lines\", which in a bank statement means hundreds of records per Run.\n\n**Where it went wrong**\nAOP Step 2 is the decision point. The Agent fetched the statement (step [1]-[2]), found 611 unmatched lines, and then tried to match them one by one inside a single Run (step [3]-[4]). It got through 230 before hitting the 30-minute limit, so Step 3 (the Slack summary) never ran. The timeout is the symptom. The cause is that the AOP puts the whole batch into one Run instead of letting the platform iterate over single items.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]-[4]: \"611 unmatched lines. Matching each against NetSuite.\" then \"Matched 230 of 611.\"\n\n230 of 611 in 30 minutes is about 7.7 lines/minute, so finishing would need roughly 80 minutes. A longer limit is not a realistic fix.\n\n**Fix**\nRestructure the work so each Run handles a single unmatched statement line (or a small fixed-size chunk) rather than the whole statement. Concretely, change AOP Step 2 from \"Reconcile all unmatched lines…\" to a per-case rule such as \"Match this one statement line against open NetSuite invoices; if exactly one match, record it and `complete_case`; if none or several, `request_handover`.\" The statement download and the Slack summary move out of the per-line Run: one Agent (or a separate step) loads the day's unmatched lines into a queue, and a final summary is posted once the queue is drained.\n\nI'm working from the transcript only, so I can't confirm how the Run was triggered or whether a queue is already configured. If it isn't, that setup is part of the change.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03`, the change request \"rewrite Step 2 to handle a single statement line per Run, with explicit terminal actions, and move the Slack summary to a separate completion step\", and the AOP file `aops/<agent-id>.md`. The queue split itself is a Setup change you'd make in Duvo.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8197,
+    "input_tokens": 2,
+    "output_tokens": 800,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10662
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X02",
+  "cost_usd": 0.0009605,
+  "created_at": "2026-10-29T11:31:55+00:00",
+  "duration_api_ms": 9121,
+  "input_hash": "19943a3a0ddec6d6",
+  "key": "d1a6067dd451a7f738ff48af",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Platform / infra failure. The SharePoint Connection keeps returning 401 after a clean re-authentication, and the failure reproduces across every Run since.\n\n**Where it went wrong:** Step 2 of the AOP, at the first tool call, `sharepoint.upload`. The AOP is correct, and the path it produces (`Logistics/Delivery notes/2026/10`) is what the user wants. The request is rejected before any file is written.\n\n**Evidence:**\n- Transcript [2]: `ERROR 401 Unauthorized`\n- Context: \"SharePoint Connection re-authenticated by the user at 10:02; Duvo's 'Test connection' succeeded at 10:03.\" and \"This Run at 10:15 and the previous 3 Runs since the re-authentication all failed with the same 401.\"\n\n**What I ruled out:**\n- *Expired token:* ruled out by the fresh re-authentication at 10:02.\n- *AOP or Setup problem:* the path and steps are fine, and the Agent reports the error faithfully.\n- *Folder permissions:* the same Microsoft account uploads to this folder from the browser, so the account has access.\n\n**One open question:** \"Test connection\" may only exercise a read call, while an upload needs write permission. If the re-authentication granted read-only scopes, Microsoft would normally return 403 rather than 401, so this is less likely, but it is cheap to check. Open the SharePoint Connection's details and confirm it grants write access to SharePoint files. If write access is present, or the scopes look right, treat this as a platform fault.\n\n**Fix:** None in your artifacts. The AOP, Setup, and Connection are behaving as configured. The fault is between Duvo and SharePoint, and it needs Duvo's engineers to look at it.\n\n**Next step:** I don't have a support-escalation tool in this session, so please raise this with Duvo support from the Duvo web app. Include:\n- Run IDs: `run_x02`, plus the three earlier failed Runs since 10:02\n- Build ID: `bld_x02`\n- Error: `sharepoint.upload: ERROR 401 Unauthorized`\n- Timeline: re-authenticated 10:02, Test connection passed 10:03, Runs at 10:15 and after all fail\n- Ruled out: expired token, AOP/path error, folder permissions (browser upload works with the same account)\n\nUntil this is fixed, further Runs of this Agent will likely fail the same way. Avoid re-running it on live delivery notes until you hear back.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8280,
+    "input_tokens": 2,
+    "output_tokens": 1755,
+    "thinking_tokens": 873
+  },
+  "variant": "main",
+  "wall_ms": 10983
+}

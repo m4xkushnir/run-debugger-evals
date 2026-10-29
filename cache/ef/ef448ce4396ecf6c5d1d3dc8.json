@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.00114471,
+  "created_at": "2026-10-29T11:28:31+00:00",
+  "duration_api_ms": 11066,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "ef448ce4396ecf6c5d1d3dc8",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Connection failure. The Enterprise Browser session for the Agrofert portal expired, and the Run had no branch for it.\n\n**Where it went wrong:** Step 3 of the AOP. The Run worked through the 17 under-90% suppliers in a single pass, and the browser session was still in use when it reached supplier 9 (transcript [5]). The session expired after 55 minutes, and the Run stopped at that point (transcript [7]). The AOP says to \"sign in to their portal\" for each supplier but does not say to sign in fresh each time or what to do when a sign-in fails. The session therefore carried over from earlier suppliers until it timed out.\n\n**Evidence:**\n- [5] \"Signing in to portal 9 of 17 (Agrofert).\"\n- [7] \"ERROR: browser session expired after 55 minutes\"\n\nThe transcript shows no download calls for suppliers 1 to 8, so I can't confirm those were completed. Step 3 wrote the W43 tab in step 2, so the scorecard is partly populated and the rest of the week's work did not run.\n\n**Fix:** One change to the AOP, Step 3:\n\n> For each supplier under 90%: sign in to their portal with **Enterprise Browser** fresh (do not reuse a session from a previous supplier), download the open-order status, then sign out. If sign-in fails or the session expires, record that supplier as \"portal unavailable\" in the W43 tab, skip to the next supplier, and continue. Do not fail the whole Run for one portal.\n\n**Next step:** I can hand this to `aop-writer` to rewrite Step 3 in the AOP file. Before rerunning, check that the Agrofert Login is still valid, since the error came from the session and not from the credentials. I can't rule out a shorter platform session limit from this transcript alone. If a fresh sign-in fails on its own, that points to a Login or Connection problem and not the loop, and it would need to go to Duvo.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8451,
+    "input_tokens": 2,
+    "output_tokens": 2120,
+    "thinking_tokens": 1438
+  },
+  "variant": "main",
+  "wall_ms": 12662
+}

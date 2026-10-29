@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.0008653599999999999,
+  "created_at": "2026-10-29T11:29:33+00:00",
+  "duration_api_ms": 7873,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "b1762ae7f31607df4102970c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Platform / infra failure. The error comes from Duvo's connection layer, not from Gmail or your AOP.\n\n**Where it went wrong:** Step 2 of the AOP, `gmail.send_message` at transcript turn [1]. The call failed before Gmail was reached. The Agent had no decision to make at that point, so the AOP is not implicated.\n\n**Evidence:**\n> [2] Tool result ← gmail.send_message: ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)\n\nThe error says the platform could not decrypt the Gmail Connection's stored credentials. That is a failure to read what Duvo holds for the Connection, not a rejection from Gmail. A Gmail-side auth problem would normally show as a 401 or 403.\n\n**Ruled out:**\n- **Expired token:** You re-authenticated at 09:12, and a test send at 09:13 succeeded on the same Connection.\n- **Missing scope:** The same Connection and scopes sent successfully at 09:13.\n- **AOP ambiguity or missing data:** The recipient is present, and the failure occurs at the tool layer before any branching.\n- **Repeat across Runs:** Run 09:20 and the two after it all show the same error, so it is not a one-off.\n\n**Fix:** None in your artifacts. Re-authenticating again or editing the AOP won't help, because the credentials have just been replaced and still fail to decrypt. Stop repeated re-authentication attempts and escalate to Duvo. Include:\n- Run ID `run_p02` and Build ID `bld_p02`\n- The exact error text, including `kms-4f19`\n- The timeline: re-auth at 09:12, successful test send at 09:13, failures from 09:20 onward\n- The ruled-out causes above\n\nI can't see a support-escalation tool in this session, so please raise this through Duvo support in the Duvo web app and paste in this diagnosis. Until it's fixed, sends from this Connection will keep failing. The AOP doesn't need a change for this.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 1566,
+    "thinking_tokens": 837
+  },
+  "variant": "main",
+  "wall_ms": 9409
+}

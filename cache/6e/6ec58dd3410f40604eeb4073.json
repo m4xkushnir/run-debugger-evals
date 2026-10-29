@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0006458200000000001,
+  "created_at": "2026-10-29T11:38:57+00:00",
+  "duration_api_ms": 4507,
+  "input_hash": "f214809918538af8",
+  "key": "6ec58dd3410f40604eeb4073",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Batch / iteration leak, with the 429 as the symptom. The root cause is the AOP's Step 2, not the Shopify call itself.\n\n**Where it went wrong:** Step 2 of the AOP (\"For each SKU in the catalogue, check stock in Shopify…\") tells the Agent to iterate over all 2,300 SKUs in one Run. The transcript shows the Agent doing exactly that: it checked about 180 SKUs (message [4]), then called `shopify.get_inventory` for SKU-0181 (message [5]), which returned a 429. The Agent then stopped (message [7]) and the Run failed.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify**…\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix:** Rewrite Step 2 so the Run handles one request, not the whole catalogue. The Agent should look up only the products named in the customer's email (the email asked about 3), with one `shopify.get_inventory` call per product, and then reply. Replace the \"for each SKU in the catalogue\" loop with a lookup of the requested products only.\n\nThis fix also reduces how often you hit the limit. Shopify allows 2 calls per second, and 2,300 sequential calls would hit that limit on almost every run. Three calls per email stays well under it. If a single request ever needs many lookups, the AOP should also tell the Agent to wait out the `Retry-After` value rather than stop.\n\n**Next step:** I can invoke `aop-writer` on `aops/<agent-id>.md` with this change request: \"Rewrite Step 2 to check stock only for the products named in the customer's email, one `shopify.get_inventory` call per product, instead of iterating the full catalogue.\" Pass Build `bld_s04` as the base.\n\nNote on confidence: the diagnosis is grounded in the transcript and the AOP you pasted. I haven't verified the Build's current state or whether the Shopify rate limit is shared with other Agents, so check those if the failure recurs after the fix.",
+  "usage": {
+    "cache_creation_input_tokens": 982,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 755,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 6281
+}

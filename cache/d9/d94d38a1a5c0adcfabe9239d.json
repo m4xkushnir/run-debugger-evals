@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0181285,
+  "created_at": "2026-10-29T11:29:08+00:00",
+  "duration_api_ms": 13596,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "d94d38a1a5c0adcfabe9239d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Wrong decomposition. One Agent is carrying a real-time onboarding Run, a 7-day wait, and a post-activation cycle in a single AOP. The Run status is `completed`, so the platform didn't fail. The Run ended when the Agent stopped.\n\n**Where it went wrong:** The decision point is transcript turn [5], at AOP Step 5 (\"Wait 7 days for the signed bank letter\"). A Run is a single execution and can't sleep for a week and resume itself. After Step 4 the Agent wrote a closing message, and the Run ended cleanly. Steps 6-11 (activate payments, chase, welcome pack, Coupa, Slack, 30-day review) never had a chance to run. The AOP has 11 top-level steps with a clear phase boundary at Step 5, and it mixes work that happens now with work that happens a week or more later.\n\n**Evidence:**\n- AOP: `5. Wait 7 days for the signed bank letter.`\n- Transcript [5]: `Agent: Bank confirmation requested. I'll check back in 7 days for the signed letter.`\n- Transcript [3-4] shows the vendor was created (`{\"vendor\": \"100977\"}`) and nothing follows. This matches your report: \"Vendor 100977 was created but never activated.\"\n\nThe \"I'll check back\" line is a promise nothing can keep. No trigger exists to start a new Run after 7 days.\n\n**Things the transcript doesn't show:**\n- There is no Gmail read for Step 1, which is the supplier form. The transcript starts at `vies.check`.\n- There is no tool call for Step 4. The Agent says \"Bank confirmation requested\" but no send action appears.\n- If the transcript is complete, the Agent claimed an action it didn't perform. If it was excerpted, ignore this. Either way, the rewritten Step 4 should name a concrete send action.\n\n**Fix:** Split the AOP at Step 5 into two Agents connected by a queue or `request_handover`.\n- **Agent A, intake (Steps 1-4):** read the form, check VIES, create the vendor in SAP, and send the bank confirmation request. It ends on an explicit terminal action that hands the supplier on, instead of a closing sentence.\n- **Agent B, activation (Steps 6-11):** it starts when the signed bank letter arrives, or when a 7-day timeout fires and it takes the chase branch. It then activates payments in SAP, sends the welcome pack, adds the supplier to the Coupa catalogue, notifies purchasing in Slack, and schedules the 30-day review.\n\nVendor 100977 still needs activation. After the split, start Agent B on it manually, or activate it directly once the letter is in.\n\n**Next step:** I can invoke `aop-writer` with Build `bld_w03` and the change request \"split the AOP at Step 5 into an intake Agent (Steps 1-4, ending in a handoff) and an activation Agent (Steps 6-11, triggered by the signed letter or a 7-day timeout).\" It would edit `aops/<agent-id>.md` in place. I'd also ask it to make Step 4 an explicit send action.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.78}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8345,
+    "input_tokens": 2,
+    "output_tokens": 1729,
+    "thinking_tokens": 637
+  },
+  "variant": "main",
+  "wall_ms": 16465
+}

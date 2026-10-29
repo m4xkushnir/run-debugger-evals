@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.0008923799999999999,
+  "created_at": "2026-10-29T11:30:37+00:00",
+  "duration_api_ms": 9096,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "bc08959fe0f793033464acf2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [3]. The Agent took \"all unmatched lines\" as one job and started matching all 611 lines in a single Run. The 30-minute limit was reached after 230 matches.\n\n**Evidence:**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\nThe timeout is the symptom. The cause is that the AOP asks one Run to do the whole batch. Going by the 230 matches in roughly 30 minutes, the batch would need on the order of 80 minutes at that pace. The transcript has no timestamps, so this estimate is approximate. The point is that the batch doesn't fit in one Run whatever the exact rate.\n\n**Fix:** Rewrite Step 2 so each Run reconciles one statement line against NetSuite, and the platform iterates over the lines. For example: \"For the single statement line you were given, find the matching open invoice(s) in **NetSuite** and reconcile it. Do not process any other line.\"\n\nStep 3 (the Slack summary) needs all the results, so it can't live inside a per-line Run. Decide where the aggregation happens, either in a separate summary Agent or a scheduled step that reads the reconciled results. That is a design choice for the user, not part of this fix.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_s03`, the change request \"rewrite Step 2 to reconcile one statement line per Run,\" and the AOP file `aops/<agent-id>.md`. Tell me the Agent ID if you want that file path to be exact.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8218,
+    "input_tokens": 2,
+    "output_tokens": 1620,
+    "thinking_tokens": 944
+  },
+  "variant": "main",
+  "wall_ms": 10791
+}

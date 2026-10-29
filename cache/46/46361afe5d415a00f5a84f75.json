@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.009592200000000002,
+  "created_at": "2026-10-29T11:23:37+00:00",
+  "duration_api_ms": 7359,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "46361afe5d415a00f5a84f75",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed technically (every tool call succeeded), but the outcome was wrong because the AOP left the refund decision to the Agent's judgment.\n\n**Where it went wrong**\nStep 2 of the AOP (Build `bld_a01`), exercised at transcript turn [3]. The AOP says to \"use your judgment on whether to refund in full or offer a partial refund\" when damage \"looks significant,\" and gives no threshold, no percentage, and no definition of cosmetic vs. significant damage. The Agent filled the gap itself, then turn [4] issued the full EUR 480.00 refund via Stripe. Steps 3 and 4 followed from that decision and did exactly what they were told.\n\n**Evidence**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent's reasoning (\"significant enough to the customer\") is a guess shaped by the vague AOP wording. The 15% cosmetic-damage policy exists only in the user's head and is not in the AOP, so the Agent could not have applied it.\n\nA secondary observation, not a separate root cause: the refund went out with no Human-in-the-loop check. I'd treat that as optional hardening, not the primary fix, since a concrete rule would have prevented this case.\n\n**Fix**\nRewrite AOP Step 2 to replace the judgment call with explicit rules, for example:\n- If the damage is cosmetic (surface scratches, scuffs, minor marks that don't affect function or structure): refund 15% of the item price.\n- If the damage affects function or structure (broken, cracked, unusable): refund in full.\n- If it's unclear which applies: use **Human in the loop** to confirm before issuing the refund.\n\nAlso update Step 3 so the Stripe refund amount comes from the result of Step 2, not from the item price by default.\n\nCaveat: I only have the policy as you stated it (\"15% for cosmetic damage\"). The definition of cosmetic vs. functional damage, and any policy for other damage tiers, should come from you.\n\n**Next step**\nI can invoke `aop-writer` to rewrite Step 2 and Step 3 of `bld_a01` in `aops/<agent-id>.md` with the rules above. If you confirm the damage-tier definitions, I'll include them in the change request.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 875,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11718
+}

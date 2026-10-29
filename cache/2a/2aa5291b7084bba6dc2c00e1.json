@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.00130802,
+  "created_at": "2026-10-29T11:37:47+00:00",
+  "duration_api_ms": 10497,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "2aa5291b7084bba6dc2c00e1",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. The Run completed cleanly, so nothing errored. The Agent made the wrong call because Step 3 says \"seems too high\" with no threshold, and it filled the gap with its own judgment.\n\n**Where it went wrong:** Step 3 of the AOP (bld_f02), at the flagging decision for lines 1 and 2 (transcript turns [1] and [2]).\n\n**Evidence:**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Turn [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Turn [2]: \"charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe Agent flagged the smaller variance and passed the larger one. Its reasoning in turn [2] cites fuel surcharges, which the AOP never mentions, so it invented a rule. The 2,600 CZK overcharge is exactly 31,600 − 29,000. The 40 CZK difference you saw is line 1 (2,140 − 2,100).\n\n**Fix:** Replace the vague test in Step 3 with a concrete rule, for example:\n\"Flag a line if the charged amount exceeds the rate card amount by more than 5%. Do not consider fuel surcharges or other reasons for the difference; apply the threshold as written.\"\n\nUnder this rule line 1 (+1.9%) is not flagged and line 2 (+9.0%) is. You should confirm 5% is the threshold your team wants. An absolute threshold (for example, more than 100 CZK) would also meet your report, so pick whichever matches your policy.\n\n**Secondary items to check (not confirmed by the transcript):**\n- The transcript shows only two lines. If the invoice has more, the Agent may have stopped early. Check the run input's line count.\n- Step 2 says to open the rate card in Files, but no Files read appears in the transcript, even though the rate values (2,100 and 29,000) show up. Check the Run's full message log to confirm the rate card was read from Files and not guessed.\n- The Sheets append recorded only `[\"line 1\"]`, which is the wrong flag. Remove or correct that row in \"Freight audit\" before re-running.\n\n**Next step:** Hand off to `aop-writer` with Build `bld_f02` and the AOP file `aops/<agent-id>.md`, asking it to rewrite Step 3 with the threshold above. After the rewrite, re-run the same invoice and confirm line 2 is flagged and line 1 is not.",
+  "usage": {
+    "cache_creation_input_tokens": 1008,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2069,
+    "thinking_tokens": 1178
+  },
+  "variant": "no_json",
+  "wall_ms": 11620
+}

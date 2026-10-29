@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.0008998599999999999,
+  "created_at": "2026-10-29T11:29:30+00:00",
+  "duration_api_ms": 8478,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "73b788f6fda723e5fbc6e84c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Platform / infra failure\n\n**Where it went wrong:** The failure happened inside the Gmail tool call itself (transcript [2]), before any response from Gmail. The error came from Duvo's credential layer, which could not decrypt the stored Connection credentials. The Agent's AOP ran correctly. Its one step called Gmail with the right recipient, and the platform failed underneath it.\n\n**Evidence:**\n> `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n\nThe `kms-` reference points to the key-management layer that stores credentials, not to Gmail or your account.\n\n**Why this is not a Connection failure you can fix:** An expired token or missing scope would be yours to fix, and a fresh authentication would usually clear it. Here the Gmail Connection was re-authenticated at 09:12, a test send at 09:13 succeeded, and then the Runs at 09:20 and after failed with the same decryption error. A Connection that fails again right after a successful reauthentication, with an identical error across Runs regardless of case data, points to the platform rather than your configuration.\n\n**Ruled out:**\n- **AOP ambiguity or wrong steps:** The AOP has no decision point that could cause this. The Run never reached a branch.\n- **Missing data:** The recipient was present in the tool call.\n- **Expired Connection or missing scope:** The reauthentication worked, and the test send proved it.\n- **Build change:** The failing Runs used the same Build (`bld_p02`) that you're describing as in effect.\n\n**Fix:** None in your artifacts. Do not rewrite the AOP or change the Gmail scopes for this. Reauthenticating again is unlikely to help, because the decryption fails on the platform side.\n\n**Next step:** This needs to go to Duvo. Raise it with Duvo support from the web app at app.duvo.ai, and include this diagnosis:\n- Run IDs: `run_p02` and the two Runs after it (the 09:20 failures)\n- Build ID: `bld_p02`\n- Connection: Gmail, re-authenticated at 09:12, test send at 09:13 succeeded\n- Exact error: `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n- Ruled out: AOP, input data, and Connection expiry or scopes\n\nI can't submit the report for you from here. Once Duvo confirms the fix, rerun the Agent to confirm.\n\n```json\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 1635,
+    "thinking_tokens": 760
+  },
+  "variant": "main",
+  "wall_ms": 10403
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.0087437,
+  "created_at": "2026-10-29T11:30:43+00:00",
+  "duration_api_ms": 8599,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "4e9c2221e39a7493a4efa5d8",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy 6). The AOP asks one Run to reconcile \"all unmatched lines\", 611 in this case, so the work cannot fit in the 30-minute Run limit.\n\n**Where it went wrong**\nAOP Step 2 is where it went wrong. At transcript [3] the Agent took the instruction literally and started matching the lines one at a time. By [4] it had matched 230 of 611, and at [5] the platform stopped the Run. Step 3 (the Slack summary) never ran, so nothing was reported. The 30-minute limit is the symptom. The root cause is that the AOP puts an unbounded per-line loop inside a single Run.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n\n**Fix**\nRewrite AOP Step 2 so that the Agent handles one unit of work per Run rather than the whole statement. Each unmatched statement line becomes its own case in a queue, and the Agent reconciles that single line against NetSuite open invoices. Use `complete_case` when the line is matched, and `postpone_case` or `request_handover` when no match is found. The Slack summary in Step 3 should move into a separate Agent or a final step that runs once, after the line cases are done, so that it does not depend on one long Run.\n\nTwo limits on this diagnosis: the transcript doesn't show how long each match took, and it doesn't show whether the NetSuite calls were slow. I can't tell whether per-line cost also needs tuning. The line count (611) against the amount done in 30 minutes (230) is enough to show that the batch design is the problem.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03` and the change request \"rewrite Step 2 to reconcile a single statement line per Run, with terminal actions for matched and unmatched outcomes, and move the Slack summary out of the per-line flow\", working in `aops/<agent-id>.md`. The queue setup that feeds the lines in (one case per unmatched line) is a separate change in Setup.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8197,
+    "input_tokens": 2,
+    "output_tokens": 792,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10475
+}

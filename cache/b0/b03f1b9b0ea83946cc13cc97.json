@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.00058582,
+  "created_at": "2026-10-29T11:39:23+00:00",
+  "duration_api_ms": 4613,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "b03f1b9b0ea83946cc13cc97",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity, specifically a stale AOP. The Agent was told to click an \"Export CSV\" button on the Invoices page. The portal's UI changed, so the button no longer exists where the AOP expects it. This is closest to the taxonomy's \"Connection failure\" and \"Missing data\" categories, but neither fits cleanly. It's best described as an **outdated navigation path**: the AOP has no path to the Billing section the portal now uses.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript [2]-[4]. The login succeeded and the portal's banner said the documents moved to \"My Account → Billing.\" The Agent went straight to clicking \"Export CSV\" on the Invoices page without going through the new path. The AOP never anticipated a navigation change, so the Agent had no fallback.\n\n**Evidence:**\n- Transcript [2]: `\"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- Transcript [4]: `ERROR: Element not found: button 'Export CSV'`\n\n**Fix:** Update Step 2 of the AOP to direct the Agent to the new location before clicking the export button. For example:\n\n> 2. After signing in, navigate to **My Account → Billing**. On the Billing page, click \"Export CSV\" and save the file to Files. If the Billing page is not found, stop and fail the run with a message noting the portal navigation has changed.\n\nThe fallback sentence matters. Without it, the next layout change will fail the same way with no clear message.\n\n**Next step:** Hand this to `aop-writer` with the Build ID `bld_g01`, the change request above, and the AOP file to edit (`aops/<agent-id>.md`). I haven't rewritten the AOP here.\n\n**Caveat on the evidence:** This diagnosis rests on the banner text in transcript [2]. I haven't confirmed the Billing page actually has an Export CSV button. If the Agent still fails after the AOP change, check the Billing page directly. The fix assumes the export option moved with the documents.",
+  "usage": {
+    "cache_creation_input_tokens": 877,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 677,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 6082
+}

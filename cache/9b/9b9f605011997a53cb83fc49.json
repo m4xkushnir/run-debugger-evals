@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.00128517,
+  "created_at": "2026-10-29T11:23:53+00:00",
+  "duration_api_ms": 11895,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "9b9f605011997a53cb83fc49",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity. The Run completed without a platform error. The Agent followed Step 3 as written, and Step 3 gives it no threshold to apply.\n\n**Where it went wrong:** Step 3 of the AOP (\"Flag any line where the charge seems too high compared with the rate card\") relies on the Agent's judgment of what \"seems too high\" means. In the transcript, the Agent applied that judgment inconsistently. It flagged line 1 at +1.9% (40 CZK) and passed line 2 at +9.0% (2,600 CZK). Its reason for passing line 2 was a fuel-surcharge explanation that appears neither in the AOP nor in the rate card excerpt.\n\n**Evidence:**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Transcript [2]: \"charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\n**Fix:** Replace the vague Step 3 with an explicit rule. The two values need your confirmation, since they are policy decisions:\n- Flag a line when the charge exceeds the rate-card rate by more than **X%** and by more than **Y CZK**.\n- Say explicitly whether fuel surcharges are excluded from the comparison or must be itemized separately.\n\nWith placeholder values of 2% and 500 CZK, line 1 (+40 CZK) would not be flagged and line 2 (+2,600 CZK, +9%) would be. The rule should also state what Step 4 appends. Right now the only write was `flags: [\"line 1\"]`, so the sheet records no decision for line 2 and no audit trail.\n\n**Next step:** Confirm the threshold values and the fuel-surcharge treatment, and I can hand off to `aop-writer` to rewrite Step 3 in `aops/<agent-id>.md` against build `bld_f02`.\n\n**Limits:** The transcript excerpt doesn't show the Step 1 read of the invoice lines or the Step 2 read of the rate card. I can't confirm that the 29,000 CZK rate came from the rate card rather than being estimated, so please check that against the Files document.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8347,
+    "input_tokens": 2,
+    "output_tokens": 2403,
+    "thinking_tokens": 1566
+  },
+  "variant": "main",
+  "wall_ms": 15437
+}

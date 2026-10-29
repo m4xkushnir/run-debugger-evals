@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.0006838899999999999,
+  "created_at": "2026-10-29T11:29:11+00:00",
+  "duration_api_ms": 5472,
+  "input_hash": "a422d48d55a66c92",
+  "key": "7fd1b6d0c8c69e34c5b605aa",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**: Platform / infra failure\n\n**Where it went wrong**: Before the Agent took any turn. Message [2] shows the sandbox failing to start, so the AOP never ran. Step 1 (query Snowflake) and step 2 (post to Slack) were never reached.\n\n**Evidence**:\n> `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n\nThe last three Runs of this Agent failed with the same sandbox error before any Agent turn, on different days. The AOP and Connections were not involved in any of them.\n\n**Fix**: None in your artifacts. The AOP is fine for this goal, and no change to the AOP, Connections, or Setup would prevent a container image pull from timing out. The fix belongs to Duvo.\n\n**Next step**: Raise this with Duvo support, not with an AOP edit. I don't have a support-escalation tool in this session, so please send it from the Duvo web app and include:\n\n- Run ID: `run_p01`\n- Build ID: `bld_p01`\n- Error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- Recurrence: the same error on the last three Runs of this Agent, on different days, each failing before any Agent turn\n- Ruled out: the AOP content, which is a two-step Snowflake query and Slack post with no branch that could cause this, and Connection state, since the error is in container startup\n\nIf you want to check whether it's still happening, a manual re-run once Duvo confirms a fix is the quickest test. Don't change the AOP to work around it.\n\n```json\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 819,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 893,
+    "thinking_tokens": 317
+  },
+  "variant": "main",
+  "wall_ms": 7170
+}

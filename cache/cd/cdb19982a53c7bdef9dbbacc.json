@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.00122349,
+  "created_at": "2026-10-29T11:28:11+00:00",
+  "duration_api_ms": 10115,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "cdb19982a53c7bdef9dbbacc",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Wrong decomposition. One Agent is carrying a claim that runs for up to seven days, and it is blocked on an in-Run wait. The taxonomy's example of this is \"real-time scan → wait → reminder cycle,\" which matches this AOP.\n\n**Where it went wrong:** Step 6 (\"Wait for the supplier's reply\") and the day-3 and day-7 branches in steps 7–8. The Run reached step 6 after sending the claim, then tried to hold open for the reply. The AOP has no terminal action at step 6, so the Run had no legitimate way to finish or pause. It stayed idle until the platform's idle timeout stopped it. A Run cannot sit for three or seven days, so steps 7–14 could never run in this Run.\n\n**Evidence:**\n- Transcript [1]: \"Claim sent to supplier Mlékárna Polná. Now waiting for the supplier's reply (step 6).\"\n- Transcript [4]: \"No reply yet. I'll keep checking.\"\n- Transcript [5]: \"Run stopped after idle timeout.\"\n\nThe search at [2]–[3] returned zero results, which is expected this soon after sending. It did not cause the stop. The Agent should have postponed the case at this point, but it kept polling instead.\n\n**Fix:** Split the AOP at step 6 into two parts connected by a case lifecycle, not one long Run.\n- **Run 1 (steps 1–5):** after step 5 sends the email, end the branch with `postpone_case`, with the reason \"awaiting supplier reply\" and a re-check date of +3 days.\n- **Re-entry on the case schedule:** if no reply, send the reminder (step 7). If still no reply at +7 days, escalate to the category manager (step 8). If a reply has arrived, read the offered credit and continue with steps 9–14, ending with `complete_case`.\n\nThis keeps each Run short and gives every waiting period a real terminal action.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_w01` and the change request: \"Split the AOP at step 6 into a claim-send Run that ends with `postpone_case` and a re-entry path that handles reminder, escalation, and close-out on the case schedule.\" It should edit the AOP file for this Agent in place. Once the rewrite is done, check that the Gmail search in step 9 will match the supplier's reply, since the current query (\"from:polna\") depends on how the sender's name and address appear.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 1057,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1877,
+    "thinking_tokens": 1025
+  },
+  "variant": "main",
+  "wall_ms": 11535
+}

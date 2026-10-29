@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00069595,
+  "created_at": "2026-10-29T11:32:31+00:00",
+  "duration_api_ms": 7377,
+  "input_hash": "086079e1976a5bd5",
+  "key": "56753c0dce74cae0dd6a419b",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Not a failure. The Run is paused, waiting on a Human-in-the-loop approval that hasn't been answered.\n\n**Where it went wrong:** Nothing went wrong in the Agent's logic. At step 2 of the AOP, the Run correctly applied the EUR 1,000 threshold (EUR 1,850 exceeds it), called `human_in_the_loop.request`, and got back `\"status\": \"pending\"`. The Run has been waiting at that point since then. It never reached step 3, so the credit note was not issued and the customer was not emailed.\n\n**Evidence:**\n- Transcript [1]: \"Credit request for EUR 1,850 from Hotel Praha. Above EUR 1,000, asking for approval.\"\n- Transcript [3]: `{\"status\": \"pending\"}`\n- Run status: `waiting`\n\n**Fix:** No change to the AOP or the Build is needed. The gate works as designed. The Run is blocked on a person, so the action is to get the approval answered:\n\n- Check whether the approval question reached the right approver. The request is \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\", and I can't see from here where it was routed or whether a notification was sent.\n- Once the approver answers yes or no, the Run should continue from step 2. If the answer is yes, it proceeds to issue the credit note in NetSuite and email the customer.\n\n**Next step:** Find the pending Human-in-the-loop request in Duvo and make sure the intended approver sees it. If the approver can't be reached, the Run will keep waiting, because the current AOP has no timeout or fallback branch for an unanswered approval. If stalls like this recur, the AOP could add one, such as escalating to a backup approver or a `postpone_case` after a set period. That would be a separate improvement, not the cause of this stall, and I can hand it to `aop-writer` if you want it.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8225,
+    "input_tokens": 2,
+    "output_tokens": 1227,
+    "thinking_tokens": 563
+  },
+  "variant": "main",
+  "wall_ms": 8733
+}

@@ -1,0 +1,549 @@
+{
+  "ab": [
+    {
+      "json_prose_agree": 1.0,
+      "model": "haiku",
+      "n": 40,
+      "with_json": 0.975,
+      "without_json": 0.9
+    },
+    {
+      "json_prose_agree": 1.0,
+      "model": "sonnet",
+      "n": 40,
+      "with_json": 0.975,
+      "without_json": 0.975
+    }
+  ],
+  "backends": [
+    "claude-cli"
+  ],
+  "by_mode": {
+    "aop_ambiguity": {
+      "haiku": 1.0,
+      "n": 6,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "batch_leak": {
+      "haiku": 0.96,
+      "n": 5,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "connection_failure": {
+      "haiku": 1.0,
+      "n": 8,
+      "opus": 1.0,
+      "sonnet": 0.875
+    },
+    "missing_data": {
+      "haiku": 1.0,
+      "n": 5,
+      "opus": 1.0,
+      "sonnet": 0.96
+    },
+    "missing_hitl": {
+      "haiku": 1.0,
+      "n": 3,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "missing_terminal_closure": {
+      "haiku": 1.0,
+      "n": 3,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "named_pattern": {
+      "haiku": 1.0,
+      "n": 1,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "not_a_failure": {
+      "haiku": 1.0,
+      "n": 2,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "platform_infra": {
+      "haiku": 1.0,
+      "n": 4,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "wrong_decomposition": {
+      "haiku": 0.6666666666666666,
+      "n": 3,
+      "opus": 1.0,
+      "sonnet": 1.0
+    }
+  },
+  "by_slice": {
+    "ambiguity": {
+      "haiku": 1.0,
+      "n": 5,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "clean": {
+      "haiku": 0.95,
+      "n": 24,
+      "opus": 1.0,
+      "sonnet": 0.95
+    },
+    "discriminator": {
+      "haiku": 1.0,
+      "n": 3,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "not_a_failure": {
+      "haiku": 1.0,
+      "n": 2,
+      "opus": 1.0,
+      "sonnet": 1.0
+    },
+    "trap": {
+      "haiku": 1.0,
+      "n": 6,
+      "opus": 1.0,
+      "sonnet": 1.0
+    }
+  },
+  "calibration": {
+    "haiku": [
+      [
+        "0.6–0.8",
+        32,
+        0.875
+      ],
+      [
+        "0.8–0.9",
+        97,
+        0.979381443298969
+      ],
+      [
+        "≥0.9",
+        71,
+        1.0
+      ]
+    ],
+    "opus": [
+      [
+        "0.6–0.8",
+        10,
+        1.0
+      ],
+      [
+        "0.8–0.9",
+        28,
+        1.0
+      ],
+      [
+        "≥0.9",
+        42,
+        1.0
+      ]
+    ],
+    "sonnet": [
+      [
+        "0.6–0.8",
+        31,
+        0.967741935483871
+      ],
+      [
+        "0.8–0.9",
+        60,
+        0.9166666666666666
+      ],
+      [
+        "≥0.9",
+        109,
+        1.0
+      ]
+    ]
+  },
+  "canonical_models": [
+    "claude-haiku-5-5",
+    "claude-opus-5-5",
+    "claude-sonnet-5-5"
+  ],
+  "cases": 40,
+  "confusions": {
+    "haiku": [
+      [
+        [
+          "wrong_decomposition",
+          "connection_failure"
+        ],
+        3
+      ],
+      [
+        [
+          "batch_leak",
+          "named_pattern"
+        ],
+        1
+      ],
+      [
+        [
+          "wrong_decomposition",
+          "missing_terminal_closure"
+        ],
+        1
+      ],
+      [
+        [
+          "wrong_decomposition",
+          "aop_ambiguity"
+        ],
+        1
+      ]
+    ],
+    "opus": [],
+    "sonnet": [
+      [
+        [
+          "connection_failure",
+          "missing_data"
+        ],
+        5
+      ],
+      [
+        [
+          "missing_data",
+          "aop_ambiguity"
+        ],
+        1
+      ]
+    ]
+  },
+  "disputed": {
+    "C03": [
+      "missing_data"
+    ]
+  },
+  "headline": [
+    {
+      "accuracy": 0.97,
+      "accuracy_ci": [
+        0.93,
+        0.9949999999999999
+      ],
+      "cost_per_run": 0.0009151591500000001,
+      "fix_accuracy": 0.94,
+      "grounded": 0.97,
+      "json_ok": 1.0,
+      "model": "haiku",
+      "output_tokens": 1583.19,
+      "p50_ms": 8686,
+      "p95_ms": 12200,
+      "repeats": 5,
+      "replies": 200,
+      "sections_ok": 0.98,
+      "stable_cases": 0.85,
+      "strict_accuracy": 0.935
+    },
+    {
+      "accuracy": 0.97,
+      "accuracy_ci": [
+        0.9099999999999999,
+        1.0
+      ],
+      "cost_per_run": 0.0111480785,
+      "fix_accuracy": 0.94,
+      "grounded": 0.96,
+      "json_ok": 1.0,
+      "model": "sonnet",
+      "output_tokens": 923.37,
+      "p50_ms": 7952,
+      "p95_ms": 14528,
+      "repeats": 5,
+      "replies": 200,
+      "sections_ok": 1.0,
+      "stable_cases": 0.925,
+      "strict_accuracy": 0.855
+    },
+    {
+      "accuracy": 1.0,
+      "accuracy_ci": [
+        1.0,
+        1.0
+      ],
+      "cost_per_run": 0.031231862500000002,
+      "fix_accuracy": 1.0,
+      "grounded": 1.0,
+      "json_ok": 1.0,
+      "model": "opus",
+      "output_tokens": 1028.3125,
+      "p50_ms": 10255,
+      "p95_ms": 15381,
+      "repeats": 2,
+      "replies": 80,
+      "sections_ok": 1.0,
+      "stable_cases": 1.0,
+      "strict_accuracy": 0.95
+    }
+  ],
+  "prompt_version": "db8ed4679cbd79c1",
+  "routing": [
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.0009151591500000001,
+      "delta_acc_ci": [
+        -0.05500000000000007,
+        0.0700000000000001
+      ],
+      "escalation_rate": 0.0,
+      "kind": "in-sample",
+      "p50_ms": 8686,
+      "p95_ms": 12200,
+      "policy": "haiku only",
+      "savings": 0.9179087992607874,
+      "savings_ci": [
+        0.9121082981722815,
+        0.9235685813446111
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.0111480785,
+      "delta_acc_ci": [
+        0.0,
+        0.0
+      ],
+      "escalation_rate": 0.0,
+      "kind": "in-sample",
+      "p50_ms": 7952,
+      "p95_ms": 14528,
+      "policy": "sonnet only",
+      "savings": 0.0,
+      "savings_ci": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "accuracy": 1.0,
+      "cost_per_run": 0.031231862500000002,
+      "delta_acc_ci": [
+        0.0,
+        0.09000000000000004
+      ],
+      "escalation_rate": 0.0,
+      "kind": "in-sample",
+      "p50_ms": 10255,
+      "p95_ms": 15381,
+      "policy": "opus only",
+      "savings": -1.8015466970384182,
+      "savings_ci": [
+        -2.3092145740228656,
+        -1.4020938276123251
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.0009151591500000001,
+      "delta_acc_ci": [
+        -0.05500000000000007,
+        0.0700000000000001
+      ],
+      "escalation_rate": 0.0,
+      "kind": "in-sample",
+      "p50_ms": 8686,
+      "p95_ms": 12200,
+      "policy": "haiku → sonnet if confidence < 0.60",
+      "savings": 0.9179087992607874,
+      "savings_ci": [
+        0.9121082981722815,
+        0.9235685813446111
+      ]
+    },
+    {
+      "accuracy": 0.975,
+      "cost_per_run": 0.00136699015,
+      "delta_acc_ci": [
+        -0.040000000000000036,
+        0.075
+      ],
+      "escalation_rate": 0.03,
+      "kind": "in-sample",
+      "p50_ms": 8691,
+      "p95_ms": 13202,
+      "policy": "haiku → sonnet if confidence < 0.70",
+      "savings": 0.8773788550197238,
+      "savings_ci": [
+        0.82733554647806,
+        0.9132266969021969
+      ]
+    },
+    {
+      "accuracy": 0.99,
+      "cost_per_run": 0.0031555836499999996,
+      "delta_acc_ci": [
+        -0.019999999999999928,
+        0.08000000000000007
+      ],
+      "escalation_rate": 0.16,
+      "kind": "in-sample",
+      "p50_ms": 8815,
+      "p95_ms": 24232,
+      "policy": "haiku → sonnet if confidence < 0.80",
+      "savings": 0.7169392330705242,
+      "savings_ci": [
+        0.5968899772453609,
+        0.8319288695541363
+      ]
+    },
+    {
+      "accuracy": 0.9949999999999999,
+      "cost_per_run": 0.00450636115,
+      "delta_acc_ci": [
+        0.0,
+        0.075
+      ],
+      "escalation_rate": 0.26,
+      "kind": "in-sample",
+      "p50_ms": 8918,
+      "p95_ms": 25785,
+      "policy": "haiku → sonnet if confidence < 0.85",
+      "savings": 0.5957723880397865,
+      "savings_ci": [
+        0.4554431029408006,
+        0.7435150232593609
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.008682401650000001,
+      "delta_acc_ci": [
+        0.0,
+        0.0
+      ],
+      "escalation_rate": 0.645,
+      "kind": "in-sample",
+      "p50_ms": 16035,
+      "p95_ms": 26382,
+      "policy": "haiku → sonnet if confidence < 0.90",
+      "savings": 0.22117505272321136,
+      "savings_ci": [
+        0.11223803748444072,
+        0.3502620740995064
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.01190393865,
+      "delta_acc_ci": [
+        0.0,
+        0.0
+      ],
+      "escalation_rate": 0.9800000000000001,
+      "kind": "in-sample",
+      "p50_ms": 16934,
+      "p95_ms": 26569,
+      "policy": "haiku → sonnet if confidence < 0.95",
+      "savings": -0.06780183239649773,
+      "savings_ci": [
+        -0.08512146960822897,
+        -0.0433549793477892
+      ]
+    },
+    {
+      "accuracy": 0.9949999999999999,
+      "cost_per_run": 0.0029264993,
+      "delta_acc_ci": [
+        -0.009999999999999964,
+        0.08499999999999996
+      ],
+      "escalation_rate": 0.07,
+      "kind": "in-sample",
+      "p50_ms": 9096,
+      "p95_ms": 23799,
+      "policy": "2× haiku, → sonnet on disagreement",
+      "savings": 0.7374884559702374,
+      "savings_ci": [
+        0.6614962718338164,
+        0.8045184469836867
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.0009151591500000001,
+      "delta_acc_ci": [
+        -0.05500000000000007,
+        0.0700000000000001
+      ],
+      "escalation_rate": 0.0,
+      "kind": "held-out",
+      "p50_ms": 8686,
+      "p95_ms": 12200,
+      "policy": "cross-fitted pick (held-out)",
+      "savings": 0.9179087992607874,
+      "savings_ci": [
+        0.9121082981722815,
+        0.9235685813446111
+      ]
+    },
+    {
+      "accuracy": 0.97,
+      "cost_per_run": 0.00160760865,
+      "delta_acc_ci": [
+        -0.05500000000000007,
+        0.0700000000000001
+      ],
+      "escalation_rate": 0.05,
+      "kind": "held-out",
+      "p50_ms": 8691,
+      "p95_ms": 16525,
+      "policy": "category gate, weak set fitted per fold (held-out)",
+      "savings": 0.855795000905313,
+      "savings_ci": [
+        0.7736586988527185,
+        0.9160403784259108
+      ]
+    }
+  ],
+  "routing_choices": {
+    "category": [
+      "haiku → sonnet if predicted ∈ {aop_ambiguity, named_pattern}",
+      "haiku → sonnet if predicted ∈ {missing_terminal_closure}"
+    ],
+    "pick": [
+      "haiku → sonnet if confidence < 0.60",
+      "haiku → sonnet if confidence < 0.60"
+    ]
+  },
+  "routing_repeats": 5,
+  "sensitivity": {
+    "haiku": 0.97,
+    "opus": 1.0,
+    "sonnet": 0.995
+  },
+  "skill_commit": "04dc3407d4c5a36eb15f384931ed32671f1aa34f",
+  "spend": {
+    "haiku": {
+      "cache_read": 1886107,
+      "cache_write": 102897,
+      "calls": 240,
+      "cost": 0.22672547,
+      "out": 374474
+    },
+    "opus": {
+      "cache_read": 570925,
+      "cache_write": 92303,
+      "calls": 80,
+      "cost": 2.4985489999999992,
+      "out": 82265
+    },
+    "sonnet": {
+      "cache_read": 1868801,
+      "cache_write": 115163,
+      "calls": 240,
+      "cost": 2.852192100000001,
+      "out": 220370
+    }
+  }
+}

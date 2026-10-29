@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.00078523,
+  "created_at": "2026-10-29T11:23:32+00:00",
+  "duration_api_ms": 8419,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "1c8334db77d9e595c316fb03",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** AOP ambiguity. The Run completed without an error, but the outcome was wrong. Step 2 hands the refund decision to the Agent's judgment (\"use your judgment on whether to refund in full or offer a partial refund\") with no threshold, and the 15% cosmetic-damage policy isn't in the AOP at all.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [3]. The Agent saw a 3 cm surface scratch and decided on a full refund.\n\n**Evidence:**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent judged significance by what the customer would perceive, not by any rule, because the AOP gave it no rule to apply. That made the €480 refund a reasonable reading of the instructions. The gap is in the AOP, so the Agent's choice isn't really the bug.\n\n**Fix:** Rewrite Step 2 so the decision is a concrete rule, and add the policy to the AOP. For example: \"If the damage is cosmetic (surface marks, scratches, scuffs), refund 15% of the item price. Use Human in the loop before refunding any full-value amount.\" Replace the 15% figure and the HITL threshold with whatever your policy actually says.\n\n**Next step:**\n1. Now, outside the Agent: the €480 refund has already succeeded in Stripe, and a confirmation email for €480 has been sent to the customer. Someone needs to decide how to correct both. I can't do that from here.\n2. For the AOP change, I can hand off to `aop-writer` with Build `bld_a01` and the change request above. It needs the AOP file path (`aops/<agent-id>.md`), so send me the Agent ID or the file path.\n3. I'm relying on your report for the 15% policy. If it's written down somewhere, use the wording from that document in the AOP.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8403,
+    "input_tokens": 2,
+    "output_tokens": 1402,
+    "thinking_tokens": 689
+  },
+  "variant": "main",
+  "wall_ms": 11519
+}

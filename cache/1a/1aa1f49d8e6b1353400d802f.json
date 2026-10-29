@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0127419,
+  "created_at": "2026-10-29T11:30:57+00:00",
+  "duration_api_ms": 7288,
+  "input_hash": "f214809918538af8",
+  "key": "1aa1f49d8e6b1353400d802f",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The 429 from Shopify is only the symptom.\n\n**Where it went wrong**\nAOP Step 2 tells the Agent to loop over the whole catalogue instead of looking up the requested items. The decision point is transcript turn [1], where the Agent takes that instruction literally and plans to check all 2,300 SKUs, even though the customer's email asked about only 3 products. After about 180 calls at a faster rate than Shopify allows (2 calls per second), turn [6] hit the rate limit. The Agent then stopped at turn [7] with no recovery path, no terminal outcome, and no reply sent via Gmail (Step 3 never ran).\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix**\nRewrite AOP Step 2 so it checks stock only for the SKUs identified in Step 1 (the 3 requested products), never the full catalogue. This also makes the rate limit irrelevant, since 3 calls are far below 2 per second. A reasonable wording would be: \"For each product requested in the email (from Step 1), look up its SKU and check stock in Shopify. Do not iterate over the catalogue. If Shopify returns 429, wait for the Retry-After duration and retry once; if it still fails, use Human in the loop / request_handover instead of ending the Run.\"\n\nThe retry and escalation clause is a secondary safeguard within the same step, not a separate root cause.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, the change request above (\"rewrite Step 2 to look up only the requested SKUs, with a 429 retry-then-handover rule\"), and the file `aops/<agent-id>.md`, so it edits the AOP in place.\n\nOne caveat: I worked only from the AOP and transcript you pasted, so I haven't confirmed that Build `bld_s04` is the exact Build in effect, and I haven't seen the case state or any Shopify Connection details.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 961,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 816,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8895
+}

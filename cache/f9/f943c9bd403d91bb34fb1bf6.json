@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.00101349,
+  "created_at": "2026-10-29T11:27:41+00:00",
+  "duration_api_ms": 9411,
+  "input_hash": "0af3d12c460cedff",
+  "key": "f943c9bd403d91bb34fb1bf6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak, compounded by a missing idempotency check. The Run reports `completed`, but the outcome is wrong: 9 customers were refunded twice.\n\n**Where it went wrong:** Step 1 of the AOP tells the Agent to process a whole set of rows in one pass (\"for each open return marked 'approved'\"). The Agent read all 12 approved rows at [1]–[2] and started working through them as a batch. The row is only set to \"refunded\" after its Stripe refund, so a second Run that reads the sheet during that window still sees the same rows as \"approved\". At [5] Stripe reported that a refund already existed for the charge, which means the other Run had already refunded it. The Agent did not stop there. At [6] it continued with the remaining rows, so the overlap continued too. The AOP has no instruction for this case and no step that claims a row before refunding it.\n\n**Evidence:**\n- AOP Step 1: \"for each open return marked \"approved\": issue the refund in **Stripe** and set the row to \"refunded\".\"\n- Transcript [5]: `\"note\": \"a refund for this charge already exists (created 2 min ago)\"`\n- Transcript [6]: \"Continuing with the remaining 11 rows.\"\n- Context: two Runs started 2 minutes apart, which matches the \"created 2 min ago\" note.\n\n**Fix:** Change the AOP so each Run handles one return, and so the Agent claims the row before refunding and checks Stripe first. Suggested change to Step 1:\n\n> Work on one return per Run. First set this return's row to \"processing\". Then check Stripe for an existing refund on the charge. If one exists, do not refund again: set the row to \"refunded\" and call `complete_case`. Otherwise issue the refund, set the row to \"refunded\", and call `complete_case`. If the refund call fails, set the row back to \"approved\" and call `fail_case`.\n\nSetting \"processing\" makes the second Run's `status=approved` filter skip the row. Do not change the schedule or the Connection for this.\n\n**Separate from the fix, these need action now:**\n- The 9 duplicate refunds have to be reversed or reconciled by a person in Stripe. The AOP change will not undo them.\n- The schedule trigger and the manual Start Work overlap. Until the new AOP is live, stop one of them.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_b02` and the change request above, pointing at `aops/<agent-id>.md`, so the rewrite is made against the AOP that was in effect for this Run.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8279,
+    "input_tokens": 2,
+    "output_tokens": 1861,
+    "thinking_tokens": 980
+  },
+  "variant": "main",
+  "wall_ms": 11533
+}

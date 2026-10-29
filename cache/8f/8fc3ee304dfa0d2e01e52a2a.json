@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0097636,
+  "created_at": "2026-10-29T11:31:36+00:00",
+  "duration_api_ms": 8850,
+  "input_hash": "8cdd082843487845",
+  "key": "8fc3ee304dfa0d2e01e52a2a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nAOP ambiguity. The Run itself completed cleanly, and the Agent followed the AOP exactly. The AOP gave it no rule for what counts as a supplier match, so it guessed and failed the case.\n\n**Where it went wrong**\nTranscript turn [5], the decision point after the SAP search. The matching AOP step is Step 2: \"If unsure about the supplier match, call `fail_case`.\" The Agent searched by a truncated name only, saw a differently worded name, and treated that as uncertainty. The VAT number that settles the match was already in the SAP result. The Agent never compared it to the invoice, and the AOP never told it to.\n\n**Evidence**\n- AOP Step 2: \"Find the supplier in **SAP**. If unsure about the supplier match, call `fail_case`.\"\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n\nYour context says the invoice VAT is DE811145120, identical to vendor 100311. So a match was available and the Agent failed a case it could have completed. The 31% weekly failure rate is consistent with this being a systematic gap: any invoice whose legal name differs from the SAP short name hits the same path. I only have this one transcript, so I can't confirm that all of those failures share this cause. It's likely, but check a couple of them.\n\n**Fix**\nRewrite AOP Step 2 to replace \"if unsure\" with a concrete matching rule. For example: *Search SAP by the VAT number on the invoice first. If exactly one vendor has an identical VAT number, treat it as the match, regardless of name differences. If the VAT number is missing or there are zero or multiple VAT matches, fall back to name search, and call `fail_case` only if no single candidate remains.*\n\nThe invoice payload in this Run only showed `supplier_on_invoice`. Confirm the VAT number is actually provided to the Agent at claim time, since the AOP rule depends on it. If it isn't, that would be a second, separate gap (missing data), but I can't tell from this transcript.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s06`, the AOP file `aops/<agent-id>.md`, and the request \"rewrite Step 2 to match suppliers by VAT number first, with a name-based fallback, instead of failing on uncertainty.\" After that, spot-check a few of the other failed cases from this week to confirm they share this pattern.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 892,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10310
+}

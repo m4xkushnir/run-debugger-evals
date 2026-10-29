@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.011973899999999999,
+  "created_at": "2026-10-29T11:27:59+00:00",
+  "duration_api_ms": 6582,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "6dc99276f59f9f4a6cce2391",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Batch / iteration leak (category 6). The Run's status is \"completed\" and the case closed cleanly, but the outcome was wrong: each of the 60 per-store cases did the work for all 60 stores.\n\n**Where it went wrong** — Step 2 of the AOP. `claim_case` returned a single store (`{\"store\": \"CZ-007\"}`), so the case was scoped to one store. The Agent ignored that and queried all stores at transcript turns [3]–[7]. Nothing in the AOP ties the stock check or the reorder to the claimed case's store.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript [2]: `claim_case: {\"store\": \"CZ-007\"}`, then [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [5]: \"Reordering 412 lines across 60 stores.\"\n\nThe Agent followed the AOP as written. \"Every store\" is a batch instruction, and the platform already iterates by creating one case per store. With 60 cases, that means 60 × 60 order sets, so duplicate replenishment orders for every store went out today. This is a real cost issue, not just a cosmetic one.\n\n**Fix** — Rewrite AOP Step 2 to handle only the claimed case's store: query Snowflake filtered to the `store` value returned by `claim_case`, and submit reorders only for that store's below-minimum lines. For example: \"Using the `store` from `claim_case`, use **Snowflake** to check stock levels for that store only, and reorder anything below minimum for that store in the **Replenishment portal**.\"\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b03`, the change request above, and the file `aops/<agent-id>.md` to land the rewrite. Separately, and outside this fix: today's duplicate orders (roughly 59 extra order sets per store) need to be reviewed and cancelled in the Replenishment portal. Fixing the AOP won't undo them.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 969,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 736,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8258
+}

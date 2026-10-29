@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.013907199999999998,
+  "created_at": "2026-10-29T11:38:07+00:00",
+  "duration_api_ms": 8267,
+  "input_hash": "28456be35269bb05",
+  "key": "50b8fb7a952a46d95eec07ab",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (primary). The AOP also lacks any closure for the Email step, which the transcript never reached; see the note below.\n\n**Where it went wrong**\nTranscript turn [1]→[2], matching AOP Step 2. The Agent hit the branch \"more than 1 day late\", then cancelled a EUR 62,400 PO in SAP and created a replacement with no confirmation. The threshold (>1 day) is concrete, so this is not ambiguity. The problem is that a 2-day slip, a trivial trigger, authorizes an irreversible, high-value, externally visible action (cancel, forfeit the supplier's slot, reorder at a higher price) with no human checkpoint.\n\n**Evidence**\n- Transcript [1]: \"PO 4500921177 (EUR 62,400) is now 2 days late. Cancelling and reordering from the backup supplier.\"\n- AOP Step 2: \"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier…\"\n- Transcript [5]: the replacement PO was created at `\"value_eur\": 66100`, EUR 3,700 above the original, matching the user's reported loss.\n\n**Fix**\nEdit AOP Step 2 to gate the cancel/reorder on a Human-in-the-loop checkpoint: *\"If the delivery is more than 1 day late, use **Human in the loop** to confirm before cancelling the PO in SAP. Show the original PO value, the new delivery date, the backup supplier, and the backup price. Only on approval, cancel and reorder.\"* The cancel must not run before approval, and the AOP should say what to do on rejection (keep the PO, then email the supplier).\n\n**Next step**\nI can invoke `aop-writer` on Build `bld_h03` (file `aops/<agent-id>.md`) with this change request: \"Rewrite Step 2 to add a HITL gate before the SAP cancel, showing PO value, delay, backup supplier and price, with a keep-the-PO branch on rejection.\"\n\n**Notes and caveats**\n- The transcript ends at [5]. Step 3 (email both suppliers via Gmail) never appears, and the Run status is `completed`. I can't tell from this excerpt whether the transcript is truncated or the Agent simply skipped it. If the excerpt is complete, the suppliers were never told, which is a second problem. I'd confirm that before treating it as a separate cause.\n- The AOP never compares the backup supplier's price to the original or sets a ceiling. A fixed price-premium limit in the HITL condition would be a reasonable addition, but I'm not proposing it as a separate fix here.\n- I wasn't given a case ID, so I can't say whether this Run was queue-driven or check terminal closure.",
+  "usage": {
+    "cache_creation_input_tokens": 959,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 935,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9575
+}

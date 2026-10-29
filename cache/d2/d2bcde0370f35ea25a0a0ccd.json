@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.00037288999999999996,
+  "created_at": "2026-10-29T11:22:49+00:00",
+  "duration_api_ms": 3663,
+  "input_hash": "b03fc180112aa5af",
+  "key": "d2bcde0370f35ea25a0a0ccd",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Connection failure (missing OAuth scope on the Gmail Connection).\n\n**Where it went wrong:** Step 2 of the AOP, at the first tool call `gmail.send_message` (transcript turn [2]). The Run tried to send, and the Gmail Connection 'Purchasing' did not have the scope required for sending.\n\n**Evidence:**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Other context: \"Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\"\n\nThe Connection has read and label scopes but not `gmail.send`. The AOP assumes the Connection can send mail, and nothing in the Build checks for that. The Run then stopped without a fallback. Its final turn reports the reminder as not sent and no row logged, but it does not end the case or request a handover, so the failure is not recorded in a terminal way.\n\n**Fix:** Extend the Gmail Connection 'Purchasing' to include the `https://www.googleapis.com/auth/gmail.send` scope. Re-authorize the Connection so the new scope is granted, then start the Run again.\n\n**Next step:** Refresh the Gmail Connection in Setup and grant send permission, then re-run this PO reminder. If you want the Agent to handle a future scope gap more gracefully, the AOP could add a branch after step 2 that calls `fail_case` with a clear reason instead of ending silently. I can hand that change to `aop-writer` if you want it.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8369,
+    "input_tokens": 2,
+    "output_tokens": 578,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 5430
+}

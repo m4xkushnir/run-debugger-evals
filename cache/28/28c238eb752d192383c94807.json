@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.048431800000000004,
+  "created_at": "2026-10-29T11:36:14+00:00",
+  "duration_api_ms": 20158,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "28c238eb752d192383c94807",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\n**Wrong decomposition.** One Agent is doing the work of at least two. Its AOP has 11 steps that span five Connection domains and two time horizons. The browser session expiring is the symptom. The cause is that the AOP packs 17 supplier portal sign-ins into a single Run.\n\n**Where it went wrong**\n\n- **Steps 1–2 succeeded.** Snowflake returned 17 suppliers under 90%, and the W43 tab was written (transcript [1]–[4]).\n- **Step 3 is where it broke.** The Run started working through the underperformers one after another in the same Run. It reached **portal 9 of 17 (Agrofert)** before the Enterprise Browser session hit its lifetime limit ([5]–[7]).\n\nThe session didn't fail because of anything specific to Agrofert. It failed because the Run had already been open for about 55 minutes doing eight earlier portals. If the AOP stays as it is, every week with enough underperformers will fail at whichever supplier happens to cross that time limit.\n\nStep 3 is also not the only problem. Step 6 (\"Next week, check replies\") expects this same Run to wait a week. That is a separate time horizon and cannot happen inside one Run. The pattern is the classic one: scan now, wait, then run a follow-up cycle.\n\n**Evidence**\n\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- AOP Step 6: \"Next week, check replies and update the scorecard.\"\n- Transcript [5]–[7]: \"Signing in to portal 9 of 17 (Agrofert).\" → \"ERROR: browser session expired after 55 minutes\"\n\n**What I ruled out**\n\n- **Connection failure.** No login was rejected and no scope error appeared. Signing in again wouldn't help, because the next long Run would expire the same way.\n- **Platform / infra failure.** The session expired at a consistent limit because the Run was long. The platform didn't malfunction, and changing the AOP's shape would have prevented the error.\n\n**Fix**\n\nSplit the AOP at Step 3 into two Agents connected by a queue:\n\n- **Agent A (weekly scorecard):** handles Steps 1–2 and Step 7. It also adds one case per supplier under 90% to a supplier-chase queue.\n- **Agent B (supplier chase):** works **one supplier per case**. It signs in to that supplier's portal, downloads open-order status, drafts and sends the Gmail performance email, then calls `postpone_case` until next week. When the case resumes, it checks replies, updates the scorecard row, and escalates or closes with `complete_case` / `fail_case`.\n\nWith this split, each browser session covers one portal, and the platform handles the iteration across suppliers.\n\n**Next step**\n\nI can invoke `aop-writer` with Build `bld_w02` and this request: \"Split this AOP at Step 3 into a weekly-scorecard Agent that enqueues one case per supplier under 90%, and a single-supplier chase Agent that uses `postpone_case` for the next-week follow-up.\" It would work in `aops/<agent-id>.md`.\n\nSteps 8–11 (escalation, SAP ratings, archiving, next week's tab) need to be assigned to one of the two Agents during that rewrite.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 1087,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1913,
+    "thinking_tokens": 765
+  },
+  "variant": "main",
+  "wall_ms": 21091
+}

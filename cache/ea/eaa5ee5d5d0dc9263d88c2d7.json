@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0097766,
+  "created_at": "2026-10-29T11:24:03+00:00",
+  "duration_api_ms": 9557,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "eaa5ee5d5d0dc9263d88c2d7",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed with no technical error, but the outcome was wrong. Step 3 gives the Agent no threshold for deciding what counts as an overcharge.\n\n**Where it went wrong**\nStep 3 of the AOP: \"Flag any line where the charge seems too high compared with the rate card.\" The decision points are transcript turns [1] and [2]. The Agent had no concrete rule, so it made up a different judgment for each line. It flagged a +1.9% variance on line 1 and excused a +9.0% variance on line 2 with its own reasoning about fuel surcharges.\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Transcript [2]: \"Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe model's wording (\"seems too high\", \"seems reasonably close\") echoes the vague AOP language. It is a guess, not a rule applied. The sheet write at [3]-[4] returned `ok`, so the Connection worked, and the Google Sheets step is not the problem. The logged result was just wrong (`\"flags\": [\"line 1\"]`). The 2,600 CZK overcharge on line 2 (31,600 vs 29,000) was never flagged.\n\n**Fix**\nRewrite AOP Step 3 to replace \"seems too high\" with an explicit rule, and to say how surcharges are treated. For example: *\"Flag a line if the charge exceeds the rate card rate by more than X% or more than Y CZK, whichever is stricter. Do not excuse a variance because of fuel surcharges unless the rate card lists a surcharge for that line, and then compare against rate plus that surcharge.\"* The values X and Y (and whether the rate card covers fuel surcharges) are business decisions I can't determine from this Run. You need to supply them. Also have the Agent record the percent and absolute difference for each line, so the threshold can be checked later.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_f02`, working in `aops/<agent-id>.md`, and the change request: \"rewrite Step 3 to flag lines using an explicit percent and/or absolute CZK threshold against the rate card, with defined fuel surcharge handling.\" Please confirm the thresholds first. Note that I did not see the rate card contents, so I can't tell whether it lists a fuel surcharge.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8326,
+    "input_tokens": 2,
+    "output_tokens": 894,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12608
+}

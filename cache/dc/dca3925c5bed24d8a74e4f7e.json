@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.00083914,
+  "created_at": "2026-10-29T11:27:23+00:00",
+  "duration_api_ms": 8691,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "dca3925c5bed24d8a74e4f7e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP. The Agent treated the Gmail search result (47 messages) as its work list instead of handling the single case it had claimed in Step 1. The case title, \"Invoice from Brenntag CZ\", shows the platform had already scoped this case to one invoice. The AOP's \"process all pending supplier invoices\" pulled the Agent into a batch the case never asked for. At roughly 90 seconds per vendor bill, 19 bills took about 30 minutes, and the Run hit its maximum duration.\n\n**Evidence:**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [6]: \"Created vendor bills 1-19 of 47.\"\n\n**Fix:** Rewrite Step 2 to handle one invoice per case: \"Extract the invoice for this case (matched by the case title) and create one vendor bill in NetSuite.\" Remove the Gmail search for all pending invoices. The queue supplies the iteration, so each invoice gets its own case and Run.\n\nAlso add a terminal action for the error path. If the invoice can't be extracted or the NetSuite call fails, the Agent should call `fail_case` or `postpone_case` rather than leave the case open. This is secondary here, since the timeout is what failed the case, but it keeps a single-invoice failure from stalling silently.\n\n**Next step:**\n1. **Before any retry, check NetSuite for vendor bills 1–19.** They were already created, and a re-run under the current AOP would search the inbox again and could create duplicates. Confirm which invoices are already booked, and check whether those emails are still unread, since the search filters on `is:unread`.\n2. Hand the rewrite to `aop-writer`. It needs Build `bld_b01` as the starting point and this change request: \"Rewrite Step 2 to process only the invoice for the current case, matched by case title, and create one vendor bill. Add `fail_case` for extraction or NetSuite errors.\"\n\nDiagnosis is from the transcript and AOP you pasted. I did not check the live state of Gmail, NetSuite, or the case.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8294,
+    "input_tokens": 2,
+    "output_tokens": 1512,
+    "thinking_tokens": 718
+  },
+  "variant": "main",
+  "wall_ms": 10995
+}

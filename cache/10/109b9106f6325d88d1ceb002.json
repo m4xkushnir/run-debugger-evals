@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00058495,
+  "created_at": "2026-10-29T11:32:30+00:00",
+  "duration_api_ms": 4880,
+  "input_hash": "086079e1976a5bd5",
+  "key": "109b9106f6325d88d1ceb002",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Not a failure. The Run is paused, waiting on a Human-in-the-loop approval.\n\n**Where it went wrong:** Nothing went wrong in the Run's logic. At step 2 of the AOP, the amount (EUR 1,850) exceeds the EUR 1,000 threshold, so the Agent correctly requested approval at transcript [2]. The request is still pending at [3], and the Run is in `waiting` status. The Run has been stuck since yesterday because nobody has answered that question.\n\n**Evidence:**\n- AOP Step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n- Transcript [3]: `{\"status\": \"pending\"}`\n\n**Fix:** No change to the AOP, Connections, or Setup is needed. The Agent is working as designed. The blocker is the unanswered approval request. To unblock the Run:\n1. Open the Run in the Duvo web app and find the pending question: \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\".\n2. Answer it. If the answer is yes, the Run continues to Step 3 and issues the credit note in NetSuite and emails the customer. If no, the Run should stop before issuing.\n3. If nobody is seeing the request, check who the approver is for this Agent and whether they received the notification. That is a team or notification-routing question, not an AOP issue.\n\nIf the request should not be acted on at all, you can cancel the Run instead. Be aware that a canceled Run leaves the credit note unissued, so the customer's request would need to be handled another way.\n\n**Next step:** Answer the pending approval in Duvo. If you want, I can also look at whether the approval routing for this Agent is set up correctly, but I'd need access to the Agent's configuration or your team's notification setup for that.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8225,
+    "input_tokens": 2,
+    "output_tokens": 1005,
+    "thinking_tokens": 358
+  },
+  "variant": "main",
+  "wall_ms": 6503
+}

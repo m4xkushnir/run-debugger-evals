@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.0373358,
+  "created_at": "2026-10-29T11:35:34+00:00",
+  "duration_api_ms": 12750,
+  "input_hash": "28456be35269bb05",
+  "key": "f77de2c816b93239435949c6",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "The Run didn't crash, it did exactly what the AOP told it to. The failure is that the AOP let the Agent cancel a EUR 62,400 PO and place a EUR 66,100 replacement over a 2-day slip, with no human sign-off.\n\n**Failure mode**\n\nMissing HITL on a high-stakes action. The Run status is `completed`, so this is a wrong outcome rather than an error. Both SAP actions are costly, visible to suppliers, and hard to undo: cancelling the PO gave up the main supplier's slot. The AOP lets the Agent take them on its own.\n\n**Where it went wrong**\n\n- **Transcript:** the decision point is turn [1]. The Agent applied Step 2's rule (\"2 days late\" is more than 1), then went straight to `sap.cancel_po` in [2] and `sap.create_po` in [4].\n- **AOP:** Step 2 is the cause. It says to cancel and reorder on any slip over 1 day. There is no value threshold, no cost comparison against the backup supplier, and no Human in the loop checkpoint before the cancellation.\n- **Not AOP ambiguity:** the threshold was concrete and the Agent followed it correctly. What's missing is the gate.\n\n**Evidence**\n\n- AOP Step 2: *\"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier\"*\n- Transcript [1]: *\"PO 4500921177 (EUR 62,400) is now 2 days late. Cancelling and reordering from the backup supplier.\"*\n- Transcript [4]: `sap.create_po {\"supplier\": \"Backup: Nordpack AB\", \"value_eur\": 66100}`. The replacement cost EUR 3,700 more, which matches your report.\n\n**Fix**\n\nRewrite Step 2 of the AOP so the cancel-and-reorder only happens after approval:\n\n> \"If the delivery is more than 1 day late, use **Human in the loop** before cancelling. Show the PO value, the days late, and the backup supplier's quoted cost. Only cancel in SAP and reorder after approval.\"\n\nIf you want small slips to skip the human, put a concrete value threshold on the gate. The transcript doesn't show what your threshold should be, so you'd need to choose it.\n\n**Next step**\n\nI can hand this to `aop-writer` with:\n- **Build:** `bld_h03`\n- **AOP file:** `aops/<agent-id>.md`\n- **Change request:** \"Rewrite Step 2 to add a Human in the loop gate before cancelling the PO and reordering from the backup supplier, showing PO value, days late, and backup cost.\"\n\n**Other things in the transcript, not part of the fix**\n\n- **Step 3 never ran.** The transcript ends at [5] with no Gmail call, so neither supplier was emailed. It's worth checking whether your excerpt is truncated. If it isn't, your main supplier wasn't told about the cancellation.\n- **Backup supplier source not shown.** The transcript has no step where the Agent reads the \"Backup suppliers\" File. I can't confirm where \"Nordpack AB\" came from.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 955,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1411,
+    "thinking_tokens": 326
+  },
+  "variant": "main",
+  "wall_ms": 13816
+}

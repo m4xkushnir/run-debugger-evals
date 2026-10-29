@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.0147072,
+  "created_at": "2026-10-29T11:38:27+00:00",
+  "duration_api_ms": 8775,
+  "input_hash": "0af3d12c460cedff",
+  "key": "53a390e3695e25cd76d9e925",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak (AOP ambiguity on idempotency), compounded by concurrent Runs. The \"completed\" status is misleading: the Run didn't error, it did the wrong thing correctly.\n\n**Where it went wrong**\nAt AOP Step 1 (\"for each open return marked 'approved', issue the refund in Stripe and set the row to 'refunded'\"). The Agent read all 12 approved rows up front (transcript [1]–[2]) and iterated over them. Because the row is only set to \"refunded\" *after* the Stripe call, a second Run started 2 minutes later read the same rows still marked \"approved\" and refunded them again. The decision point is [5]–[6]: Stripe flagged a duplicate and the Agent continued anyway.\n\n**Evidence**\n- AOP: *\"for each open return marked 'approved', issue the refund in **Stripe** and set the row to 'refunded'\"*\n- Transcript [5]: *\"a refund for this charge already exists (created 2 min ago)\"* with `\"status\": \"succeeded\"`\n- Transcript [6]: *\"Continuing with the remaining 11 rows.\"*\n\nThe Agent saw an explicit duplicate-refund warning, and nothing in the AOP told it what to do with one. The AOP has no claim step, no pre-check, and no branch for \"refund already exists\".\n\n**Fix**\nRewrite AOP Step 1 so it is safe against concurrent and repeated Runs. Specifically, add to the AOP:\n1. Mark the row \"refunding\" *before* calling Stripe, and only process rows still \"approved\" (re-read the row right before refunding).\n2. *If the Stripe result note says a refund for this charge already exists: do not count it as a new refund, set the row to \"refunded\", and move on (or stop and use **Human in the loop** if the amounts differ).*\n\nThis is a single artifact (the AOP). Note that the 9 duplicate refunds already issued need to be reconciled manually in Stripe; this fix only prevents recurrence.\n\nSecondary note (not a separate fix): the underlying shape is \"process all approved rows\" in one Run. If you can feed returns through a queue so each Run handles one return, the platform handles iteration and the double-start collision shrinks to a single case. That is a larger restructuring, so I'd land the AOP fix first.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_b02`, the file `aops/<agent-id>.md`, and the change request: *\"Rewrite Step 1 to claim each row as 'refunding' before calling Stripe, re-check status immediately before each refund, and handle a 'refund already exists' result by marking the row refunded without re-issuing.\"* Also consider removing either the schedule or the manual trigger overlap, or confirming no Run is in progress before Start Work.\n\nCaveat: I only have the first 6 transcript turns, so I can't confirm how the other 11 rows were handled in this Run, or which Run refunded which 9 customers. The diagnosis rests on the AOP, the duplicate note at [5], and your report of two Runs 2 minutes apart.",
+  "usage": {
+    "cache_creation_input_tokens": 919,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1031,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9932
+}

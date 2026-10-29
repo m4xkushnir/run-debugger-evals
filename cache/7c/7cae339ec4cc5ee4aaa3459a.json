@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.0079648,
+  "created_at": "2026-10-29T11:28:02+00:00",
+  "duration_api_ms": 6559,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "7cae339ec4cc5ee4aaa3459a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Batch / iteration leak (taxonomy #6). The Run is \"completed\" and the case closed cleanly, so the failure is in outcome, not in a tool error.\n\n**Where it went wrong** — Step 2 of the AOP. The Agent claimed `case_b03` for a single store, and the `claim_case` result gave it that store (`CZ-007`). It then ignored that scope and queried and ordered for every store (transcript [3]–[7]). The AOP never tells it to use the claimed case's store.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript [2]: `claim_case: {\"store\": \"CZ-007\"}`, followed by [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [5]: \"Reordering 412 lines across 60 stores.\"\n- Context: 60 cases ran, each placing orders for all 60 stores. That means roughly 60x duplicate orders (about 3,600 orders instead of 60), and the Agent did exactly what the AOP said.\n\n**Fix** — Rewrite AOP Step 2 to be scoped to the claimed case's store. For example: \"Using the `store` from the `claim_case` result, use **Snowflake** to check stock levels for that store only, and reorder items below minimum for that store only in the **Replenishment portal**.\" The platform already iterates over the queue, so the AOP should handle one case. Separately, the duplicate orders already placed today need to be reviewed and cancelled in the Replenishment portal. That is outside what I can do from here.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b03`, the change request above, and the file `aops/<agent-id>.md` (I don't have the Agent ID in what you shared). Also consider adding a **Human in the loop** gate or a quantity cap on `replenishment.submit`, but that is a secondary hardening step, not the root cause.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8308,
+    "input_tokens": 2,
+    "output_tokens": 713,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8107
+}

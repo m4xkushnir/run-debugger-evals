@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.0158132,
+  "created_at": "2026-10-29T11:38:04+00:00",
+  "duration_api_ms": 9111,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "aa82a72e4aa99104245cb330",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action. This is the primary root cause. The Run status is \"completed\" because nothing technically errored; the outcome was wrong, not the execution. It also overlaps with AOP ambiguity (no verification step), but the missing gate is the decisive gap.\n\n**Where it went wrong**\nTranscript [3], the decision point right after reading the email at [2]. The Agent went straight from \"read request\" to `sap.update_vendor` on the `bank_iban` field. This corresponds to AOP Step 2 (\"Identify the supplier in SAP and the field to change\") and Step 3 (\"Update the field in SAP\"). Neither step contains any check on the sender's legitimacy or any approval before a bank-detail change. Step 4 then confirmed the change to the (likely fraudulent) sender.\n\n**Evidence**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`, a look-alike domain (per the security report, the real one is sunfieldfoods.com) and an urgency cue.\n- Transcript [3]–[4]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}` → `{\"status\": \"updated\"}`, with no Human-in-the-loop request beforehand.\n- AOP Step 3: \"Update the field in **SAP**.\"\n\n**Fix**\nEdit Step 3 of the AOP to gate every bank-detail change on a Human in the loop checkpoint, with a sender check before it. For example:\n\n> *Before updating any bank or payment field (e.g. `bank_iban`), compare the sender's email domain with the domain stored on the supplier's SAP vendor record. If it doesn't match exactly, do not update; use **Human in the loop** to escalate. If it matches, still use **Human in the loop** to get approval before the update. Do not send the confirmation reply until the update is approved and applied.*\n\nAlso, Step 4 shouldn't confirm bank changes to the requesting address; confirmations should go to the contact already on file in SAP.\n\n**Next step**\nUrgent, and separate from the AOP fix: the IBAN in SAP for vendor 100482 is currently the attacker's. With EUR 212,000 due in the next payment run, someone on your team should revert it to the previous value and block or hold the payment to Sunfield until the bank details are verified with a known contact by phone. Also consider notifying your security team of the reply that was sent.\n\nFor the AOP change, I can invoke `aop-writer` with Build `bld_h01`, the change request \"add a sender-domain check and a Human in the loop approval before any bank-detail update in Step 3, and send confirmations to the contact on file in Step 4\", and the file `aops/<agent-id>.md`. I don't have the Agent ID in what you pasted, so I'd need that to point to the right file.\n\nOne caveat: I'm working only from the six transcript lines you pasted. I can't confirm from them what the previous IBAN was, whether the sender-domain comparison would have been possible with the data SAP returns, or whether other Runs made similar changes. If this Agent processes change requests regularly, it's worth checking its other recent Runs for the same pattern.",
+  "usage": {
+    "cache_creation_input_tokens": 1018,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1102,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 10286
+}

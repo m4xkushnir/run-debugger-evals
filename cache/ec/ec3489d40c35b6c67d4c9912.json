@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.018767,
+  "created_at": "2026-10-29T11:28:48+00:00",
+  "duration_api_ms": 17963,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "ec3489d40c35b6c67d4c9912",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Batch / iteration leak. Step 3 makes one Run loop over all 17 underperforming suppliers inside a single Enterprise Browser session. The AOP also has a decomposition problem (see the note under Fix), but the loop is what caused this failure.\n\n**Where it went wrong:** Transcript [5]-[7], inside AOP Step 3 (\"For each supplier under 90%, sign in to their portal with Enterprise Browser...\"). The Run had already spent 55 minutes working through suppliers serially. At supplier 9 of 17 (Agrofert) the browser session hit its time limit and the login failed. The expired session is the symptom. The cause is that the AOP puts all 17 portal sign-ins and downloads into one long-lived session. Even with a retry, a Run shaped this way will keep running into the session limit whenever many suppliers fall under 90%. Eight suppliers were left unprocessed, and Steps 4-11 never ran.\n\n**Evidence:**\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [2]: `{\"suppliers\": 84, \"under_90\": 17}`\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\n**Fix:** Rewrite the AOP so one Run handles one supplier. Step 1-2 (Snowflake query and scorecard) becomes a scan that creates a case per supplier under 90%. The per-supplier steps (portal download, email draft, Gmail send) move into a case-driven procedure that opens its own browser session and ends with `complete_case` or `postpone_case`. The platform then iterates over the 17 cases, so no single session has to last through all of them.\n\nThe same AOP also has 11 steps and a \"next week\" wait in Step 6, so it likely wants a further split into a weekly scan and a per-supplier follow-up. I'd treat that as a second pass, not part of this fix.\n\n**Next step:** I can invoke `aop-writer` with Build `bld_w02`, working in `aops/<agent-id>.md`, and the request: \"Rewrite Step 3 onward to handle a single supplier per case (portal download, email draft, send), end with `complete_case` or `postpone_case`, and move the weekly scan into its own Agent that creates the cases.\"\n\n**Caveats:** The transcript starts at [1] and shows no portal work for suppliers 1-8, even though the Run said it was on supplier 9. So I can't confirm from this excerpt that those eight were fully processed. I also can't tell from the excerpt what the Enterprise Browser's session limit is, beyond the 55 minutes in the error. If the full transcript shows earlier re-logins or slow page loads, that would support the same conclusion.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8430,
+    "input_tokens": 2,
+    "output_tokens": 1792,
+    "thinking_tokens": 788
+  },
+  "variant": "main",
+  "wall_ms": 19634
+}

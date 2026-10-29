@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.031127800000000004,
+  "created_at": "2026-10-29T11:37:28+00:00",
+  "duration_api_ms": 14240,
+  "input_hash": "4a001beca9456e30",
+  "key": "96c6574bda66acece708601c",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity. The Run shows `completed`, but the outcome is wrong: the vendor bill was booked against your own entity, not the supplier.\n\n**Where it went wrong:** The decision point is transcript turn **[1]**, under AOP **Step 1**, not the `create_bill` call at [4]. The invoice carries two VAT IDs: the supplier's (`DE811203984`) and the bill-to customer's (`CZ45272956`, yours). Step 1 says only \"VAT ID\" and doesn't say whose, so the Agent picked the bill-to one. Step 2 then matched the vendor on that ID, and NetSuite returned your own entity. Nothing in the AOP told the Agent to treat that match as wrong, so it created the bill.\n\n**Evidence:**\n- AOP Step 1: *\"Read the invoice PDF and extract the supplier name, VAT ID and total.\"*\n- Transcript [1]: *\"Extracted: supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\"*. The supplier name is correct, but the VAT ID is yours.\n- Transcript [3]: *\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"*. The Agent proceeded to [4] anyway.\n\n**Fix:** Rewrite AOP Step 1 to name the field exactly. For example: *\"Extract the **supplier's (seller/issuer's) VAT ID**, the one next to the supplier name and address, not the bill-to / customer VAT ID. Our own VAT ID `CZ45272956` is never the supplier's.\"* Step 2 matches on whatever Step 1 extracts, so pinning the extraction fixes the match too. A secondary guard for aop-writer to consider in the same edit: in Step 2, if the matched vendor is our own entity, don't create the bill.\n\n**Next step:** I can invoke `aop-writer` on Build `bld_g05` (`aops/<agent-id>.md`) with the request \"rewrite Step 1 to extract the supplier's VAT ID, not the bill-to VAT ID.\" Separately, the bill already created in **NetSuite** under vendor `200140` (8,412.00 EUR) is wrong. Void or correct it by hand and re-register it against Frischeparadies KG (`DE811203984`).\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 949,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1103,
+    "thinking_tokens": 277
+  },
+  "variant": "main",
+  "wall_ms": 15456
+}

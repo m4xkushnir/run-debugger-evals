@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0101015,
+  "created_at": "2026-10-29T11:28:24+00:00",
+  "duration_api_ms": 7235,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "f2a0017d29e53e539a00704f",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Wrong decomposition (one Agent carrying a real-time phase and a multi-day wait/reminder cycle in a single Run). Status is `stopped` on idle timeout, so it is a Run that was cut off, not an error in a tool.\n\n**Where it went wrong** — At step 6 (\"Wait for the supplier's reply\"). The Agent finished steps 1–5, then had no way to wait. It polled Gmail once (step 6, transcript [2]–[3]), found nothing, and idled until the platform stopped the Run. Steps 7–8 (3-day and 7-day timers) and 9–14 (post-reply processing) could never be reached inside a single Run, because a Run cannot stay open for days.\n\n**Evidence**\n- AOP: `6. Wait for the supplier's reply.` / `7. If no reply after 3 days, send a reminder.` / `8. If no reply after 7 days, escalate to the category manager.`\n- Transcript [4]: `No reply yet. I'll keep checking.` followed by [5] `Run stopped after idle timeout.`\n\nThe AOP has 14 top-level steps spanning two phases (send the claim now; handle the reply or timers days later) across Gmail, SAP, SharePoint, Sheets, Slack, and ServiceNow. The goal also says \"one supplier quality claim\", but there is no mechanism that resumes the work when the reply arrives.\n\nI can only see the transcript from [1], so I can't confirm whether steps 1–5 completed cleanly. The Agent's message at [1] says the claim was sent. Also, the AOP has no terminal action (e.g. `postpone_case`) on the waiting branch. If this is queue-driven, I can't tell from what you pasted, so I'm not claiming that as the root cause.\n\n**Fix** — Split the AOP at step 6 into two Agents. Agent A (steps 1–5) sends the claim, then ends the Run by handing off (`request_handover`) or putting the case into a follow-up queue. Agent B (steps 7–14) is triggered by the supplier's reply or by the 3-day/7-day timers. It handles the reminder, the escalation, and the post-reply SAP, Sheets, Slack, ServiceNow and archive steps.\n\n**Next step** — Restructure the split in Setup first, then I can invoke `aop-writer` with Build `bld_w01` and the change request \"split the AOP at step 6: Agent A ends after sending the claim with a handover; Agent B handles reminder, escalation and post-reply steps\". The file to edit would be `aops/<agent-id>.md`. I don't have the agent ID, so that path needs filling in.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8375,
+    "input_tokens": 2,
+    "output_tokens": 926,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9090
+}

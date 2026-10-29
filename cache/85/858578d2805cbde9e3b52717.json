@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.00119899,
+  "created_at": "2026-10-29T11:24:42+00:00",
+  "duration_api_ms": 10366,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "858578d2805cbde9e3b52717",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing terminal closure. The Run ended on a branch with no terminal action, so the platform auto-completed the case. The Run itself reports as `completed`, which is why it looks healthy.\n\n**Where it went wrong:** Step 2, the \"supplier asked for more time\" branch. The AOP says only \"note the new date in the thread.\" It doesn't say to continue to step 3 or to close the case. The Agent read that as the end of the job. After `slack.post` at [5], it wrote \"Noted the new date of 12 Nov in the thread\" at [7] and stopped. Steps 3 (Gmail reminder) and 4 (`update_case` + `complete_case`) never ran. The case then closed as `auto-completed on clean run end`, with no reminder sent and nothing scheduled for 12 Nov. That matches the report: the PO dropped out of the chain.\n\n**Evidence:**\n- [4] `\"Textima: We need until 12 Nov to ship, sorry for the delay.\"`\n- [7] `\"Noted the new date of 12 Nov in the thread.\"`\n- AOP step 2: `If the supplier has replied asking for more time: note the new date in the thread.`\n\nThe `slack.post` at [5] is also not in the AOP. The Agent improvised it. That didn't cause the failure, but it shows the branch was underspecified.\n\n**Fix:** Change step 2's reply branch to end in a terminal action. Replace the note-only instruction with: *\"If the supplier has replied asking for more time: post the new date to the PO thread, call `update_case` with `second_reminder_postponed_until` set to that date, then `postpone_case` until that date. Do not send the reminder on this Run.\"*\n\nThis assumes the intended behaviour is to hold the reminder until the supplier's date and then follow up. If the business wants the reminder sent anyway, the branch needs a different terminal action. That's a product decision for you to confirm before the AOP changes.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_t02` and the change above, so it rewrites step 2 in `aops/<agent-id>.md`. I haven't changed anything. Once it's in, the 12 Nov date should come up as a postponed case, not a silent completion. You may also want to check whether other cases hit this branch and auto-completed the same way, since they'd have the same gap.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1077,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1820,
+    "thinking_tokens": 1003
+  },
+  "variant": "main",
+  "wall_ms": 12709
+}

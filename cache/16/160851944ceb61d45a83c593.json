@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.0135459,
+  "created_at": "2026-10-29T11:24:31+00:00",
+  "duration_api_ms": 6633,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "160851944ceb61d45a83c593",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure. The \"PO not found\" branch in Step 2 posts to Slack but never says to call `fail_case`, `postpone_case`, or `request_handover`. The Run ended cleanly after a non-terminal action, so the platform settled the case itself: Completed, reason `auto-completed on clean run end`. The Run status is \"completed\" and nothing errored, so the failure only shows in the case evaluation (1 critical issue).\n\n**Where it went wrong**\nThe decision point is transcript turns [4]→[5]. `netsuite.find_po` returned no results, so the Agent followed the only instruction for that branch, which was to post to Slack. It then stopped at [7] without any case-closing call. Step 4 (`complete_case`) is written as the next step in the happy path, and the Step 2 branch has no terminal action of its own. The Agent also never called `complete_case`, so the platform's auto-completion is what marked the case Completed.\n\n**Evidence**\n- AOP Step 2: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions.\"\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case evaluation: \"Invoice was never posted, but the case shows Completed.\"\n\n**Fix**\nEdit AOP Step 2 so the not-found branch ends with an explicit terminal action. For example: \"If the PO is not found: post the invoice number to **Slack** #ap-exceptions, then call `fail_case` with the reason 'PO not found' and stop.\" Use `postpone_case` instead if you expect the PO to show up later and want a retry, or `request_handover` if a human should take over. Which one fits depends on your AP process.\n\nThe AOP also doesn't say what to do when lines fall outside the 1% tolerance in Step 3. That is the same kind of gap, but it did not cause this Run's failure, so it's worth fixing in the same edit only if you want to.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t01`, the file `aops/<agent-id>.md`, and this change request: \"In Step 2, after the Slack post on the PO-not-found branch, add a `fail_case` call and stop. Also add a terminal action for the Step 3 mismatch branch.\" Please confirm whether you want `fail_case`, `postpone_case`, or `request_handover` for the not-found branch.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 1077,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 850,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8998
+}

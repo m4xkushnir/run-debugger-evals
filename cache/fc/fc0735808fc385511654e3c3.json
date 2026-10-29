@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.0065834,
+  "created_at": "2026-10-29T11:31:49+00:00",
+  "duration_api_ms": 4865,
+  "input_hash": "95d351598029029b",
+  "key": "fc0735808fc385511654e3c3",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nConnection failure. The Login **Coop portal (Okta)** had an expired session. It was last re-authenticated 94 days ago and the portal enforces 90-day sessions. This is the user's to fix (expired credential), not a platform fault.\n\n**Where it went wrong**\nStep 1 of the AOP, the very first action. `browser.open` on the reports page was redirected to Okta, and the Agent had no way to proceed. The Agent never reached Step 2 (the download).\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: Login last re-authenticated 94 days ago, against a 90-day session limit by the portal.\n- The AOP has no branch for a sign-in failure: Step 1 just says to use the Login, with nothing about what to do if it has expired.\n\n**Fix**\nRe-authenticate the Login **Coop portal (Okta)** in Setup so the session is valid again. This is the change that unblocks this Run and any rerun. The session will expire again every 90 days, so put a recurring reminder to re-authenticate it before day 90 (for example, every 80 days).\n\n**Next step**\nRe-authenticate the Login in Setup and then rerun. Once that is done, if you want the Agent to fail more cleanly when the session lapses again (for example, by asking a human to re-authenticate via **Human in the loop** instead of ending with a bare failure), I can hand `aop-writer` Build `bld_x01` and that change request for `aops/<agent-id>.md`. That is optional hardening, not the cause of this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8194,
+    "input_tokens": 2,
+    "output_tokens": 576,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 6372
+}

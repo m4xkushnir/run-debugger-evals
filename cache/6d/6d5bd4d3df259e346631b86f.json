@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S02",
+  "cost_usd": 0.00032389,
+  "created_at": "2026-10-29T11:30:15+00:00",
+  "duration_api_ms": 2873,
+  "input_hash": "7df77d8d99342926",
+  "key": "6d5bd4d3df259e346631b86f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** AOP ambiguity. The AOP gives the Agent no format rule for the amount, so the Agent passed the invoice's display string through unchanged.\n\n**Where it went wrong:** Step 2 of the AOP (\"entering the amount as shown on the invoice\") and the decision at transcript [1]–[2]. The Agent copied \"1.234,50 €\" directly into the `amount` field, which SAP requires as a number.\n\n**Evidence:**\n- AOP Step 2: \"entering the amount as shown on the invoice.\"\n- Transcript [2]: `sap.create_invoice {\"amount\": \"1.234,50 €\"}`\n- Transcript [3]: `ERROR 400 ValidationError: \"amount\" must be a number`\n\n**Fix:** Add a normalization rule to Step 2 of the AOP: *\"Convert the amount to a plain decimal number before entering it: remove the currency symbol and thousands separators, and use a period as the decimal separator (for example, 1.234,50 € → 1234.50). Enter the number only, without the currency.\"*\n\n**Next step:** I can hand this to `aop-writer` to rewrite Step 2 with the rule above. Note that this diagnosis rests on the transcript and AOP you pasted. If the Agent's Build has other steps that depend on the amount format, they should be checked as well.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8169,
+    "input_tokens": 2,
+    "output_tokens": 484,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 4945
+}

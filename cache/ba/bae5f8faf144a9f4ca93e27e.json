@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.008373199999999999,
+  "created_at": "2026-10-29T11:34:31+00:00",
+  "duration_api_ms": 6060,
+  "input_hash": "4a001beca9456e30",
+  "key": "bae5f8faf144a9f4ca93e27e",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — AOP ambiguity. The Run status is \"completed\", but the outcome is wrong: the bill was registered against our own entity.\n\n**Where it went wrong** — Step 1 of the AOP, at transcript turn [1]. The AOP says to extract \"the supplier name, VAT ID and total\" without saying which of the invoice's two VAT IDs is the supplier's. The Agent picked the bill-to customer's VAT ID (our own) and passed it to Step 2's vendor match. Step 2 then matched on that ID and found our own entity, and no check caught it.\n\n**Evidence**\n- Turn [1]: `Extracted: supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'; total 8,412.00 EUR.` The supplier name is Frischeparadies KG, but the VAT ID is the bill-to customer's (ours). The supplier's is DE811203984.\n- Turn [3]: `{\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"}`. The lookup result flagged that the match was our own entity, and the Agent created the bill anyway at turn [4].\n\n**Fix** — Change Step 1 of the AOP so it states which VAT ID to extract and adds a guard in Step 2. For example:\n- Step 1: \"Extract the VAT ID printed in the **supplier/seller block**. Never use the VAT ID in the bill-to/customer block (that is our own entity, `CZ45272956`).\"\n- Step 2: \"If the vendor match is our own entity, or no vendor matches, do not create the bill. Use **Human in the loop** to confirm the vendor first.\"\n\nThis is one root cause, an AOP that doesn't separate the two VAT IDs. The guard is part of the same rewrite, not a separate fix.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g05` and this change request, to edit the AOP in place at `aops/<agent-id>.md`. The bad bill for 200140 (8,412.00 EUR) has already been created in NetSuite, so someone should reverse it and re-register it against the real supplier.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8292,
+    "input_tokens": 2,
+    "output_tokens": 754,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7366
+}

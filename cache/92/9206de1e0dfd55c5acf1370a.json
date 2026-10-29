@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P02",
+  "cost_usd": 0.00082936,
+  "created_at": "2026-10-29T11:29:33+00:00",
+  "duration_api_ms": 8565,
+  "input_hash": "6f5b81b1c79a2f1c",
+  "key": "9206de1e0dfd55c5acf1370a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Platform / infra failure\n\n**Where it went wrong:** Step 2 of the AOP (`gmail.send_message`), at transcript turn [2]. The Gmail Connection was reauthenticated at 09:12 and a test send succeeded at 09:13, so the Connection's credentials were valid at that point. Runs starting at 09:20 failed on the platform's credential decryption, before any Gmail API call reached the mailbox.\n\n**Evidence:**\n> `ERROR 500: internal error: failed to decrypt connection credentials (ref: kms-4f19)`\n\n> \"a test send at 09:13 worked. This Run at 09:20 and the 2 after it failed with the same internal error.\"\n\n**Why it isn't a Connection failure:** An expired token or missing scope would be yours to fix, and a fresh reauthentication would normally clear it. Here the Connection worked right after reauthenticating, then failed with an error about decrypting the stored credentials. That points to the platform's key management service (`kms-4f19`), not to your Gmail account or the AOP. The three failures are identical and independent of the input data, which fits a platform fault.\n\n**Ruled out:**\n- **AOP:** The two steps are concrete and the Agent handled the error by reporting it. No decision point led to the failure.\n- **Missing data:** The order was read from the run input before the send, and the failure happened at the send.\n- **Missing terminal closure, batch leak, HITL, decomposition:** No case ID was given, the Run isn't queue-driven, and the AOP is a single-customer, single-send task.\n\n**Fix:** None in your artifacts. Don't edit the AOP or Setup. Raise this with Duvo.\n\n**Next step:**\n- I don't have a support-escalation tool in this session, so I can't report this for you. Please raise it with Duvo support from the Duvo web app and include the diagnosis above: Run `run_p02`, Build `bld_p02`, the exact `kms-4f19` error, the 09:12 reauthentication, the 09:13 successful test send, and the failed Runs at 09:20 and after.\n- Customer impact: `buyer@hotel-praha.cz` has not received the order confirmation for these Runs. Send it manually or re-run once Duvo confirms the fix.\n- If you want to rule out a stale token before escalating, you can disconnect and reconnect Gmail once more. Given the timing, I wouldn't expect it to help.\n\n```json\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 1494,
+    "thinking_tokens": 636
+  },
+  "variant": "main",
+  "wall_ms": 9914
+}

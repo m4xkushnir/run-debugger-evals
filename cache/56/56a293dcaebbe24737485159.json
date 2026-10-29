@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.00046623000000000004,
+  "created_at": "2026-10-29T11:23:32+00:00",
+  "duration_api_ms": 4253,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "56a293dcaebbe24737485159",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity. The run completed without a platform error, but the wrong outcome was produced: the Agent issued a full refund on a cosmetic-damage case where policy calls for a partial refund.\n\n**Where it went wrong:** Step 2 of the AOP, at the decision point after the photo review. The AOP says \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\" It gives no threshold for \"significant\" and no rule for cosmetic damage. The Agent used the customer's perception as the test.\n\n**Evidence:**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"It looks significant enough to the customer, so I'll refund in full.\"\n- Transcript [4]: `stripe.refund {\"order\": \"#88213\", \"amount_eur\": 480.00}`\n\nThe AOP never mentions the 15% cosmetic-damage policy, so the Agent had nothing to check its judgment against. The user report confirms the policy exists outside the AOP.\n\n**Fix:** In Step 2 of the AOP, replace the judgment instruction with an explicit rule, for example:\n\"If the damage is cosmetic only (scratches, scuffs, surface marks that do not affect function or structure), issue a partial refund of 15% of the item price. If the damage affects function or structure, refund in full. If you cannot tell which applies, use Human in the loop before issuing any refund.\"\n\nThe exact wording and threshold need to match the company's actual policy. Confirm that with the user before finalising.\n\n**Next step:** Hand off to `aop-writer` with Build `bld_a01` and the change request \"rewrite Step 2 to replace the judgment call with a cosmetic-damage rule (15% partial refund) and a functional-damage rule (full refund), with HITL for unclear cases.\" The AOP file is `aops/<agent-id>.md`. You will also need to decide whether the Stripe refund step should require a check on the amount. Consider adding a guard on Step 3 so a refund over the policy-calculated amount for cosmetic damage cannot go through without review.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8403,
+    "input_tokens": 2,
+    "output_tokens": 764,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8386
+}

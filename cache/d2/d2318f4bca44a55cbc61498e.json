@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.0010873899999999997,
+  "created_at": "2026-10-29T11:26:12+00:00",
+  "duration_api_ms": 10511,
+  "input_hash": "28456be35269bb05",
+  "key": "d2318f4bca44a55cbc61498e",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed without error, but it took an irreversible, high-value, externally visible action (cancelling a EUR 62,400 PO and placing a new one at EUR 66,100) with no human checkpoint. The problem is the wrong outcome, not a crash.\n\n**Where it went wrong:** AOP Step 2. The 1-day threshold is concrete, so the AOP did not ask for judgment. It says to cancel and reorder, with no approval gate and no check on the cost of the reorder. The Agent cancelled the PO at [2] before the backup order existed, so once the cancel succeeded the original slot was gone regardless of what happened next. The cancel-before-create sequence is part of the same gap: a human should have approved the trade-off before the first irreversible step.\n\n**Evidence:**\n- AOP Step 2: \"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier…\"\n- Transcript [2]–[3]: `sap.cancel_po {\"po\": \"4500921177\"}` → `{\"status\": \"cancelled\"}`\n- Transcript [4]: `sap.create_po {\"supplier\": \"Backup: Nordpack AB\", \"value_eur\": 66100}`\n- Your report: EUR 3,700 more paid over a 2-day slip. This matches 66,100 − 62,400.\n\n**Other things to check:**\n- The transcript shows no read of the \"Backup suppliers\" file, so I can't confirm where Nordpack or the 66,100 figure came from. Verify both against the file.\n- Step 3 (email both suppliers) never ran. The Run completed without it, so the suppliers may not know about the cancellation.\n\n**Fix:** Add a Human-in-the-loop gate before the cancel in Step 2. The gate should show the original PO value, the backup supplier's price, and the delta, and wait for approval before `sap.cancel_po` runs. Optionally, reorder the steps so the backup PO is created and confirmed before the main PO is cancelled.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_h03` and the change request (\"gate Step 2 on HITL approval showing the cost delta, before cancelling the PO\"). Before that, I'd check the backup supplier file and whether the Run was supposed to send the Step 3 emails.\n\n```json\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8319,
+    "input_tokens": 2,
+    "output_tokens": 2008,
+    "thinking_tokens": 1171
+  },
+  "variant": "main",
+  "wall_ms": 13027
+}

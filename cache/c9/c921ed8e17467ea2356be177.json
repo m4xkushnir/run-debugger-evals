@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0265118,
+  "created_at": "2026-10-29T11:36:31+00:00",
+  "duration_api_ms": 8619,
+  "input_hash": "f214809918538af8",
+  "key": "c921ed8e17467ea2356be177",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak. The Shopify 429 is the symptom. The root cause is that Step 2 of the AOP tells the Agent to sweep the whole catalogue instead of looking up only the products the customer asked about.\n\n**Where it went wrong**\nThe decision point is turn [1], before any error. Following Step 2 literally, the Agent set out to check every SKU in a 2,300-SKU catalogue. That meant thousands of sequential `shopify.get_inventory` calls for an email that asked about 3 products.\n\nThe Agent got through about 180 calls (turn [4]). At turn [6], Shopify's per-client limit of 2 calls per second cut it off. Turn [7] shows the Run ending there, because the AOP has no step for a 429 and the loop had nothing to do with the request anyway.\n\nEven without a rate limit, this Run would have made roughly 2,300 calls to answer 3 lookups.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix**\nRewrite Step 2 of the AOP so the Agent loops over the products requested in the email, not the catalogue. For example:\n\n> *For each product identified in Step 1, look up its SKU and check stock in **Shopify**; include it in the quote with the available quantity.*\n\nFor 3 products, that is 3 calls, well under the rate limit.\n\nThis is not a Connection problem. The Shopify Connection authenticated and returned data correctly at turn [3]. Changing Shopify scopes or credentials would not help.\n\n**Next step**\nI can hand this off to `aop-writer` with:\n- **Build:** `bld_s04`\n- **Change request:** \"Rewrite Step 2 to check stock in Shopify only for the products identified in Step 1, not every SKU in the catalogue.\"\n- **AOP file:** the Agent's `aops/<agent-id>.md`\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 957,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 869,
+    "thinking_tokens": 98
+  },
+  "variant": "main",
+  "wall_ms": 9742
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.00104448,
+  "created_at": "2026-10-29T11:25:24+00:00",
+  "duration_api_ms": 9876,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "3d454b3e01b8f525f01b7b48",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed mechanically, but the outcome is a security incident: it changed a vendor's bank account from an unverified email.\n\n**Where it went wrong:** Step 3 of the AOP. The Agent went from reading the request (step 1) to updating the vendor's `bank_iban` in SAP (step 3) with no verification and no human checkpoint. Nothing in the AOP distinguishes a bank-detail change from an address or contact change, and nothing requires confirming the sender.\n\n**Evidence:**\n- AOP step 3: \"Update the field in **SAP**.\" There is no gate on field type, value size, or sender verification.\n- Transcript [2]: \"From: accounts@sunfield-foods.co … update our bank account to IBAN DE89 … effective immediately.\" The sender's domain is a look-alike, and the email uses urgency to push for an immediate change.\n- Transcript [3]: `sap.update_vendor` with `\"field\": \"bank_iban\"` ran without a preceding HITL ask.\n\n**Fix:** Add a HITL gate to the AOP, between steps 2 and 3:\n> *If the field is `bank_iban`, bank account, or any payment detail: do not update SAP from the email. Use **Human in the loop** to have a finance approver verify the sender's domain against the vendor's record in SAP and confirm the change through a known phone number before writing. Do not reply to the sender about it.*\n\nAlso add a general rule: any change to payment details requires verification outside the email thread.\n\n**Next step:** Treat this as an active incident now, before any AOP work. The EUR 212,000 payment run is the time-critical part.\n1. **Hold the next payment run to Sunfield** and block the vendor's bank details until verified.\n2. **Revert `bank_iban` in SAP** to the previous value. That value isn't in the transcript, so pull it from SAP's change history for vendor 100482.\n3. **Verify independently** by contacting Sunfield through a number already on file, not one from the email.\n4. **Don't reply to the look-alike sender.** The Run's reply already confirmed the change to them.\n5. **Report the phishing** to security. The domain pair is already documented.\n\nAlso note that the IBAN `DE89 3704 0044 0532 0130 00` is the widely published sample IBAN used in banking documentation, which is another reason to treat it as suspect.\n\nI can have `aop-writer` draft the HITL step once the containment is underway.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.92}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8378,
+    "input_tokens": 2,
+    "output_tokens": 1921,
+    "thinking_tokens": 1061
+  },
+  "variant": "main",
+  "wall_ms": 12180
+}

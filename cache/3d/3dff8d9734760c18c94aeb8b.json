@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.00099746,
+  "created_at": "2026-10-29T11:31:13+00:00",
+  "duration_api_ms": 9508,
+  "input_hash": "80480c72868f94f9",
+  "key": "3dff8d9734760c18c94aeb8b",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing data. The AOP assumed the case would carry `unit_price` and gave no instruction for when it didn't. The Agent filled the gap by pulling a price from an unrelated source and treated it as valid.\n\n**Where it went wrong:** Transcript [2]–[3], against AOP Step 1. The case returned `po`, `supplier`, and `qty`, but no `unit_price`. The AOP still expected that field, so the Agent improvised at [3] instead of stopping. Its reasoning there was \"using that,\" with no check on whether the source was authoritative. The Run then sent the email at [4] and marked the case complete at [6].\n\n**Evidence:**\n- [2] `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`\n- [3] \"No unit_price on the case. The supplier's last email signature lists 'Standard price 4.10 EUR/pc', using that.\"\n\nThe \"Standard price\" in an email signature is not the contract price. The user reports the contract price is 3.65 EUR. I can't verify that figure from the Run data, but the mismatch fits this failure.\n\n**Fix:** Add a guard to AOP Step 1: *If `unit_price` is missing or empty on the case, call `fail_case` with the reason \"unit_price missing\" and do not send any email.* This also closes the gap that let a `complete_case` follow an unsupported price. Optionally, add a Setup input or File holding the contract price list so the Agent has an approved source to read from.\n\n**Next step:**\n- **Correct the supplier now.** The wrong figure (4,920 EUR instead of 4,380 EUR at 3.65 EUR/pc) has already gone to sales@kavalier.example. Someone needs to send a correction. I can't send email from here.\n- **Fix the AOP.** I can hand this to `aop-writer` with Build `bld_s05` and `aops/<agent-id>.md`, asking for the missing-`unit_price` guard in Step 1.\n- Check whether `case_s05` should be reopened or re-run once the AOP is fixed. Its \"Completed by Agent\" state still records a successful outcome.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8376,
+    "input_tokens": 2,
+    "output_tokens": 1827,
+    "thinking_tokens": 1068
+  },
+  "variant": "main",
+  "wall_ms": 11150
+}

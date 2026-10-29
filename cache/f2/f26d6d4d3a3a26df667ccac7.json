@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0157524,
+  "created_at": "2026-10-29T11:35:04+00:00",
+  "duration_api_ms": 7460,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "f26d6d4d3a3a26df667ccac7",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed without errors and did what Step 3 allowed. The AOP never set a threshold for an overcharge, so the Agent guessed at each line and guessed inconsistently.\n\n**Where it went wrong**\nThe problem is at Step 3 of the AOP in Build `bld_f02`, which affected transcript turns [1] and [2].\n\n- On turn [1], the Agent flagged a +1.9% (40 CZK) difference as \"too high.\"\n- On turn [2], the Agent let a +9.0% (2,600 CZK) difference through. It reasoned that fuel surcharges \"vary,\" but the AOP never mentions fuel surcharges.\n\nWith no concrete rule, the Agent judged each line differently. Its two calls point in opposite directions, which matches your report. Turns [3] and [4] then wrote that wrong result to \"Freight audit\" as instructed.\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [2]: \"Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\n**Fix**\nRewrite Step 3 of the AOP to use a concrete threshold instead of \"seems too high.\" For example:\n*\"Flag a line if the charge exceeds the rate card rate by more than X% or more than Y CZK. Do not adjust for fuel surcharges unless a surcharge is listed on the rate card or on the invoice line.\"*\n\nYou need to choose the actual X and Y values. Your report suggests 40 CZK should pass and 2,600 CZK should not.\n\n**Next step**\nI can hand this to `aop-writer` with:\n- Build `bld_f02`\n- The request: \"rewrite Step 3 to flag lines exceeding the rate card by more than [X% / Y CZK], with no implicit fuel-surcharge allowance\"\n- The target file `aops/<agent-id>.md`\n\nBefore it runs, please confirm the threshold values you want.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8322,
+    "input_tokens": 2,
+    "output_tokens": 704,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8570
+}

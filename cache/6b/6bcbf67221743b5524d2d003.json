@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.0082235,
+  "created_at": "2026-10-29T11:25:01+00:00",
+  "duration_api_ms": 9249,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "6bcbf67221743b5524d2d003",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nMissing terminal closure (the AOP has no terminal action on the \"supplier asked for more time\" branch), with the case auto-completed by the platform.\n\n**Where it went wrong**\nTranscript turn [5]–[7]: after the Agent saw the supplier's delay request, it posted the note to Slack and then ended its Run with a final message. It never reached Step 3 (Gmail reminder) or Step 4 (`update_case` / `complete_case`). The AOP's Step 2 sub-bullet says only \"note the new date in the thread\" and then falls through to nothing. The branch has no instruction to postpone the case until the new date, so no `postpone_case` ran. The platform then closed the case itself.\n\n**Evidence**\n- AOP Step 2: \"If the supplier has replied asking for more time: note the new date in the thread.\"\n- Case state: \"Completed — reason: auto-completed on clean run end\"\n- Transcript [7]: \"Noted the new date of 12 Nov in the thread.\"\n\nThe Run looked clean (status `completed`, case Completed), but the Agent never chose that outcome. The note in Slack was the only record of 12 Nov, and nothing was scheduled to bring the PO back on that date. That is why it fell out of the reminder chain.\n\n**Fix**\nChange Step 2 of the AOP so the \"more time\" branch ends in a terminal action that reschedules the case. For example: *\"If the supplier has replied asking for more time: note the new date in the thread, then call `postpone_case` with that date and stop. Do not send the reminder.\"* I'm inferring that `postpone_case` accepts a date. The transcript doesn't show its parameters, so confirm that against the tool.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t02`, the AOP file `aops/<agent-id>.md`, and this change request: \"In Step 2, add `postpone_case` to the supplier-asked-for-more-time branch, set to the new date.\" I don't have the Agent ID, so I can't name the exact file. Please supply it, or `aop-writer` can resolve it from the Build.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.86}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8395,
+    "input_tokens": 2,
+    "output_tokens": 738,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12691
+}

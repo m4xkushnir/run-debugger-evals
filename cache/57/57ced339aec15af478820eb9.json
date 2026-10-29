@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.0092964,
+  "created_at": "2026-10-29T11:25:15+00:00",
+  "duration_api_ms": 7095,
+  "input_hash": "d0dabf96580dd687",
+  "key": "57ced339aec15af478820eb9",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nMissing terminal closure. The \"label can't be generated\" branch of the AOP never ends in `fail_case`, `postpone_case`, or `request_handover`. The Run ended cleanly after the Slack post, so the platform settled the case itself. The case is Completed with the reason \"auto-completed on clean run end\", and its evaluation is stuck in `evaluating`. The Run status is \"completed\", so this looks healthy even though the return was never processed. The Packeta 422 is only the symptom.\n\n**Where it went wrong**\nThe decision point is at transcript turn [4]-[7], which maps to AOP Step 2. After the Packeta error, the Agent followed the only instruction for that branch (post to Slack) and then stopped. Step 2's failure branch has no terminal action, and Steps 3 and 4 only apply on the success path. The customer got no label and no email, and the case was never explicitly failed or handed over.\n\n**Evidence**\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Label could not be created; I alerted #returns-ops.`\n- AOP Step 2: `If the label can't be generated: post the order number to **Slack** #returns-ops.` (nothing follows it)\n\n**Fix**\nIn AOP Step 2, add a terminal action to the failure branch. For example: *\"If the label can't be generated: post the order number and the error to Slack #returns-ops, then call `request_handover` (or `fail_case` with the error as the reason) and stop. Do not continue to Step 3.\"* Since the 422 says return service isn't available for SK, `request_handover` to a human who can arrange a manual return is probably better than `fail_case`. Choose whichever matches how your ops team works.\n\nThere is a secondary issue, not a separate root cause: the Slack message `R-30112: no return label` omits the error reason. Including it in the same edit would help ops triage. Whether other SK orders will hit the same 422 is unknown from this single Run. If they will, a pre-check on country is a later improvement.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t03` and the AOP file `aops/<agent-id>.md`, asking it to rewrite Step 2 as above. Separately, case `case_t03` is currently marked Completed even though the return wasn't processed. Someone should handle R-30112 manually and check how that case's outcome is treated.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8324,
+    "input_tokens": 2,
+    "output_tokens": 846,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10486
+}

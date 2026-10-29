@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0363518,
+  "created_at": "2026-10-29T11:36:45+00:00",
+  "duration_api_ms": 13705,
+  "input_hash": "80480c72868f94f9",
+  "key": "4b149b9fc07c82c8604c0ca7",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "The root cause is **missing data**: the case arrived without `unit_price`, and the AOP never says what to do when a field it depends on is absent. The Agent filled the gap with a guess and sent it to the supplier. The wrong price is the symptom.\n\n**Failure mode**\nMissing data. The AOP relies on a case field (`unit_price`) that was not present, and has no rule for that situation.\n\n**Where it went wrong**\n- **Transcript turn [2]:** `claim_case` returned the PO, supplier and quantity, but no `unit_price`.\n- **Transcript turn [3]:** this is where the Run took the wrong path. Instead of stopping, the Agent replaced the missing field with a price it attributed to the supplier's email signature.\n- **AOP Steps 1–2:** Step 1 says the case \"carries … `unit_price`,\" and Step 2 says to email the unit price and total. Neither step covers a case without that field, so the Agent improvised.\n- **Turn [6]:** `complete_case` then closed the case as a success. That is why the Queue shows \"Completed by Agent\" even though a wrong price went out.\n\nTwo things worth noting:\n- The transcript has no Gmail read call before turn [3]. The \"last email signature\" price wasn't fetched during this Run, as far as the transcript shows. Its source is unclear from what I can see.\n- Whatever the source, a supplier's \"standard price\" is not your contract price (3.65 EUR). The Agent had no basis to treat one as the other.\n\n**Evidence**\n- AOP Step 1: \"the case carries PO number, supplier, quantity and `unit_price`.\"\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n\n**Fix**\nAdd a guard to the AOP between Steps 1 and 2:\n\n> *If the case has no `unit_price` (or it is empty), do not look up or estimate a price from any other source. Call `fail_case` with the reason \"missing unit_price\" and send no email.*\n\nIf you'd rather have a person fill in the price than fail the case, use `request_handover` instead of `fail_case`. Either way, the price on a supplier confirmation must come only from the case.\n\nSeparately, find out why `case_s05` was enqueued without `unit_price`. Whatever creates these cases should always supply it. That is a data-source problem, though. This AOP still needs the guard so a missing price never goes out as a guess again.\n\n**Next step**\n- **AOP:** I can hand this to `aop-writer` with Build `bld_s05`, the request \"add a guard after Step 1: if `unit_price` is missing, `fail_case` with reason 'missing unit_price' and send no email,\" and the AOP file `aops/<agent-id>.md`.\n- **Supplier:** separately, Sklárny Kavalier should get a corrected confirmation for PO-88120: 1200 pcs × 3.65 EUR = 4,380 EUR.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1012,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1339,
+    "thinking_tokens": 272
+  },
+  "variant": "main",
+  "wall_ms": 15006
+}

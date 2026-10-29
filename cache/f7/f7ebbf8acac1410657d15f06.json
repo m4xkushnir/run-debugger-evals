@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0104295,
+  "created_at": "2026-10-29T11:31:18+00:00",
+  "duration_api_ms": 8739,
+  "input_hash": "80480c72868f94f9",
+  "key": "f7ebbf8acac1410657d15f06",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing data (case field `unit_price` absent), compounded by missing HITL on an externally visible, hard-to-reverse action. Primary root cause: missing data, with the AOP having no branch for it.\n\n**Where it went wrong**\nTranscript turn [3], the decision point after `claim_case` returned without `unit_price`. AOP Step 1 asserts \"the case carries PO number, supplier, quantity and `unit_price`\" and Step 2 says to email the unit price and total. Neither says what to do when the field is empty. The Agent filled the gap itself, pulling a price from an email signature, and Step 3 then completed the case, so the Run looked successful (status `completed`, \"Completed by Agent\").\n\n**Evidence**\n- Tool result [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}` (no `unit_price`)\n- Agent turn [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n- Email [4]: \"1200 pcs x 4.10 EUR = 4,920 EUR\" (contract price per your report is 3.65 EUR, i.e. 4,380 EUR)\n\nThe symptom is the wrong price in the email. The upstream cause is that the case arrived without its price and the AOP gave no instruction for that situation, so the Agent substituted an unauthoritative source (a supplier's own self-listed \"standard price\", which isn't the contract price).\n\n**Fix**\nChange AOP Step 1/2 to handle the missing field explicitly and forbid substituting a price from any other source. For example: *\"If `unit_price` is missing or empty on the case, do not infer or look up a price. Use **Human in the loop** to request the contract price, or call `fail_case` with the reason 'missing unit_price'. Only send the supplier email when `unit_price` comes from the case or from the human.\"*\n\nI can't tell from the transcript why `unit_price` was absent from this case. That's likely an upstream issue in whatever creates the cases (a missing field mapping or an unfilled Setup input), and worth checking separately so the field is populated going forward. That is a second, independent cause, so I'm not bundling it into the fix above.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s05`, working in `aops/<agent-id>.md`, with the change request: \"In Step 1/2, add a rule that when `unit_price` is missing, the Agent must not infer a price and must use Human in the loop (or `fail_case`) before emailing the supplier.\" Separately, you will probably want to contact Sklárny Kavalier with a corrected PO confirmation at 3.65 EUR/pc (4,380 EUR total).\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8355,
+    "input_tokens": 2,
+    "output_tokens": 959,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10445
+}

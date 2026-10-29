@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.0131452,
+  "created_at": "2026-10-29T11:38:42+00:00",
+  "duration_api_ms": 13835,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "31a4d868d4d39f6af998d71e",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nWrong decomposition (primary), with a Connection/session-lifetime symptom. The Enterprise Browser expiry is the symptom, not the root cause.\n\n**Where it went wrong**\nStep 3 of the AOP: a per-supplier portal loop (\"for each supplier under 90%\"). The Run was on supplier 9 of 17 when the session hit its ~55-minute limit. The loop is also a batch/iteration leak: one Run is processing all 17 underperformers instead of one case. Beyond Step 3, the AOP spans phases that can't live in a single Run: a real-time scan and build (Steps 1-5), a \"next week\" wait and reply check (Step 6), and downstream updates (Steps 7-11). That's 11 steps over multiple Connection domains and a one-week time horizon.\n\n**Evidence**\n- Transcript [5]: `Agent: Signing in to portal 9 of 17 (Agrofert).`\n- Transcript [7]: `ERROR: browser session expired after 55 minutes`\n- AOP Step 3: `For each supplier under 90%, sign in to their portal with **Enterprise Browser**...`\n- AOP Step 6: `Next week, check replies and update the scorecard.`\n\n**Fix**\nSplit the AOP at Step 3 into two Agents. Agent A (Steps 1-2) queries Snowflake, builds the scorecard, and creates one queue case per supplier under 90%. Agent B handles a single supplier per case: portal sign-in, download, draft, send, then `postpone_case` until next week for the reply check. A fresh Enterprise Browser session per case removes the 55-minute ceiling. The weekly summary, SAP ratings, and archiving (Steps 7-11) go in a separate downstream Agent or step, not in the per-supplier Run.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w02`, the change request \"rewrite Step 3 to handle a single supplier per case and split Steps 1-2 and 6-11 into separate Agents,\" and the AOP file `aops/<agent-id>.md`. Note that I only had the transcript up to the error, so I can't confirm whether Steps 4-11 would have hit further problems. They never ran. As a stopgap before the split lands, you could check whether the portals can be handled in smaller batches, but that is only a mitigation, since the underlying structure would still be fragile.",
+  "usage": {
+    "cache_creation_input_tokens": 1091,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 806,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 15169
+}

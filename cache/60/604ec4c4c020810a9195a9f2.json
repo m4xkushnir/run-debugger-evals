@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.017317,
+  "created_at": "2026-10-29T11:28:50+00:00",
+  "duration_api_ms": 13793,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "604ec4c4c020810a9195a9f2",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Batch / iteration leak. Step 3 loops over all 17 underperforming suppliers inside a single Run, so one Enterprise Browser session has to stay alive for the whole loop. The Run died on the expired session. It is not a Connection failure, because nothing was misconfigured or lacking scopes.\n\n**Where it went wrong:** Transcript turn [5]-[7], at supplier 9 of 17 (Agrofert), matching AOP Step 3. The Agent had been working through the portal loop serially, and the session hit its limit (55 minutes) before the loop finished. Nothing in the AOP says what to do if a session expires or how to resume, so the Run just failed. Turns [1]-[4] (Snowflake query and Sheets write) succeeded.\n\n**Evidence:**\n- AOP Step 3: *\"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"*\n- Transcript [5]: *\"Signing in to portal 9 of 17 (Agrofert).\"*\n- Transcript [7]: *\"ERROR: browser session expired after 55 minutes\"*\n\nThe expiry message is the symptom. The cause is that one Run carries 17 sequential portal logins, so the session time budget is exhausted no matter how healthy the Login is. Re-authenticating wouldn't prevent a recurrence once the loop gets long enough.\n\n**Caveat:** The pasted transcript skips from [4] to [5], so I can't see portals 1-8. The \"serial loop ate the session\" reading is inferred from \"9 of 17\" plus the 55-minute error. If portals 1-8 show a long hang or retries, that would change the picture.\n\n**Fix:** Change AOP Step 3 so a Run handles one supplier, with the platform iterating over the under-90% list instead of the Agent looping inside the Run. Roughly: *\"For the supplier in this case, sign in to its portal with Enterprise Browser and download open-order status.\"* The Snowflake/Sheets steps (1-2) would create one case per under-90% supplier rather than looping. Each supplier then gets a fresh browser session, and one portal failure no longer takes down the other 16.\n\n**Next step:** I can invoke `aop-writer` with Build `bld_w02` as the AOP in effect, working in the AOP file `aops/<agent-id>.md`, and the change request: \"rewrite Step 3 to process a single supplier per Run, with one case per supplier under 90%, instead of 'for each supplier'.\" Once that is in, a separate pass is worth making on Steps 6-11. They cover next-week follow-ups, so the Agent is also spanning a time horizon, which is a decomposition concern. It is not the cause of this failure, so I'm leaving it out of this fix.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8430,
+    "input_tokens": 2,
+    "output_tokens": 1647,
+    "thinking_tokens": 683
+  },
+  "variant": "main",
+  "wall_ms": 15444
+}

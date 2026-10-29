@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X02",
+  "cost_usd": 0.011649900000000001,
+  "created_at": "2026-10-29T11:32:08+00:00",
+  "duration_api_ms": 8780,
+  "input_hash": "19943a3a0ddec6d6",
+  "key": "1dab3ea56c97bf86cb2258e9",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Platform / infra failure (not an ordinary Connection failure). The 401 persists after a clean reauthentication, which is the discriminator in the taxonomy.\n\n**Where it went wrong** — Transcript [1]→[2]: the very first `sharepoint.upload` call returned 401. The decision point is not in the AOP. Step 2 (\"Upload it to SharePoint…\") was executed as written and no AOP wording would have changed the outcome. (Side observation: the call in [1] shows only `path`, with no file payload visible. That may just be how the transcript is logged, but it isn't the cause of a 401.)\n\n**Evidence**\n- `[2] Tool result ← sharepoint.upload: ERROR 401 Unauthorized`\n- Context: the Connection was re-authenticated at 10:02, \"Test connection\" succeeded at 10:03, and this Run (10:15) plus the 3 previous Runs since then all failed with the same 401.\n- The same Microsoft account uploads to this folder fine from the browser.\n\n**What I ruled out**\n- Expired token: reauthentication was done and the test passed.\n- User permissions on the folder: the account can upload through the browser.\n- AOP ambiguity or missing branch: the failure occurs on the first tool call, independent of AOP logic.\n- Case data: 4 of 4 Runs fail identically, so it is not case-specific.\n\nWhat I cannot rule out from this data: a scope issue specific to the upload operation (e.g. the Connection's grant covers read/test but not write to that site or library). \"Test connection\" typically exercises a lighter call than a file write, so that is the most likely mechanism. I can't confirm it without the Connection's granted scopes or the response body of the 401. If the granted scopes turn out to lack write access, this would reclassify as a Connection failure, fixed by re-authorizing with the right scopes.\n\n**Fix** — Nothing in your AOP, Setup, or Files needs to change. The artifact at fault is the platform's SharePoint Connection/tool layer, which needs Duvo to investigate why `sharepoint.upload` is unauthorized under a freshly authenticated, passing Connection.\n\n**Next step** — Escalate to Duvo. If a support-escalation tool is available in your session, I'd draft it there for you to review and send. Otherwise, raise it with Duvo support from the Duvo web app and include:\n- Run IDs: `run_x02` (Build `bld_x02`) plus the 3 earlier failed Runs since 10:02\n- Exact error: `sharepoint.upload: ERROR 401 Unauthorized`, on the first call, target path `Logistics/Delivery notes/2026/10`\n- Reauthentication at 10:02, successful Test connection at 10:03, failures continuing through 10:15\n- Browser upload by the same Microsoft account succeeds\n- Ask: the granted scopes on the Connection and the full 401 response body from the upload call\n\nQuick check you can do meanwhile: in the Connection's settings, see whether the granted permissions include write access to the SharePoint site. If not, re-authorize with it and re-run.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8259,
+    "input_tokens": 2,
+    "output_tokens": 1082,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10537
+}

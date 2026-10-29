@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.00104616,
+  "created_at": "2026-10-29T11:28:16+00:00",
+  "duration_api_ms": 9912,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "731a918e169c863e617184ab",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing terminal closure. The Run ended on a non-terminal branch. Step 6 (\"Wait for the supplier's reply\") has no mechanism for waiting, and the AOP never says what to do when no reply has arrived yet.\n\n**Where it went wrong:** Transcript [4] to [5], against AOP Step 6. After the first check found no reply, the Agent improvised a polling loop (\"I'll keep checking\") instead of ending the work with a terminal or postpone action. The 3-day reminder (Step 7) and 7-day escalation (Step 8) can't happen inside one live Run, so the Run sat idle until the platform's idle timeout stopped it. The Run stopped; it did not fail on a Connection or data error.\n\n**Evidence:**\n- AOP Step 6: \"Wait for the supplier's reply.\"\n- Transcript [4]: \"No reply yet. I'll keep checking.\"\n- Transcript [5]: \"Run stopped after idle timeout.\"\n\n**Fix:** Change Step 6 so the Agent never polls. Insert this after Step 5:\n\n> 6. Do not poll for the reply. Call `postpone_case` to re-check in 3 days.\n>    - On wake, if the supplier has replied, go to Step 9.\n>    - If there is still no reply after 3 days, send the reminder via **Gmail**, then `postpone_case` to re-check at day 7.\n>    - If there is still no reply at day 7, escalate to the category manager and `request_handover`.\n\nThis assumes the Agent runs queue-driven, which the store and ServiceNow steps suggest. Your message didn't include a case ID, so I haven't confirmed it. If the Agent runs standalone, `postpone_case` won't be available and the wait needs a different mechanism. Check this before the rewrite.\n\n**Next step:** Hand off to `aop-writer` with Build `bld_w01`, the change request (\"rewrite Step 6 so the Agent postpones instead of polling, with 3-day reminder and 7-day escalation branches\"), and the AOP file `aops/<agent-id>.md`. Before that, confirm the Run is queue-driven. If you send me the case ID, I can check its terminal state.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8396,
+    "input_tokens": 2,
+    "output_tokens": 1924,
+    "thinking_tokens": 1146
+  },
+  "variant": "main",
+  "wall_ms": 11704
+}

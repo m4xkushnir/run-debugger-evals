@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S01",
+  "cost_usd": 0.0069324,
+  "created_at": "2026-10-29T11:30:14+00:00",
+  "duration_api_ms": 7844,
+  "input_hash": "1a25899d7045e182",
+  "key": "17ea5e8509b93ec67e626a44",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Missing data. The Setup input `alert_channel` the AOP depends on was empty. The Slack error is only the symptom.\n\n**Where it went wrong** — At transcript turn [1] the Agent saw the empty input, and at turn [2] it posted anyway. This maps to AOP Step 2 (\"Post an alert to the store's channel: the Setup input `alert_channel`\"). The AOP has no branch for an empty `alert_channel`, so the Agent built a malformed channel (`#`) and Slack rejected it.\n\n**Evidence**\n- `[1] Agent: Setup inputs: alert_channel = \"\"`\n- `[2] Tool call → slack.post {\"channel\": \"#\", ...}`\n- `[3] ... \"error\": \"channel_not_found\"`\n\nThe Connection is not the cause: it posts fine from other Agents, and the request failed because the channel name was blank, not because of auth or scopes.\n\n**Fix** — Set a real value for the `alert_channel` Setup input. The AOP also reads \"the store's channel\" from a single Setup input, even though the alert is per store. If that input is meant to vary by store, it needs to come from the run input or a File mapping stores to channels, rather than one Setup value. If the value stays in Setup, the AOP should also handle the empty case explicitly (this is a secondary hardening, not a second root cause).\n\n**Next step** — Populate `alert_channel` in Setup for this Agent (or decide how store-to-channel mapping should work). If you want the AOP to guard against an empty channel, for example \"If `alert_channel` is empty, use **Human in the loop** / fail the case instead of posting\", I can invoke `aop-writer` with Build `bld_s01` and that change request.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8184,
+    "input_tokens": 2,
+    "output_tokens": 611,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9015
+}

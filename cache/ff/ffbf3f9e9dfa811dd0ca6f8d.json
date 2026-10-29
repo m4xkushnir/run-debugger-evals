@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.00079772,
+  "created_at": "2026-10-29T11:38:41+00:00",
+  "duration_api_ms": 6251,
+  "input_hash": "a422d48d55a66c92",
+  "key": "ffbf3f9e9dfa811dd0ca6f8d",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Platform / infra failure\n\n**Where it went wrong:** Before the Agent's first turn. The Run never reached the AOP. The sandbox that would run it could not start because the container image pull timed out, so neither step 1 (Snowflake) nor step 2 (Slack) was attempted.\n\n**Evidence:**\n- Transcript [2]: `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Context: \"The last 3 Runs of this Agent (different days) failed with the identical sandbox error before any Agent turn.\"\n\n**Fix:** None in your artifacts. Nothing in the AOP, Setup, Connections, or Files would prevent a container image pull from timing out before the Agent starts. The AOP for `bld_p01` is fine as far as this failure goes, and I'd leave it unchanged.\n\nWhat I ruled out:\n- **AOP ambiguity, missing terminal closure, batch leak, wrong decomposition:** none of these can happen before the Agent runs, and the AOP is two short steps.\n- **Connection failure (Snowflake or Slack):** no Connection call appears in the transcript. I can't confirm either Connection is healthy, but this failure doesn't depend on them.\n- **Missing data:** the failure happens before any input is read.\n\n**Next step:** Send this to Duvo support, since the fix is on the platform side. I don't have a support-escalation tool in this session, so please raise it from the Duvo web app. You can paste this:\n\n> Agent run failing before any Agent turn. Run `run_p01`, Build `bld_p01`. Error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3).` The same error occurred on the last 3 Runs of this Agent on different days, so it looks persistent rather than transient. The AOP and Connections were not reached. Please check the sandbox image pull for this Agent's runtime.",
+  "usage": {
+    "cache_creation_input_tokens": 819,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1124,
+    "thinking_tokens": 480
+  },
+  "variant": "no_json",
+  "wall_ms": 7365
+}

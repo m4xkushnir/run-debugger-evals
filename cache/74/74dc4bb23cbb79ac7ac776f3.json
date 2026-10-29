@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.00102733,
+  "created_at": "2026-10-29T11:34:28+00:00",
+  "duration_api_ms": 9465,
+  "input_hash": "4a001beca9456e30",
+  "key": "74dc4bb23cbb79ac7ac776f3",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** AOP ambiguity. The run finished without error, but the bill was created against the wrong entity.\n\n**Where it went wrong:** Step 1 of the AOP says to extract \"the VAT ID\" without saying whose. The invoice carries two VAT IDs, and the Agent took the bill-to customer's (ours) rather than the supplier's. The lookup in [2]–[3] then matched our own entity, and the Agent proceeded to create the bill in [4] without questioning it. Step 2 (\"matching the vendor by VAT ID\") then did exactly what it was told, using the wrong ID.\n\n**Evidence:**\n- [1] \"supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\" — the supplier is named, but the VAT ID is the one the invoice assigns to the bill-to customer. The supplier's ID is DE811203984.\n- [3] `\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"` — the lookup result itself flagged the match as our own entity.\n- [4] `netsuite.create_bill {\"vendor\": \"200140\", \"amount\": 8412.00}` — the bill was created with no check on that result.\n\nThe Agent also didn't reconcile the name and the VAT ID. \"Frischeparadies KG\" is a German name, and a Czech VAT ID for it is a warning sign. The AOP gave it no rule for handling that, so it had nothing to check against.\n\n**Fix:** Change Step 1 of the AOP to:\n> Extract the **supplier's** VAT ID — the one shown for the company issuing the invoice (for this invoice type, typically a DE-prefixed ID). Do not use the bill-to customer's VAT ID; that belongs to us. If the only VAT ID found is ours, stop and request human input.\n\nThis fixes the extraction. It doesn't cover a case where a bad lookup match slips through, but the rule above addresses the cause of this Run.\n\n**Immediate action (outside Duvo):** Bill `200140` for 8,412.00 EUR now exists in NetSuite against our own entity. Someone should void or reverse it there. Duvo can't do that from this diagnosis.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_g05` and the AOP file at `aops/<agent-id>.md` so it can apply the Step 1 change in place.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8313,
+    "input_tokens": 2,
+    "output_tokens": 1888,
+    "thinking_tokens": 1051
+  },
+  "variant": "main",
+  "wall_ms": 10546
+}

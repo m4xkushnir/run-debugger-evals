@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.00111042,
+  "created_at": "2026-10-29T11:38:27+00:00",
+  "duration_api_ms": 9446,
+  "input_hash": "0af3d12c460cedff",
+  "key": "d0e58452f2447f619af23ce1",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Batch / iteration leak, compounded by no duplicate check before refunding.\n\n**Where it went wrong:** Step 1 of the AOP tells the Agent to loop over every approved row (\"for each open return marked 'approved'\"). The transcript shows that loop starting at [3]–[4]: the Agent read all 12 rows and began refunding them one by one. At [5] Stripe reported that a refund for order #90011 already existed, created 2 minutes earlier. That was the second Run's refund. The Agent did not stop. At [6] it said \"Continuing with the remaining 11 rows.\" The Run still ended as `completed` because nothing in the AOP tells the Agent what to do with that warning.\n\n**Evidence:**\n- AOP Step 1: \"for each open return marked 'approved', issue the refund in **Stripe** and set the row to 'refunded'.\"\n- [5]: `\"note\": \"a refund for this charge already exists (created 2 min ago)\"`\n- [6]: \"Continuing with the remaining 11 rows.\"\n\n**Why this is the root cause:** Two Runs of the same Agent read the same sheet and both refunded the same rows. Each Run's loop had no claim on a row and no check for an existing refund. The AOP treats the sheet as a batch to drain, not one return to handle. Stripe's warning was the one signal that could have stopped the duplicate, and the AOP gave the Agent no rule for it.\n\n**Fix:** Rewrite Step 1 so each Run handles one return:\n\"Work on the single return this Run was started for. If its status is not 'approved', stop and complete the case without action. Before refunding, check Stripe for an existing refund on the order. If one exists, do not refund again: set the row to 'refunded' and complete. Otherwise issue the refund, set the row to 'refunded', and complete.\"\n\n**Next step:** Hand this to `aop-writer` with `bld_b02` as the Build in effect and the change above, editing `aops/<agent-id>.md` in place. Separately, the 9 double refunds already issued need reconciling in Stripe. That is a manual task and falls outside this fix. Also check whether the rows in the sheet were actually set to \"refunded\"; the transcript stops at [6], so I can't confirm that.",
+  "usage": {
+    "cache_creation_input_tokens": 940,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1701,
+    "thinking_tokens": 955
+  },
+  "variant": "no_json",
+  "wall_ms": 10495
+}

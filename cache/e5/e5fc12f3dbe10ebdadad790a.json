@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.00131343,
+  "created_at": "2026-10-29T11:33:19+00:00",
+  "duration_api_ms": 12808,
+  "input_hash": "82cebd8c79c09140",
+  "key": "e5fc12f3dbe10ebdadad790a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Connection failure. DPD returned an upstream 429, and the AOP has no branch for it.\n\n**Where it went wrong:** Step 2 of the AOP (\"Get the latest status from the **DPD** Connection\") has no handling for an error response. At transcript [4] DPD returned 429 with `Retry-After: 600`. At [5] the Agent stopped and wrote a free-text message. It never called `update_case`, `complete_case`, `fail_case`, or `postpone_case`. The case was then closed by the platform with no reason, which is why it shows \"Failed (no reason).\"\n\n**Evidence:**\n- [4] `ERROR 429 Too Many Requests. Retry-After: 600`\n- [5] `DPD is rate limiting. I can't get the status.`\n\n**Fix:** Add a rate-limit branch to Step 2 of the AOP:\n\n> If the DPD lookup returns 429, do not retry in this Run. Call `postpone_case` with the reason \"DPD rate limited\" and the delay from the Retry-After header (600 seconds here).\n\nThis turns a silent failure into a postponed case that will be retried after DPD's cool-down. The change is in the AOP only, and it doesn't require new Connection scopes or Setup inputs.\n\n**Ruled out:**\n- **Tracking number:** `claim_case` returned `0953 4412 8890` and the Agent called DPD with `09534412 8890`. The digits are identical (`095344128890`) and only the spacing differs. That is untidy but did not cause this failure, since DPD answered with a rate limit, not \"not found.\" Normalising the number to digits only in Step 1 would remove the inconsistency.\n- **Connection health:** The 429 is DPD's own response, not an auth or scope error. Re-authenticating won't help.\n\n**Volume:** Roughly 30% of today's Runs are hitting this, with 1,900 cases queued. The AOP fix makes each affected case retry safely, but the underlying pressure is concurrency against DPD's rate limit. Reducing how many DPD lookups run at once is a throughput decision, not an AOP change, so it's worth raising separately if the postpone-and-retry path leaves the queue backlogged.\n\n**Next step:** This fix is an AOP change, so I'd hand it to `aop-writer`. It needs:\n1. The Build to work from: `bld_g02`.\n2. The change request: \"Add a 429 branch to Step 2 that calls `postpone_case` with the reason 'DPD rate limited' and the Retry-After delay.\"\n3. The AOP file to edit in place: `aops/<agent-id>.md`. I don't have the Agent ID, so please supply it.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 2461,
+    "thinking_tokens": 1532
+  },
+  "variant": "main",
+  "wall_ms": 14046
+}

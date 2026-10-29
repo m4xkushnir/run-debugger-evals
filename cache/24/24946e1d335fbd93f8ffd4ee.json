@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A03",
+  "cost_usd": 0.00074909,
+  "created_at": "2026-10-29T11:24:14+00:00",
+  "duration_api_ms": 6722,
+  "input_hash": "d5a2c038d277510f",
+  "key": "24946e1d335fbd93f8ffd4ee",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** AOP ambiguity. The run completed without a platform error. The Agent simply took the wrong branch.\n\n**Where it went wrong:** Step 2 of the AOP says \"If quantities don't match, handle it appropriately.\" It gives no threshold and no action for a small shortfall. At message [2], the Agent turned that open instruction into a supplier email (message [3]) instead of a goods-receipt adjustment. The discrepancy is 20 of 500 units, or 4%, which falls under the 5% threshold in your report, so the correct branch was the WMS adjustment.\n\n**Evidence:**\n- AOP Step 2: \"If quantities don't match, handle it appropriately.\"\n- Transcript [2]: \"I'll handle it by asking the supplier to explain the shortfall.\"\n\n**Fix:** Replace Step 2 with an explicit threshold rule, for example:\n\n> If DESADV quantity and PO quantity differ by less than 5% of the PO quantity, adjust the received quantity to the DESADV figure on the goods receipt in the WMS and do not contact the supplier. If the difference is 5% or more, send the supplier a shortfall query.\n\nStep 3's Slack summary should also report which branch was taken. Before you rely on the WMS step, confirm that the Build includes a WMS Connection with write access to goods receipts. The AOP above doesn't show one, and if it's missing, that is a Connection or Setup change, not just an AOP change.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_d03` and the change request \"rewrite Step 2 to add a 5% threshold: adjust on the WMS goods receipt below 5%, email the supplier at or above 5%.\" Once the rewrite is in, you may want to re-run the same input to confirm the branch.\n\nSecondary note: the supplier email went out to an external address with no human review. That is a costly, externally visible action, so the rewritten AOP might also gate the supplier email behind a HITL checkpoint. This is not the primary cause here, and I'm not counting it as a second fix.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8339,
+    "input_tokens": 2,
+    "output_tokens": 1331,
+    "thinking_tokens": 606
+  },
+  "variant": "main",
+  "wall_ms": 10594
+}

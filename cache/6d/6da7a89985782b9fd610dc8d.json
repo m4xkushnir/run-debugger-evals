@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.0360438,
+  "created_at": "2026-10-29T11:37:14+00:00",
+  "duration_api_ms": 13873,
+  "input_hash": "cec074b757b36bc9",
+  "key": "6da7a89985782b9fd610dc8d",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "## Failure mode\n\n**Connection failure: upstream 5xx from the retailer's portal.** The portal had an outage, and the AOP has no branch for an unavailable portal. This is not a Platform / infra failure. The 504 came from the portal's own load balancer, other Agents on other portals ran normally, and the portal's status page reported degraded performance that day.\n\n## Where it went wrong\n\n- **Transcript turns [1]–[4]:** the first `browser.open` in **Step 1** (\"open 'New ASN'\") returned a 504. The Agent retried once, got the same 504, and then stopped at turn [5] without a deliberate outcome.\n- **AOP Steps 1–2:** these only cover the happy path. The AOP doesn't say what to do if the portal can't be reached, how many times to retry, how long to wait, or how to end the Run. So the Agent improvised a single retry and then gave up.\n\nThe timeout itself was outside your control. The part you can fix is that an expected condition (supplier portals do go down) wasn't planned for, so the Run ended as an unexplained failure.\n\n## Evidence\n\n- Transcript [2]/[4]: `ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- Transcript [5]: `Agent: The portal keeps timing out.`\n- AOP Step 1: `Use **Enterprise Browser** with the Login **Tesco Partner Toolkit** to open \"New ASN\".` This is the only instruction for this step. It has no fallback for an unreachable portal.\n\n## Fix\n\nAdd an unavailability branch to **Step 1 of the AOP**: *If opening \"New ASN\" returns a 5xx error or times out, wait about 2 minutes and retry, up to 3 attempts in total. If it still fails, do not submit anything. End the Run by reporting \"Tesco Partner Toolkit unavailable (HTTP <code>), ASN not submitted\" so it can be retried later.* If this Agent runs from a queue, use `postpone_case` here instead of a plain failure, so the ASN is retried automatically.\n\n## Next step\n\n1. **For this ASN:** once the portal's status page clears, use **Start Work** again. Nothing was submitted, so you don't need to clean anything up.\n2. **For the AOP:** I can hand off to `aop-writer` with Build `bld_g03` and this request: \"add a retry-then-postpone/fail branch to Step 1 for portal 5xx/timeouts.\" It would work in the Agent's AOP file (`aops/<agent-id>.md`). Your paste didn't include the Agent ID, so that file name is still a placeholder.\n3. **No escalation to Duvo is needed**, since this was the retailer's portal and not the platform.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 906,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1366,
+    "thinking_tokens": 422
+  },
+  "variant": "main",
+  "wall_ms": 14935
+}

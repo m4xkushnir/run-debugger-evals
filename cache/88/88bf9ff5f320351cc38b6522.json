@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.0118052,
+  "created_at": "2026-10-29T11:39:04+00:00",
+  "duration_api_ms": 10810,
+  "input_hash": "f214809918538af8",
+  "key": "88bf9ff5f320351cc38b6522",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity / over-broad scope, specifically a batch / iteration leak (category 6). The 429 is only the symptom.\n\n**Where it went wrong**\nThe decision point is at transcript [1], where the Agent decided to walk the whole catalogue (\"Checking the catalogue: 2,300 SKUs\"). That follows directly from AOP Step 2. The Agent never narrowed to the 3 products the customer asked about (Step 1). By SKU-0181 it had made about 180 calls, exceeded Shopify's 2 calls/second limit, and the Run died at [6]. The Agent's response at [7] (\"Shopify is rate limiting me.\") shows the AOP has no branch for rate limits, so it just stopped.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n- Context: the customer's email asked about 3 products, yet the Agent was on SKU-0181 of 2,300.\n\n**Fix**\nRewrite AOP Step 2 so it looks up only the SKUs the customer requested, rather than iterating the catalogue. For example: \"For each product requested in the email (Step 1), match it to its SKU and check stock in Shopify for that SKU only. If a product can't be matched to a SKU, say so in the reply rather than scanning the catalogue.\" With 3 lookups, the rate limit is not reached. A secondary hardening, optional and not a separate root cause, is to add \"If Shopify returns 429, wait for the `Retry-After` period and retry once\" to that step.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, the AOP file `aops/<agent-id>.md`, and the change request \"rewrite Step 2 to check stock only for the SKUs requested in the email, not every SKU in the catalogue\". Note that I worked from the AOP you pasted. If it was edited after this Run, confirm it matches Build `bld_s04`.",
+  "usage": {
+    "cache_creation_input_tokens": 961,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 724,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 12465
+}

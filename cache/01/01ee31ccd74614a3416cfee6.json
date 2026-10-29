@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S01",
+  "cost_usd": 0.0007492499999999999,
+  "created_at": "2026-10-29T11:30:09+00:00",
+  "duration_api_ms": 7841,
+  "input_hash": "1a25899d7045e182",
+  "key": "01ee31ccd74614a3416cfee6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing data. The `alert_channel` Setup input was empty for this Build, and the AOP used it without checking.\n\n**Where it went wrong:** Step 2 of the AOP posts to \"the Setup input `alert_channel`.\" At transcript [1] the Agent read that input as empty, and at [2] it still called `slack.post` with `\"channel\": \"#\"`, which is the empty value with a `#` prefix. Slack rejected the post at [3]. The Slack Connection isn't the problem, since you say it posts fine from other Agents.\n\n**Evidence:**\n- `[1] Agent: Setup inputs: alert_channel = \"\".`\n- `[2] Tool call → slack.post {\"channel\": \"#\", \"text\": \"SKU 40221 out of stock at CZ-018\"}`\n\n**Fix:** Set the `alert_channel` Setup input on this Agent to the store team's Slack channel (for example `#store-cz-018-alerts`), then start a new Run. This is the change that makes this Run succeed.\n\nA second gap made the failure happen: the AOP has no check for an empty `alert_channel`. A guard in Step 2 would make a missing setting fail the case clearly instead of posting to `#`. That is an AOP change, so I'd hand it to `aop-writer` if you want it.\n\n**Next step:** Set `alert_channel` in Setup and re-run. If you want the empty-value guard, I can hand the AOP to `aop-writer` with the request \"in Step 2, if `alert_channel` is empty, call `fail_case` with reason 'alert_channel Setup input not set' instead of posting.\"\n\nOne thing to check before you go live: Step 1 takes the store from the run input, but Step 2 uses a single `alert_channel` for the whole Agent. If this Agent covers more than one store, every store's alerts will go to the same channel. Consider a per-store channel mapping, or confirm that one channel is intended.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8205,
+    "input_tokens": 2,
+    "output_tokens": 1334,
+    "thinking_tokens": 660
+  },
+  "variant": "main",
+  "wall_ms": 9682
+}

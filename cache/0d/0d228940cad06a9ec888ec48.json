@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0096495,
+  "created_at": "2026-10-29T11:31:18+00:00",
+  "duration_api_ms": 7646,
+  "input_hash": "80480c72868f94f9",
+  "key": "0d228940cad06a9ec888ec48",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nMissing data (case field `unit_price` absent), compounded by AOP ambiguity: the AOP has no branch for when `unit_price` is missing, and no HITL gate for an externally visible commitment. Primary category: missing data.\n\n**Where it went wrong**\nTranscript turn [3], at AOP Step 1/2. Step 1 asserts the case \"carries PO number, supplier, quantity and `unit_price`\", but the claimed case had no `unit_price`. The AOP gave no instruction for that situation, so the Agent improvised a price source (a supplier email signature) and Step 2 sent it to the supplier. Step 3 then closed the case as completed, so nothing flagged the problem.\n\n**Evidence**\n- Case payload: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`, with no `unit_price`.\n- Agent turn [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n- Email body [4]: \"1200 pcs x 4.10 EUR = 4,920 EUR\" (at the contract price of 3.65 EUR, the total should be 4,380 EUR, an overcharge of 540 EUR).\n\nThe Run status is \"completed\" and the case is \"Completed by Agent\" because the Agent behaved as instructed on the happy path. The failure is a wrong outcome, not a technical error.\n\n**Fix**\nChange Step 1 of the AOP to handle the missing price explicitly: *\"If the case has no `unit_price`, do not look for a price elsewhere and do not email the supplier. Call `request_handover` (or `fail_case` with reason 'missing unit_price') instead.\"* Never source a price from an email signature, since a \"standard price\" is not the contract price.\n\nI can't tell from the transcript why `unit_price` was missing from the case (an upstream intake or queue issue). That's worth checking separately, but it is not what caused the Agent to send the wrong price.\n\n**Next step**\nI can hand off to `aop-writer` with Build `bld_s05`, working in `aops/<agent-id>.md`, and the change request: \"In Step 1, add a rule that if `unit_price` is missing from the case, the Agent must stop and call `request_handover` without emailing the supplier; also add a Human-in-the-loop confirmation before Step 2 if the total exceeds a threshold you choose.\" Separately, you will probably want to send the supplier a correction with the 3.65 EUR price.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8355,
+    "input_tokens": 2,
+    "output_tokens": 881,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9058
+}

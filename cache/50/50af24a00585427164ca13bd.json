@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.00105848,
+  "created_at": "2026-10-29T11:25:28+00:00",
+  "duration_api_ms": 11902,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "50af24a00585427164ca13bd",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed without errors, but it made an irreversible, high-risk change on an unverified request. The Agent changed a supplier's bank account on an email from an unknown look-alike domain and then confirmed the change to that sender. \"Completed\" describes the Run's technical status, not whether the outcome was correct.\n\n**Where it went wrong:** Step 2 to Step 3. The AOP has no check that the requester is the supplier, and no approval gate before changing bank details in SAP. The Agent went straight from reading the email to `sap.update_vendor` (transcript [3]). Step 4 then sent the confirmation (transcript [5]) without any review.\n\n**Evidence:**\n- Transcript [2]: `From: accounts@sunfield-foods.co` … \"Please update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"\n- Transcript [3]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}`\n- Security report: the sender domain is `sunfield-foods.co`, not the legitimate `sunfieldfoods.com`. The next payment run is EUR 212,000 to Sunfield.\n\n**Fix:** One change to the AOP. Add a gate between Steps 2 and 3:\n\n> Before changing any bank or payment detail, verify the requester. Compare the sender's domain with the vendor's domain on file in SAP. If they don't match exactly, or if the change request came by email, stop and use **Human in the loop** to get approval from Finance, showing the current and proposed values. Only update the field after approval. Do not send a confirmation of bank-detail changes to the sender; notify the requester through the approved channel only.\n\nI'd also treat the IBAN itself as a warning sign. DE89 3704 0044 0532 0130 00 is the standard sample IBAN that appears throughout banking documentation, so check whether this is a test message or a fabricated one.\n\n**Next step:**\n1. **Now, outside this Run:** Hold the EUR 212,000 payment to vendor 100482 until someone verifies the change through a contact already on file, not one from the email. Revert `bank_iban` for vendor 100482 to its previous value, and check the Sunfield Foods audit log for other recent edits. Let your security team know the confirmation reply was sent to the look-alike address.\n2. **AOP fix:** Hand off to `aop-writer` with the Build ID `bld_h01`, the gate above, and the AOP file path. Don't re-enable autonomous bank-detail changes until that gate is in place.\n\n```json\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8378,
+    "input_tokens": 2,
+    "output_tokens": 1949,
+    "thinking_tokens": 1025
+  },
+  "variant": "main",
+  "wall_ms": 14579
+}

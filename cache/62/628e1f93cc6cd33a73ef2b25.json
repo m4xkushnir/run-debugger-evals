@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.0008068299999999999,
+  "created_at": "2026-10-29T11:27:05+00:00",
+  "duration_api_ms": 8695,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "628e1f93cc6cd33a73ef2b25",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing data. The case had no `cost_center`, and the AOP had no rule for that case, so the Agent improvised a placeholder.\n\n**Where it went wrong:** Turn [3], right after `claim_case` returned without a cost center. Step 2 of the AOP says to post \"to the case's `cost_center`\" but doesn't say what to do when that field is empty. The Agent chose to post anyway with `TBD`, which the AOP never authorized.\n\n**Evidence:**\n- [3] Agent: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- [4] `netsuite.post_bill {\"invoice\": \"INV-7731\", \"cost_center\": \"TBD\"}`\n\nThe run then completed cleanly ([6]–[7]), which is why it looks like a success. The outcome is wrong: a €4,120 bill from Hartmann Logistik is now posted to NetSuite with no real cost center.\n\n**Fix:** Add one branch to Step 2 of the AOP: *\"If the case has no `cost_center`, or it is empty, do not post. Call `postpone_case` with the reason 'missing cost_center' and stop.\"* This makes the Agent wait for the data rather than invent a value.\n\n**Next step:**\n- **Clean up this Run:** The `INV-7731` bill in NetSuite needs its cost center corrected or the posting reversed. That is a finance action outside Duvo, and I can't tell from the transcript whether NetSuite has any downstream effects yet.\n- **Find the upstream gap:** Work out why `cost_center` is missing from the case. If it's supposed to come from intake or another system, that fix may matter more than the AOP change, since postponing alone will just queue more cases.\n- **AOP change:** I can hand the AOP and the change above to `aop-writer` to write the new Step 2 branch.\n\nConfidence is high on the failure mode. The transcript shows the decision clearly. I have not seen the Build's full history, so I can't confirm whether the AOP was edited after this Run.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8313,
+    "input_tokens": 2,
+    "output_tokens": 1447,
+    "thinking_tokens": 730
+  },
+  "variant": "main",
+  "wall_ms": 10890
+}

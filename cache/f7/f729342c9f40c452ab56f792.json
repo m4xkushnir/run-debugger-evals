@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.0112819,
+  "created_at": "2026-10-29T11:32:50+00:00",
+  "duration_api_ms": 6048,
+  "input_hash": "1c85333d7be4398e",
+  "key": "f729342c9f40c452ab56f792",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Not a failure. The Run behaved exactly as the AOP specifies. The Run status is `completed` and the case was closed by the Agent via `complete_case`.\n\n**Where it went wrong** — Nothing went wrong at a decision point. At transcript turn [4], SAP returned the PO as received, which triggers the AOP's Step 2 early-exit branch. The Agent took it at turn [6].\n\n**Evidence**\n- Transcript [4]: `{\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n\nThe email in Step 3 is only for POs that are not yet received. This one was received two days before the Run (today is 2026-10-29), so skipping the Gmail email was correct.\n\n**Fix** — No change to the AOP, Connections, or Setup is needed for this Run. The thing to check is the case routing: why was a PO that was already received queued for chasing? That is a question about whatever feeds the queue (a stale filter or a delay between SAP receipt and the queue population), which I can't see from this Run. If you expected PO-61204 to still be outstanding, verify its status in SAP directly. If SAP is wrong (for example, a partial receipt marked as fully received), that's a data issue in SAP, not an Agent bug. An optional hardening, if partial deliveries matter to you, would be an AOP step that checks received quantity against ordered quantity, but nothing in this transcript shows that happened.\n\n**Next step** — Confirm PO-61204's real delivery status in SAP. If it was truly received, no action is needed. If it was not, tell me what SAP shows and I can help work out whether the data is wrong or the AOP needs a partial-receipt check, in which case I'd hand off to `aop-writer`.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 956,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 672,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7616
+}

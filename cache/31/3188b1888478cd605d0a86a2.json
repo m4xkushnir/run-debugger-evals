@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.012451199999999999,
+  "created_at": "2026-10-29T11:39:11+00:00",
+  "duration_api_ms": 6605,
+  "input_hash": "95d351598029029b",
+  "key": "3188b1888478cd605d0a86a2",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure (expired Login). The Login **Coop portal (Okta)** had an expired session, which is the user's to fix, not a platform fault.\n\n**Where it went wrong**\nTranscript step [1]-[2]: the first action, opening the reports page in Enterprise Browser, was redirected to Okta. The Run never reached AOP Step 2. The AOP (Step 1) assumes the Login is always valid and has no branch for an expired session.\n\n**Evidence**\n- Transcript [2]: `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Context: the Login was last re-authenticated 94 days ago, and the portal enforces 90-day sessions. The session crossed the limit about 4 days earlier.\n- AOP Step 1: `Use **Enterprise Browser** with the Login **Coop portal (Okta)** to open the reports page.`\n\nThe \"Okta sign-in required\" error is the symptom. The root cause is that the Login aged past the portal's 90-day session window and nothing refreshes it. This will recur roughly every 90 days.\n\nThis is not a platform/infra failure: it's tied to the Login's age, and re-authentication is the user's action. I can't confirm from the paste whether re-authenticating would succeed (for example, if MFA is required for the Agent), so if the Run fails again right after a clean re-authentication, treat that as a different case and escalate to Duvo.\n\n**Fix**\nRe-authenticate the **Coop portal (Okta)** Login in Setup so it gets a fresh session. This clears this failure.\n\nTo stop it recurring, a single change to the AOP is also worth considering, but only after the Login is fixed: add a branch to Step 1, e.g. *\"If the browser is redirected to an Okta sign-in page, use **Human in the loop** to report that the Coop portal Login has expired and stop; do not retry.\"* That turns a silent failure into a clear request to re-authenticate. A calendar reminder to re-authenticate every ~80 days would also cover the 90-day window.\n\n**Next step**\n1. Re-authenticate the **Coop portal (Okta)** Login in Setup, then start a new Run.\n2. If you want the expired-session branch added, I can invoke `aop-writer` with Build `bld_x01`, the request \"add an expired-Okta-session branch with a Human in the loop stop to Step 1\", and the file `aops/<agent-id>.md`. I need the Agent ID for that path, which isn't in what you pasted.",
+  "usage": {
+    "cache_creation_input_tokens": 855,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 831,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 7747
+}

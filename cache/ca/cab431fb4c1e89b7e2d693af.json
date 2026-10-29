@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.00077341,
+  "created_at": "2026-10-29T11:30:48+00:00",
+  "duration_api_ms": 7925,
+  "input_hash": "f214809918538af8",
+  "key": "cab431fb4c1e89b7e2d693af",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, which tells the Agent to check stock \"for each SKU in the catalogue.\" The Agent began that loop at message [1] (\"Checking the catalogue: 2,300 SKUs\"), and Shopify rejected it at message [6], after about 180 calls. The 429 is the symptom. The loop was the cause.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\nThe customer asked about 3 products, but the AOP has the Agent check all 2,300. At the 2-calls-per-second limit, that scan takes around 20 minutes even with no errors, so the Run was always going to hit the rate limit. The Agent also has no instruction for handling a 429. It couldn't retry, so the Run failed.\n\n**Fix:** Rewrite Step 2 so it looks up only the products named in the email:\n\"For each product identified in Step 1, call Shopify to get inventory for that product's SKU only. If Shopify returns 429, wait the number of seconds in Retry-After and retry that call. Include the product in the quote only if available stock covers the requested quantity.\"\n\n**Next step:** I can hand this to `aop-writer` with `bld_s04` and the Step 2 change above. Before that, confirm that the email's products can be mapped to SKUs. If they can only be matched by name, Step 2 needs a lookup step first.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 1380,
+    "thinking_tokens": 758
+  },
+  "variant": "main",
+  "wall_ms": 9174
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0010961200000000001,
+  "created_at": "2026-10-29T11:38:17+00:00",
+  "duration_api_ms": 8536,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "1da46a3d9cd30b5d5bbbbd3c",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data, compounded by AOP ambiguity. The Run finished as \"completed,\" but the order it submitted was wrong, so this is a wrong outcome rather than a crashed Run.\n\n**Where it went wrong:** Step 2 of the AOP needs the Setup input `safety_stock_days`. At transcript [3] the Agent found it unset and silently substituted 0 instead of stopping or asking. Every later step (the calculation at [4] and the submission at [5]) inherited that placeholder. The AOP has no instruction for an unset input, so the Agent improvised.\n\n**Evidence:**\n- Transcript [3]: \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- Transcript [4]: \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n- AOP Step 2: \"daily demand × Setup input `safety_stock_days`\". The AOP does not say what to do when that input is missing.\n\n**Fix:** Set `safety_stock_days` in Setup for this Agent. Then add a guard to AOP Step 2, along these lines: \"If `safety_stock_days` is not set, do not submit. Request Human-in-the-loop with the store and SKU, and ask for the value.\" This turns a silent default into a visible stop. With SKU-1101 at 42 units/day, each safety day adds 42 units to the order, so the 34-unit order was likely short by a multiple of 42, which fits the stockout on Thursday.\n\n**Next step:** Set the Setup value first, since that alone fixes the input. For the guard, hand the Build `bld_d02` AOP and the change request (\"if `safety_stock_days` is unset, stop and request HITL instead of defaulting to 0\") to `aop-writer`, targeting `aops/<agent-id>.md`.\n\nTwo things to check, though neither changes the diagnosis:\n- The AOP says to read \"28-day sales,\" but the query returned only `daily_demand`. The transcript never shows how 294 (the weekly forecast) was derived. If the 28-day window matters, the AOP should name the derivation explicitly, since this is a second, smaller ambiguity.\n- Ask the store whether the Thursday stockout was on this order's replenishment cycle. If so, this Run is the cause. If not, look for other Runs on CZ-031 that used the same unset input.",
+  "usage": {
+    "cache_creation_input_tokens": 1021,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1640,
+    "thinking_tokens": 855
+  },
+  "variant": "no_json",
+  "wall_ms": 9846
+}

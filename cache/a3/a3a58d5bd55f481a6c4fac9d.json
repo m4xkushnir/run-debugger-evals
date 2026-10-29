@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.00096499,
+  "created_at": "2026-10-29T11:30:46+00:00",
+  "duration_api_ms": 7538,
+  "input_hash": "f214809918538af8",
+  "key": "a3a58d5bd55f481a6c4fac9d",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Batch / iteration leak. The 429 is the symptom, and the AOP caused it.\n\n**Where it went wrong:** Step 2 of the AOP (`For each SKU in the catalogue, check stock in Shopify…`) told the Agent to check stock for all 2,300 SKUs, not the 3 products the customer asked about. The Agent started that loop at [1], made about 180 `get_inventory` calls, and hit Shopify's limit of 2 calls per second at SKU-0181 ([6]). The Run never reached Step 3, so no quote was sent.\n\n**Evidence:**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n\n**Fix:** Rewrite Step 2 in the AOP so the Agent looks up only the products named in the customer's email. Each requested product gets one stock check in Shopify, and the Agent never iterates the full catalogue. The change is to the AOP only; no Connection or Setup change is needed. Two things I'd keep out of this fix: the Agent also ignored `Retry-After: 30` and kept calling, which is worth handling once the loop is gone, but it isn't the root cause.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_s04` and the change request: \"Rewrite Step 2 to check stock only for the products named in the customer's email, one Shopify lookup per product, instead of iterating all SKUs.\" I'd point it at `aops/<agent-id>.md`. You can also check whether a Shopify search-by-product lookup is available, since that would cover the case where the email names a product by description and not by SKU.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 982,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1390,
+    "thinking_tokens": 707
+  },
+  "variant": "main",
+  "wall_ms": 9129
+}

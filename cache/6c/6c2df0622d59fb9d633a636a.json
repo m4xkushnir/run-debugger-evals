@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.018816199999999998,
+  "created_at": "2026-10-29T11:34:22+00:00",
+  "duration_api_ms": 16156,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "6c2df0622d59fb9d633a636a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\n\nMissing terminal closure. The 503 is only the trigger, and it isn't a typical Connection failure. It's a transient upstream error, not an expired token or a missing scope. The root cause is that the AOP has no branch for a failed Step 3 after Step 2 has already made an irreversible change.\n\n**Where it went wrong**\n\nThe decision point is transcript turn [7], right after the Gmail error. The Agent wrote a one-line note and stopped, without calling `fail_case`, `postpone_case`, or `request_handover`. This matches AOP Step 3 (email the supplier), which only describes the success path. Step 4 (`complete_case`) was never reached. Because the Run ended without a terminal action, the platform settled the case as Failed with no reason. Nothing on the case said NetSuite had already posted the bill.\n\n**Evidence**\n\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Email failed with a temporary Gmail error.` This is the last turn, with no case-closing call after it.\n- AOP: `3. Email the supplier the payment date via **Gmail**.` There is no instruction for what to do if the send fails.\n- Your context: the case shows Failed with no reason, so the AP team re-ran it. The re-run repeated Step 2 and posted a duplicate bill.\n\n**Fix**\n\nAdd a failure branch to AOP Step 3, along these lines: *\"If the Gmail send fails with a 5xx error, retry once. If it still fails, call `fail_case` with the reason: 'Bill posted in NetSuite for <invoice>; supplier email NOT sent. Do not re-post the bill, only send the email.'\"*\n\nThis gives the case a reason that says the bill is already posted, and it retries the 503 the error message itself suggested. As a related hardening, Step 2 could check NetSuite for an existing bill for the invoice before posting. That would make re-runs safe, but it's a separate change.\n\n**Next step**\n\n1. Clean up now: void the duplicate INV-5512 bill in NetSuite and send the payment-date email to ar@supplier.example manually.\n2. I can invoke `aop-writer` with Build `bld_g04` (pass the id, not the AOP text), the change request above, and the AOP file `aops/<agent-id>.md`, so it edits the AOP in place.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.74}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8322,
+    "input_tokens": 2,
+    "output_tokens": 1798,
+    "thinking_tokens": 965
+  },
+  "variant": "main",
+  "wall_ms": 17135
+}

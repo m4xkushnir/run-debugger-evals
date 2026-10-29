@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.013339899999999998,
+  "created_at": "2026-10-29T11:27:10+00:00",
+  "duration_api_ms": 7556,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "c0b70c9d154f370814e75a12",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Missing data (a required case field, `cost_center`, was absent), compounded by AOP ambiguity: the AOP has no branch for what to do when it's missing. Run status is \"completed\", so this is a wrong outcome, not a crash.\n\n**Where it went wrong** — Transcript turn [3], the decision point after `claim_case` returned. The AOP's Step 1 asserts the invoice \"carries amount, supplier, and `cost_center`\", and Step 2 posts \"to the case's `cost_center`\". The case payload at [2] had no `cost_center`. The AOP gives no instruction for that situation, so the Agent improvised and carried on to Step 3.\n\n**Evidence**\n- Transcript [2]: `{\"invoice\": \"INV-7731\", \"amount_eur\": 4120, \"supplier\": \"Hartmann Logistik\"}` (no `cost_center`)\n- Transcript [3]: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- AOP Step 2: \"Post the invoice in **NetSuite** to the case's `cost_center`.\"\n\nThe NetSuite post succeeded with a placeholder, so INV-7731 (€4,120) now sits in the ledger against cost center \"TBD\", and the case was closed as Completed by the Agent. Nothing flagged it as wrong.\n\n**Fix** — Edit AOP Step 2 to add an explicit guard for the empty case: *\"If the case has no `cost_center`, do not post to NetSuite. Use **Human in the loop** to request the cost center, or call `fail_case` with reason 'missing cost_center' if no answer is available. Never post with a placeholder value.\"* This is an AOP change because the data gap itself is a per-invoice condition the AOP must handle; it cannot be prevented by Setup alone. Separately, you may want to check why the upstream queue is delivering invoices without `cost_center`, and correct the INV-7731 posting in NetSuite manually, since I can't edit it.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d03`, working in `aops/<agent-id>.md`, and the change request \"add a missing-`cost_center` guard to Step 2 (HITL or `fail_case`, never post a placeholder)\". Also reclassify INV-7731 in NetSuite by hand.\n\nCaveat: I worked from the pasted transcript and AOP only. I couldn't confirm whether the source system omitted `cost_center` for this invoice or the field was dropped upstream.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 953,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 879,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9972
+}

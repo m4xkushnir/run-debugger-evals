@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.013817900000000001,
+  "created_at": "2026-10-29T11:25:12+00:00",
+  "duration_api_ms": 7629,
+  "input_hash": "d0dabf96580dd687",
+  "key": "d283ae47eeab8126eed719a8",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure. The AOP's \"label can't be generated\" branch has no terminal action, so the platform settled the case instead of the Agent.\n\n**Where it went wrong**\nTranscript turn [7], right after the Slack post in turn [6]. The Agent followed AOP Step 2's failure branch (\"post the order number to Slack #returns-ops\") and then stopped. That branch never says to call `fail_case`, `postpone_case`, or `request_handover`. Step 4 (`complete_case`) sits after the Gmail step, which the Agent correctly skipped because no label existed. The Run ended cleanly with no terminal call, so the case was auto-completed with the reason \"auto-completed on clean run end\". The evaluation is stuck in `evaluating`, which fits an outcome the Agent never declared.\n\nThe Run status \"completed\" and the case status \"Completed\" are misleading here. No customer got a label, and the case looks healthy in the Queue.\n\n**Evidence**\n- AOP: \"If the label can't be generated: post the order number to **Slack** #returns-ops.\" The branch ends there.\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: \"Label could not be created; I alerted #returns-ops.\" No terminal call follows.\n- Case state: \"auto-completed on clean run end\".\n\nThe 422 itself is a symptom. It looks like a business-rule rejection (Packeta doesn't offer returns to SK), not an expired token or missing scope, so it is not a Connection failure. A secondary AOP gap is that the branch has no path for a customer who can never get a Packeta label. That gap is part of the same fix: the branch has to decide what happens to the case.\n\n**Fix**\nEdit Step 2 of the AOP so the failure branch ends in a terminal action. For example:\n\n> If the label can't be generated: post the order number and the error message to **Slack** #returns-ops, then call `fail_case` with the reason \"return label unavailable\", and stop. Do not continue to Step 3.\n\nUse `request_handover` instead of `fail_case` if ops should resolve it manually. That choice is yours to make, since the transcript doesn't show which you intend.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t03`, working in `aops/<agent-id>.md`, and the change request: \"Rewrite Step 2's failure branch to include the error text in the Slack post and end with `fail_case` (or `request_handover`), skipping Steps 3 and 4.\" Separately, check case `case_t03` by hand. It is marked Completed but the customer never received a label.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 985,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 914,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10891
+}

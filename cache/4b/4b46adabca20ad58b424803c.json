@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T01",
+  "cost_usd": 0.00044707,
+  "created_at": "2026-10-29T11:24:23+00:00",
+  "duration_api_ms": 4185,
+  "input_hash": "15d9fda0a8404d60",
+  "key": "4b46adabca20ad58b424803c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing terminal closure. The Run took a branch that never reached a terminal action, so the platform closed the case.\n\n**Where it went wrong:** Step 2, the \"PO not found\" branch. The AOP says to post the invoice number to Slack #ap-exceptions, and the Agent did that (transcript [5]–[6]). It then stopped. Step 4 (`complete_case`) was not the step that ended the case, and no `fail_case` or `postpone_case` was called either. The branch had no terminal action after the exception post, so the Run ended with the case unsettled by the Agent.\n\n**Evidence:**\n- Transcript [4]: `{\"results\": []}`, then [5]: `slack.post ... \"INV-20931: PO-778812 not found\"`\n- Transcript [7]: \"The PO was not found, so I posted the invoice to #ap-exceptions as instructed.\"\n- Case state: \"Completed — reason: auto-completed on clean run end\"\n\n**Fix:** In AOP Step 2, add a terminal action to the not-found branch. For example: *\"If the PO is not found: post the invoice number to Slack #ap-exceptions, then call `fail_case` with reason 'PO-778812 not found in NetSuite'.\"* This makes the Agent close the case on purpose, so the platform doesn't auto-complete it.\n\n**Note on the case evaluation comment:** \"Invoice was never posted, but the case shows Completed\" is consistent with this diagnosis. The case was marked Completed by the platform on a clean run end, not by the Agent, and the evaluation flagged the mismatch between that status and the actual outcome. The status is misleading here; the issue is that the branch never produced a real outcome.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_t01` and the change request \"add `fail_case` with the PO reference to the not-found branch of Step 2.\" Before that, a question for you: should a missing PO fail the case, or postpone it until the PO shows up? The answer decides between `fail_case` and `postpone_case`.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8437,
+    "input_tokens": 2,
+    "output_tokens": 725,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8239
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0261358,
+  "created_at": "2026-10-29T11:35:48+00:00",
+  "duration_api_ms": 8542,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "c1c974c5c10ef8805fdb3dc6",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nBatch / iteration leak. The duration timeout is the symptom. The root cause is that the AOP told a single-case Run to work through the entire AP inbox.\n\n**Where it went wrong**\n- **The decision point is turns [3]–[5].** The case claimed in [2] was one invoice (\"Invoice from Brenntag CZ\"). Following AOP Step 2, the Agent ignored that scope and searched the whole inbox, found 47 messages, and started iterating.\n- **It ran out of time partway.** After 19 of 47 vendor bills, the Run hit the 30-minute cap. Step 3 (`complete_case`) never ran, so the platform settled the cut-off Run as Failed.\n\n**Evidence**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox: extract fields and create a vendor bill in **NetSuite** for each.\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n\n**Fix**\nRewrite AOP Step 2 to handle only the claimed case's invoice. The Agent should:\n1. Find the single Gmail message for this case, using the case title or fields from `claim_case`.\n2. Extract its fields.\n3. Create one vendor bill in **NetSuite**.\n\nThe queue already handles iteration by creating one case per invoice. Also add a check before creating the bill: if a NetSuite vendor bill already exists for this invoice, skip creation. This prevents duplicates.\n\n**Follow-up on data:** this Run created 19 vendor bills outside its case scope. Check NetSuite for duplicates when those invoices' own cases run.\n\n**Next step**\nI can invoke `aop-writer` with:\n- Build `bld_b01`\n- The change request: \"Rewrite Step 2 so the Run processes only the invoice for the claimed case, finding its Gmail message from the case data, and skips creation if a matching NetSuite vendor bill already exists.\"\n- The Agent's AOP file `aops/<agent-id>.md`\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 930,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 861,
+    "thinking_tokens": 141
+  },
+  "variant": "main",
+  "wall_ms": 9791
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.0216636,
+  "created_at": "2026-10-29T11:35:02+00:00",
+  "duration_api_ms": 9220,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "d538e0b7c1043c8d2dd107f0",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed without errors, but it produced the wrong outcome. Step 2 left the refund amount to \"your judgment\" when it needed a concrete rule. Your 15% cosmetic-damage policy isn't in the AOP, so the Agent couldn't have applied it.\n\n**Where it went wrong**\nThe decision point is transcript turn [3], which corresponds to AOP Step 2. The Agent correctly saw a minor cosmetic defect (\"3 cm surface scratch on one leg\"). It then had to choose between a full and a partial refund with no criteria, and it framed the choice from the customer's point of view (\"significant enough to the customer\"). Turns [4] to [7] simply carried out that choice: Stripe refunded EUR 480.00 and Gmail sent the confirmation. Those tool calls worked as designed and are only symptoms.\n\n**Evidence**\n- AOP Step 2: *\"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"*\n- Transcript [3]: *\"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"*\n\n**Fix**\nRewrite AOP Step 2 so it classifies the damage and sets the refund amount with explicit rules instead of judgment. For example:\n- *If the damage is cosmetic only (scratches, scuffs, minor marks that don't affect use or structure): refund 15% of the item price.*\n- *If the damage is structural or makes the item unusable: refund in full.*\n- *If the photos don't clearly show which category applies: stop before Step 3 and use **Human in the loop**.*\n\nStep 3 should then refund exactly the amount Step 2 produced.\n\n**Next step**\nI can hand this to `aop-writer` with:\n1. Build `bld_a01`, so it works from the AOP that was in effect.\n2. The request: \"rewrite Step 2 to classify damage as cosmetic vs. structural, refund 15% for cosmetic and 100% for structural, and use Human in the loop when unclear.\"\n3. The Agent's AOP file, `aops/<agent-id>.md`.\n\nSeparately, the EUR 480 refund on order #88213 has already gone through and the customer has been emailed. Recovering any difference is a business decision for you to make outside the Agent.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8378,
+    "input_tokens": 2,
+    "output_tokens": 999,
+    "thinking_tokens": 171
+  },
+  "variant": "main",
+  "wall_ms": 10301
+}

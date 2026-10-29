@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0009663,
+  "created_at": "2026-10-29T11:26:47+00:00",
+  "duration_api_ms": 10030,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "67f90bb0ca368ca22fe2724f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing data. The AOP's Setup input `safety_stock_days` was not set, and the Agent silently substituted 0 instead of stopping or asking.\n\n**Where it went wrong:** Transcript [3]. The Agent found that `safety_stock_days` was unset and chose to continue with a default. AOP Step 2 uses that input in the order formula with no fallback, and nothing in the AOP says what to do when it's missing. The Agent therefore filled the gap itself and submitted the order at [5].\n\n**Evidence:**\n- Transcript [3]: \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- Transcript [4]: \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n\nThis is consistent with the report that CZ-031 ran out of SKU-1101. With zero safety stock, the order covers only the forecast gap. Any demand variance or delivery lag leaves no buffer, and that is the situation the input exists to prevent.\n\n**A second thing to verify:** Snowflake returned only `daily_demand` and `stock`. The 294 in [4] equals 42 × 7, so the Agent apparently treated daily demand × 7 as \"forecast weekly demand.\" The AOP names a forecast, and the data doesn't include one. This may be an acceptable proxy, but the Agent did not say it was making that substitution. Confirm which weekly forecast the store should use.\n\n**Fix:** Set `safety_stock_days` in Setup for this Agent to the value the business intends. This is the single change that addresses the missing input. Then re-run CZ-031 for the affected week.\n\nThe Agent's silent default is itself a gap. The AOP should halt on a missing Setup input rather than proceed, but that is a separate change, and I've held it back so the fix stays to one artifact. If you want it, I can hand off to `aop-writer` with the request \"if `safety_stock_days` is unset, call `fail_case` with reason rather than assume 0.\"\n\n**Immediate action:** Order RP-99120 has already been submitted to the Replenishment portal with 34 units of SKU-1101. Check it there and amend or top up the order if it's too low. I can't correct it from this transcript.\n\n**Next step:** Set the Setup value, then tell me the number and I'll confirm the recalculated quantity against the formula. If you also want the missing-input guard in the AOP, say so and I'll hand the change to `aop-writer`.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8360,
+    "input_tokens": 2,
+    "output_tokens": 1765,
+    "thinking_tokens": 907
+  },
+  "variant": "main",
+  "wall_ms": 13227
+}

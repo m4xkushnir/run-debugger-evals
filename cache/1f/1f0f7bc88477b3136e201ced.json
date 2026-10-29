@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.008157699999999999,
+  "created_at": "2026-10-29T11:29:23+00:00",
+  "duration_api_ms": 5774,
+  "input_hash": "a422d48d55a66c92",
+  "key": "1f0f7bc88477b3136e201ced",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Platform / infra failure. The Run never reached the Agent: the sandbox container could not start, so no AOP step executed.\n\n**Where it went wrong** — Transcript turn [2], before any Agent turn. The AOP (Step 1, Snowflake query; Step 2, Slack post) was never reached, so nothing in it contributed to the failure.\n\n**Evidence**\n- `[2] System: ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Your context: the last 3 Runs, on different days, failed with the identical sandbox error before any Agent turn.\n\nI ruled out the other categories:\n- **Connection failure:** no Connection call was made, so no Snowflake or Slack error exists.\n- **AOP ambiguity, missing data, or terminal closure:** the AOP never ran.\n- The error is an infrastructure-level image pull timeout. It repeats identically across days and is independent of the AOP's content, so no AOP, Setup, or Connection change would have prevented it.\n\n**Fix** — There is nothing in your artifacts to change. The container image pull is failing on the platform side, and only Duvo can resolve it. I don't have a way to determine why the pull is timing out (registry, network, or image issue) from this transcript, so I won't guess.\n\n**Next step** — Raise this with Duvo support from the Duvo web app. No support-escalation tool is available in this session, so I can't draft it for you. Include:\n- Run ID `run_p01` and Build ID `bld_p01`\n- The exact error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- That the last 3 Runs of this Agent, on different days, failed identically before any Agent turn\n- That the AOP is simple (Snowflake query, then Slack post) and never started, so this is not a configuration problem\n\nOnce Duvo fixes it, the failed Runs will probably need to be restarted. Yesterday's summary also hasn't been posted to #leadership-daily, so you may want to cover that manually in the meantime.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8137,
+    "input_tokens": 2,
+    "output_tokens": 734,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7462
+}

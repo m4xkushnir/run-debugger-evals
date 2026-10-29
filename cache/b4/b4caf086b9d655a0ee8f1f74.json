@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.00041123,
+  "created_at": "2026-10-29T11:23:23+00:00",
+  "duration_api_ms": 4242,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "b4caf086b9d655a0ee8f1f74",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** AOP ambiguity. The Run completed without a platform error, but it produced the wrong outcome: a full refund where policy calls for a partial one.\n\n**Where it went wrong:** Step 2 of the AOP, at the point where the Agent judged the photos. The AOP says \"use your judgment on whether to refund in full or offer a partial refund\" and gives no threshold, no cosmetic-damage rule, and no percentage. The Agent's decision at transcript [3] was a free judgment call, and it chose full refund.\n\n**Evidence:**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent's reasoning also leaned on the customer's view (\"significant enough to the customer\") rather than any objective standard. The AOP gave it nothing else to anchor on.\n\n**Fix:** In Step 2 of the AOP, replace the judgment clause with an explicit rule, for example: \"If the damage is cosmetic (surface marks, scratches, or dents that do not affect function), issue a partial refund of 15% of the item price. If the damage affects function or structure, refund in full. If you cannot tell which applies from the photos, use Human in the loop before issuing any refund.\"\n\nConfirm the 15% figure and the cosmetic/functional definitions against your actual policy before using this wording.\n\n**Next step:** I can hand this to `aop-writer` with the change request above and the Build ID `bld_a01`, so it rewrites Step 2 from the current AOP. Separately, the refund for #88213 has already been issued for EUR 480 and the confirmation email has been sent. Someone should decide whether to correct it with the customer before anything else happens, since that can't be undone from the Agent side.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8403,
+    "input_tokens": 2,
+    "output_tokens": 654,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7489
+}

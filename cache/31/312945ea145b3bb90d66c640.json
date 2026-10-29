@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.00039186,
+  "created_at": "2026-10-29T11:32:55+00:00",
+  "duration_api_ms": 4256,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "312945ea145b3bb90d66c640",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Named pattern: UI drift. The portal changed its layout, so the step the AOP describes (\"Click 'Export CSV' on the Invoices page\") no longer maps to anything on the page.\n\n**Where it went wrong:** AOP Step 2, at transcript [3]. The login at [1]–[2] succeeded. The Agent then tried to click \"Export CSV\" directly, assuming the Invoices page already showed that button. The banner at [2] says the portal was redesigned and billing documents moved to \"My Account → Billing\". The AOP was never updated for that, so the Agent went looking for a button in the wrong place.\n\n**Evidence:**\n- [2] Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"\n- [4] ERROR: Element not found: button 'Export CSV'\n\n**Fix:** Change AOP Step 2 to navigate through the new path before exporting: \"Navigate to My Account → Billing, open the Invoices page, then click 'Export CSV' and save the file to Files.\" Also add a fallback for the case where the path is still not found: \"If 'Export CSV' is not visible, stop and fail the case with the screen text so a person can update the procedure.\" That keeps the Agent from guessing when the portal changes again.\n\n**Next step:** I can hand this to `aop-writer` to rewrite Step 2 with the new navigation path, using the Build `bld_g01` as the base. Whether the banner text matches what the portal actually shows today is something I can't confirm from the data you sent. Please check it in the portal before the rewrite goes out.\n\nCaveat: this diagnosis rests on one banner line and one failed click. I have not seen the page itself, so the exact menu labels may differ from the banner wording.\n\n```json\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 619,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 5852
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0080679,
+  "created_at": "2026-10-29T11:26:39+00:00",
+  "duration_api_ms": 7824,
+  "input_hash": "531aa89fc651bef5",
+  "key": "6f29647e0124727bd4b9b0a8",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Missing data (the rate card File was absent), compounded by AOP ambiguity: the AOP has no branch for \"rate card not found\". The Run is marked `completed` but the outcome is wrong: a silent false negative.\n\n**Where it went wrong** — Step 2 (open the rate card in Files). `files.search` returned no results at [2]. At the decision point [3], the Agent substituted \"typical market rates\" for the 2026 rate card, so Step 3's \"more than 3% above the rate card\" was evaluated against a baseline the AOP never authorised. Step 4 then wrote an empty flags result as if the audit had been done.\n\n**Evidence**\n- Transcript [2]: `{\"results\": []}`\n- Transcript [3]: \"The rate card isn't available. I'll compare against typical market rates for these lanes instead.\"\n- AOP Step 2 says only \"Open the rate card in Files\", with no instruction for what to do if it isn't there.\n\n**Fix** — Add an explicit missing-File branch to Step 2 of the AOP: *\"If 'Carrier rate card 2026.xlsx' is not found in Files, do not estimate or use market rates. Stop, and use **Human in the loop** to request the file (or fail the Run), and do not write to Google Sheets.\"* Separately, the underlying cause for this Run is that the File is not attached or has a different name. Check that \"Carrier rate card 2026.xlsx\" is present in the Agent's Files. That is a Setup check, but the AOP change is the durable fix, because it prevents a wrong \"no flags\" result next time.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d01`, the change request \"In Step 2, add a branch for a missing rate card that stops the Run and asks via Human in the loop instead of using market rates; skip the Sheets append in that case\", and the working file `aops/<agent-id>.md`. Also confirm the rate card File is attached, and re-run the audit for this invoice, since the \"No flags\" row already written to the \"Freight audit\" sheet is unreliable.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8239,
+    "input_tokens": 2,
+    "output_tokens": 724,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10092
+}

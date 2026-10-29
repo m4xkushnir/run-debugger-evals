@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.0101928,
+  "created_at": "2026-10-29T11:29:57+00:00",
+  "duration_api_ms": 7175,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "2eefe7d80d83790add879e3d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nPlatform / infra failure. The platform's own `update_case` tool returns a 500 Internal Server Error. This is not a failure of the AOP, a Connection, or the data.\n\n**Where it went wrong**\nStep 3 of the AOP (\"Call `update_case` with `credit_offered`, then `complete_case`\"), at transcript turns [5]–[8]. The Agent did everything upstream correctly: it claimed the case, read the Gmail reply, and extracted 840. The platform then rejected the write twice. The Agent never reached `complete_case`, so the case was settled as Failed with no reason, which is the platform's settlement of an errored Run, not an Agent decision.\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- Context you gave: \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\nThe payload `{\"data\": {\"credit_offered\": 840}}` is well-formed and the value was extracted correctly from \"We offer a credit of EUR 840.\" The failure reproduces identically across cases, starting at a specific time, so it is independent of case data. Nothing in the AOP, Setup, or Connections would have prevented it. `update_case` is a platform tool, not one of your Connections, so this is not the Connection-failure category either.\n\n**Fix**\nThere is no change to make in your artifacts. The fix is on Duvo's side: the `update_case` 500s that began at 14:00 need to be investigated and resolved. Once it is fixed, the failed cases will need to be re-run, since each one carries a Failed state with no reason.\n\nI am not recommending an AOP edit. Adding retries or a fallback branch would only mask a platform outage, and the Agent already retried once.\n\n**Next step**\nRaise this with Duvo support from the Duvo web app. I can't send it for you, and nothing has been reported yet. Include:\n- Symptom: `update_case` returns 500 on every Run in this queue since 14:00, across different cases.\n- Example: Run `run_p03`, Build `bld_p03`, case `case_p03`.\n- Request IDs: `req_9a7c1e` and `req_9a7c52`.\n- Ruled out: the AOP (the payload is correct and the earlier steps succeeded), Connections (Gmail worked; `update_case` is not a Connection call), and case data (it fails across different cases).\n\nOnce Duvo confirms the fix, re-run the cases that failed since 14:00.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8388,
+    "input_tokens": 2,
+    "output_tokens": 935,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8383
+}

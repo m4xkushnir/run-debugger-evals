@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0092601,
+  "created_at": "2026-10-29T11:23:14+00:00",
+  "duration_api_ms": 7748,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "266715f133d6f18a66f900fe",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing data (Setup input / Login). The Login the AOP relies on is scoped to the wrong market. It's a Login/permission mismatch rather than an upstream outage or platform fault, and it's not a Connection OAuth expiry.\n\n**Where it went wrong**\nTranscript [2]–[5], at AOP Step 2 and Step 3. Step 2 signs in with the Login **Alpenfrisch portal**, which is the CZ service account `svc-replen-cz`. Step 3 then selects the store's market, which was AT. The portal rejected that selection because the account isn't authorised for AT. The AOP assumes one Login can order for any market, but the Login in Setup only covers CZ. The AOP also has no branch for \"portal refuses this market\", so the Run ended with only a prose message and no handover or failure signal.\n\n**Evidence**\n- Transcript [3]: `Signed in as svc-replen-cz@retailco.eu`\n- Transcript [5]: `Access denied: this account is not authorised for market AT.`\n- AOP Step 2: `sign in to the Alpenfrisch portal with the Login **Alpenfrisch portal**`\n\n**Fix**\nAdd a Login for an Alpenfrisch portal account authorised for AT (or extend `svc-replen-cz` on the portal side to cover AT) in Setup. Then make the AOP's Step 2 pick the Login that matches the store's market. Without that, every non-CZ store will hit this same wall. The artifact that has to change first is the Login in Setup. The AOP change depends on it.\n\nA secondary gap worth fixing in the same pass: the AOP should say what to do when the portal denies access (for example, use **Human in the loop** to hand over rather than ending silently). I can't confirm from this transcript whether this Run was queue-driven, so I'm not claiming a terminal-closure failure.\n\n**Next step**\n1. In Setup, add or fix the Login for market AT (or get portal access for `svc-replen-cz` extended to AT). That's yours to do and is the actual unblocker.\n2. Then I can invoke `aop-writer` with Build `bld_51e`, working in `aops/<agent-id>.md`, with this change request: \"In Step 2, select the Alpenfrisch portal Login by the store's market, and add a branch to Step 3: if the portal denies access for the market, use Human in the loop instead of ending the Run.\"\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8361,
+    "input_tokens": 2,
+    "output_tokens": 842,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10403
+}

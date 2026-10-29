@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0077188000000000005,
+  "created_at": "2026-10-29T11:23:03+00:00",
+  "duration_api_ms": 5482,
+  "input_hash": "b03fc180112aa5af",
+  "key": "ac491bbb32219d2ac036cea1",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nConnection failure. The 'Purchasing' Gmail Connection lacks the send scope the AOP depends on.\n\n**Where it went wrong**\nStep 2 of the AOP (\"Use **Gmail** to send the supplier a reminder\"). The decision point is transcript turn [2], where the Agent called `gmail.send_message`. The Agent's input handling in Step 1 was fine (PO number, supplier, and due date were all read correctly). Step 3 (Google Sheets log) never ran because it depends on Step 2 succeeding.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Connection context: \"Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\"\n\nThe Connection was authorized for reading and labelling only, so any send attempt would fail regardless of the case data. This is a configuration gap, not a one-off upstream error. It will recur on every Run of this Agent until the scopes change.\n\n**Fix**\nRe-authorize the **Gmail** Connection 'Purchasing' with the `gmail.send` scope added to the existing `gmail.readonly` and `gmail.labels` scopes.\n\n**Next step**\nIn Duvo, reconnect the 'Purchasing' Gmail Connection and grant the send permission when Google prompts. Then start a new Run with the same input (PO 4500918821). Note that the failed Run did not send the reminder or log a row, so nothing was partially done and a retry will not create duplicates.\n\nA secondary observation, not the root cause: the AOP has no branch for a failed send. The Agent correctly stopped before logging, but if you want failures surfaced to a person, a later AOP change could add a Human-in-the-loop or failure step, and I can hand that to `aop-writer`. It is not needed to resolve this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.96}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8348,
+    "input_tokens": 2,
+    "output_tokens": 688,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7341
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.0090737,
+  "created_at": "2026-10-29T11:30:43+00:00",
+  "duration_api_ms": 7373,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "b456ca83d75261090d2bf10c",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The Run was cut off by the 30-minute limit because one Run was asked to work through an entire statement's backlog.\n\n**Where it went wrong**\nStep 2 of the AOP. The Agent fetched the statement at [1]–[2] and found 611 unmatched lines. At [3] it began matching each of them against NetSuite in a single Run. By [4] it had matched 230 of 611, and at [5] the platform stopped it on the duration limit. The timeout is the symptom. The root cause is that the AOP defines the unit of work as \"all unmatched lines\" rather than one case.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n\nPace was about 230 lines in 30 minutes, so the full 611 would take roughly 80 minutes, well over the limit. This will recur on any day with a similar volume. Note that the transcript shows no Connection error and no missing data, so I've ruled those out. I can only see these five transcript turns, so I can't say what the Agent was doing between [3] and [4].\n\n**Fix**\nChange the AOP so one Run handles one unmatched statement line (or one small fixed-size batch), with the platform iterating through a queue. Step 1 would split off as a separate intake Agent that downloads the Fio statement and enqueues each unmatched line as a case. The reconcile Agent's Step 2 would then read: \"Match this single statement line against open invoices in NetSuite. If one match is found, record it and use `complete_case`. If none or several are found, use `request_handover` with the candidates.\" The Slack summary in Step 3 would move to a separate summary step that runs after the queue drains. Without that, each case-level Run would post its own message.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03`, the file `aops/<agent-id>.md`, and the change request: \"Rewrite Step 2 to reconcile a single unmatched statement line per Run with explicit terminal actions, and move statement download and the #finance summary into separate Agents.\" Setting up the queue and the intake Agent is a Setup change you would make in Duvo.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8197,
+    "input_tokens": 2,
+    "output_tokens": 825,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9575
+}

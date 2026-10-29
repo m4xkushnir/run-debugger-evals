@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.007314399999999999,
+  "created_at": "2026-10-29T11:32:38+00:00",
+  "duration_api_ms": 5792,
+  "input_hash": "086079e1976a5bd5",
+  "key": "28683ecf4f3db3673805c3ed",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Not a failure. The Run is paused on Human-in-the-loop, which is working as designed.\n\n**Where it went wrong** — Nothing went wrong in the Run. It reached AOP Step 2 (amount over EUR 1,000 requires approval), made the HITL request at transcript turn [2], and is waiting at turn [3]. Step 3 (issue the credit note in NetSuite and email the customer) hasn't started because it depends on that approval. The Run status is `waiting`, not `failed`.\n\n**Evidence**\n- Transcript [3]: `{\"status\": \"pending\"}`\n- Transcript [2]: `\"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"`\n- AOP Step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n\nThe Run has been stuck since yesterday because nobody has answered the approval request. I can't tell from the transcript who the request was routed to or whether they were notified, so I can't say why it's unanswered.\n\n**Fix** — No change to the AOP, Connections, or Setup is needed. Open the Run in the Duvo web app, find the pending approval request, and answer it. \"Yes\" lets the Agent continue to Step 3. \"No\" lets it stop without issuing the credit note. If the request isn't visible to the right person, check who it was assigned to and whether their notifications are on.\n\nIf stalled approvals become a recurring problem, that's a separate design question (for example, who gets notified, or whether there should be a timeout path). Nothing in this one Run points to it.\n\n**Next step** — Answer the pending approval request in the web app. If the Run stays in `waiting` after you answer, or the request doesn't appear anywhere, send me the Run again with the new transcript and I'll look at it as a possible platform issue.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8204,
+    "input_tokens": 2,
+    "output_tokens": 649,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7779
+}

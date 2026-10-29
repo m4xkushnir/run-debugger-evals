@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.0809,
+  "created_at": "2026-10-29T11:34:52+00:00",
+  "duration_api_ms": 7328,
+  "input_hash": "b03fc180112aa5af",
+  "key": "d62009c93f2a07afe0c7c2ba",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure. The **Gmail** Connection 'Purchasing' doesn't have the send scope that Step 2 of the AOP needs.\n\n**Where it went wrong**\nTranscript turn [2]→[3]: the first `gmail.send_message` call in Step 2 of the AOP (\"Use **Gmail** to send the supplier a reminder\") was rejected. The model's reasoning at [1] was correct: it read the PO number, the supplier and the due date properly from the Run input. So the root cause is not the AOP or the data. The Connection was authorized with read-only scopes, but the AOP depends on it to send mail. The Run stopped correctly at [4] without logging a row, so Step 3 never ran and the \"PO reminders\" sheet has no false entry.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Connection context: \"Gmail Connection 'Purchasing' granted scopes: gmail.readonly, gmail.labels.\"\n\n**Fix**\nReauthorize the **Gmail** Connection 'Purchasing' in Setup and add the `gmail.send` scope. Keep `gmail.readonly` and `gmail.labels` as they are. No change to the AOP is needed. Its three steps are fine once the Connection can send.\n\n**Next step**\nReconnect the 'Purchasing' Gmail Connection in Setup and approve the send permission on Google's consent screen. Then click Start Work with the same input (PO 4500918821, orders@kovotech.cz, due 2026-10-20) to re-send the reminder Kovotech never got. If the same 403 comes back right after a successful reauthorization with `gmail.send` granted, that is a platform issue rather than a Connection setup issue. In that case, bring it to Duvo support from the Duvo web app with Run `run_c02`, Build `bld_2c9`, and this diagnosis.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 8344,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 707,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9821
+}

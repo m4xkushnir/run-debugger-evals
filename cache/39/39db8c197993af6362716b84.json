@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.0090664,
+  "created_at": "2026-10-29T11:25:13+00:00",
+  "duration_api_ms": 8265,
+  "input_hash": "d0dabf96580dd687",
+  "key": "39db8c197993af6362716b84",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nMissing terminal closure. The \"label can't be generated\" branch of the AOP has no terminal action (`fail_case`, `postpone_case`, or `request_handover`). The Run ended on a clean stop after the Slack post, so the platform settled the case itself: Completed, reason `auto-completed on clean run end`, with the evaluation stuck in `evaluating`. The Run status is `completed`, so it looks healthy even though the return was never processed.\n\n**Where it went wrong**\nThe decision point is at [4]-[7], in AOP Step 2's sub-bullet. After the Packeta 422, the Agent followed the only instruction it had for that branch (post to Slack) and then stopped. Step 3 (email) was correctly skipped, but Step 4 (`complete_case`) was never called, and nothing told the Agent to call `fail_case` or `request_handover`. The platform therefore closed the case as Completed.\n\nA secondary point: the 422 is deterministic. SK is not served by Packeta's return service, so retrying won't help. The AOP doesn't anticipate this country, so a human or an alternate carrier must handle it, and `request_handover` or `fail_case` is the right close.\n\n**Evidence**\n- AOP: `- If the label can't be generated: post the order number to **Slack** #returns-ops.` (no terminal action follows)\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Label could not be created; I alerted #returns-ops.` (the Run ends here with no case-lifecycle call)\n\n**Fix**\nEdit AOP Step 2's failure branch so it ends in a terminal action:\n*\"If the label can't be generated: post the order number and the error reason to **Slack** #returns-ops, then call `fail_case` with the reason (or `request_handover` if ops should finish it manually). Do not continue to Step 3.\"*\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t03`, the change request \"add a terminal `fail_case`/`request_handover` to the Step 2 label-failure branch\", and the file `aops/<agent-id>.md`. Once it's applied, check the stuck case `case_t03`, which is recorded as Completed even though no label was sent, and re-process the return for R-30112 manually or via an alternate carrier.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8324,
+    "input_tokens": 2,
+    "output_tokens": 823,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11960
+}

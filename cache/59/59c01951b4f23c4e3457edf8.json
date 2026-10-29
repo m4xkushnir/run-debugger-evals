@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "T02",
+  "cost_usd": 0.0133352,
+  "created_at": "2026-10-29T11:37:56+00:00",
+  "duration_api_ms": 7791,
+  "input_hash": "b83dfab2d80ab148",
+  "key": "59c01951b4f23c4e3457edf8",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure (category 3), compounded by an AOP branch that doesn't say what to do after the supplier asks for more time. The Run looks healthy, which is why it went unnoticed.\n\n**Where it went wrong**\nAt transcript [7], right after the Slack post at [5]. The Agent took the \"supplier has replied asking for more time\" branch in Step 2, noted the date, and then the Run ended. It never reached Step 3 (Gmail reminder) or Step 4 (`update_case` / `complete_case`). The AOP gives that branch no terminal action and no instruction on whether to continue, stop, or reschedule. The platform then settled the case itself: Completed, reason \"auto-completed on clean run end\". No `postpone_case` was called, so nothing was ever scheduled for 12 Nov, and the PO dropped out of the reminder chain.\n\n**Evidence**\n- AOP Step 2: \"If the supplier has replied asking for more time: note the new date in the thread.\"\n- Transcript [7]: \"Noted the new date of 12 Nov in the thread.\" This is the last turn. There is no `complete_case`, `postpone_case`, or `fail_case` call after it.\n- Case state: \"auto-completed on clean run end\". This is a platform settlement, not an Agent decision.\n\n**Fix**\nEdit AOP Step 2 so the \"more time\" branch ends in a terminal action: *\"If the supplier has replied asking for more time: note the new date in the thread, then call `postpone_case` until that date and stop. Do not send the reminder.\"* This keeps the case open and brings it back on 12 Nov for the second reminder.\n\nTwo caveats:\n- I can't see the `postpone_case` parameters in this transcript. The rewrite should use whatever the date argument is called in your setup.\n- Check whether the Agent should send the reminder anyway, or only after the new date. I assumed the latter, since the supplier has just asked for time.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_t02`, the AOP file `aops/<agent-id>.md`, and the change request \"In Step 2, make the supplier-asked-for-more-time branch call `postpone_case` to the new date and stop.\" The agent id is not in what you pasted, so substitute the real one.\n\nSeparately, case_t02 is closed as Completed, so it won't come back by itself. Reopen it or send the reminder manually. Other POs that hit this branch were probably auto-completed the same way. If you can paste a list of recent Runs, I can check for them.",
+  "usage": {
+    "cache_creation_input_tokens": 1056,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 839,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 8962
+}

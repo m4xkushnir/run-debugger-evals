@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0011381399999999997,
+  "created_at": "2026-10-29T11:27:26+00:00",
+  "duration_api_ms": 11458,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "c6f5a428e3fc537322bfaadb",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at the point where the Agent searched the whole inbox. The claimed case is titled \"Invoice from Brenntag CZ,\" so it represents one invoice. But Step 2 tells the Agent to process every pending invoice, so after `claim_case` it ran `gmail.search_messages` and found 47 messages. It then worked through all 47 inside one Run. The Run hit the 30-minute limit after bill 19, so the Run failed, and the case was marked Failed rather than completed.\n\n**Evidence:**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox…\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix:** Change Step 2 so the Agent handles only the invoice this case represents, not the whole inbox. For example: \"Find the invoice message that matches this case's title and details. Extract its fields and create one vendor bill in **NetSuite**. Do not search for or process other pending invoices.\" The platform should handle the iteration, with one case per invoice, instead of the Agent looping over the inbox.\n\n**Two things to check before rerunning:**\n1. **Duplicates.** The transcript says bills 1–19 were created in NetSuite, but it doesn't list which invoices they were or confirm bill 19 was saved. Before any rerun, check NetSuite for those 19 bills so the same invoices aren't billed twice.\n2. **The other 28 invoices.** Nothing in this Run's data shows how 47 invoices ended up in a single case. Check how cases are created for this inbox. If one case is being created for the whole batch, the intake needs to create one case per invoice. The fix to Step 2 alone won't pick up the remaining invoices.\n\n**Not the main issue:** This case is Failed, not auto-completed, so it isn't a missing terminal closure. The Run was cut off mid-work, and a missing `complete_case` only matters as a secondary effect.\n\n**Next step:** Hand this to `aop-writer` with:\n- Build `bld_b01`, so it works from the AOP that was in effect for this Run\n- The change request: \"Rewrite Step 2 to process only the invoice this case represents, not all pending invoices\"\n- The AOP file, `aops/<agent-id>.md`. The Agent ID wasn't in what you sent, so I need it to point to the right file.\n\nI haven't rewritten the AOP here. Once `aop-writer` returns the change, verify the 19 existing bills before any retry.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8294,
+    "input_tokens": 2,
+    "output_tokens": 2110,
+    "thinking_tokens": 1178
+  },
+  "variant": "main",
+  "wall_ms": 13914
+}

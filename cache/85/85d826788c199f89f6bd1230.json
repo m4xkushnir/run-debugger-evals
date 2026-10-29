@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.00101839,
+  "created_at": "2026-10-29T11:27:00+00:00",
+  "duration_api_ms": 8165,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "85d826788c199f89f6bd1230",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data. The AOP reads a case field (`cost_center`) that wasn't on the case, and it has no instruction for that case. The Agent filled the gap with a placeholder. The Run reports `completed`, but the outcome is wrong.\n\n**Where it went wrong:** Step 2 of the AOP says to post the invoice \"to the case's `cost_center`\" and does not say what to do if the field is empty. At [3] the Agent saw that `cost_center` was missing and chose to post anyway with `TBD`, which it then sent to NetSuite at [4].\n\n**Evidence:**\n- [2] `claim_case` returned `{\"invoice\": \"INV-7731\", \"amount_eur\": 4120, \"supplier\": \"Hartmann Logistik\"}`, with no `cost_center`.\n- [3] Agent: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n\n**Fix:** Add a guard to Step 2 of the AOP: *\"If the case has no `cost_center`, do not post the invoice. Call `postpone_case` with the reason `missing cost_center` and stop.\"* This changes one branch in one artifact. The AOP has no path for a missing `cost_center`, and the Agent should not have been able to post without one.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_d03` and the change request above, so it edits the AOP that was in effect for this Run.\n\nSeparately, the bill for INV-7731 is already posted in NetSuite with cost center `TBD`. That is outside what I can see or change from here. Someone with NetSuite access should reverse or correct it and get the correct cost center from the supplier or budget owner. Also check whether the case should have been left open or handed over instead of completed.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 974,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1500,
+    "thinking_tokens": 874
+  },
+  "variant": "main",
+  "wall_ms": 11536
+}

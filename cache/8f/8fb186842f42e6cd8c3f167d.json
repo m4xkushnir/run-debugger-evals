@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.0015492199999999998,
+  "created_at": "2026-10-29T11:39:44+00:00",
+  "duration_api_ms": 12669,
+  "input_hash": "4a001beca9456e30",
+  "key": "8fb186842f42e6cd8c3f167d",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** AOP ambiguity. The AOP says \"VAT ID\" without saying which one, and the invoice has two.\n\n**Where it went wrong:** Step 1 (extraction) and step 2 (vendor match). In step 1 the Agent extracted the bill-to customer's VAT ID, `CZ45272956`, which is ours, not the supplier's. Step 2 then searched NetSuite with that ID. The Agent did not stop when the match came back as our own entity, so it created the bill against our own vendor record.\n\n**Evidence:**\n- AOP step 1: \"extract the supplier name, VAT ID and total\"\n- AOP step 2: \"matching the vendor by VAT ID\"\n- Other context: \"two VAT IDs: the supplier's (DE811203984) and the bill-to customer's (CZ45272956, ours)\"\n- Transcript [3]: `\"vendor\": \"200140 RetailCo CZ s.r.o. (our own entity)\"`, followed by the Agent's create call in [4] with `\"vendor\": \"200140\"`\n\nThe run shows as `completed` because the platform only checks that the tool call succeeded. It did not check that the bill was correct. That is why the failure looks clean on the dashboard.\n\n**Fix:** Edit Build `bld_g05` in place with `aop-writer`, changing step 1 to name the supplier's VAT ID explicitly, and adding a guard to step 2:\n\n- Step 1: \"Extract the supplier's name, the supplier's VAT ID (the one belonging to the company that issued the invoice, not the bill-to customer), and the total.\"\n- Step 2 addition: \"If the vendor returned is our own entity (200140 RetailCo CZ s.r.o., VAT CZ45272956), do not create the bill. Stop and ask a human.\"\n\nThe step 1 change is the root-cause fix. The step 2 guard is what would have caught the error even if extraction had got the wrong ID. If you want only one change, make the step 1 change.\n\n**Next step:**\n1. **Act on the bill now.** Bill 200140 for 8,412.00 EUR was created against our own entity. Someone with NetSuite access should review and reverse it. I can't do that from here.\n2. **Rewrite the AOP.** Hand off to `aop-writer` with Build `bld_g05` and the two changes above. If you give me the Agent ID, I'll point it at `aops/<agent-id>.md`.",
+  "usage": {
+    "cache_creation_input_tokens": 974,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2565,
+    "thinking_tokens": 1764
+  },
+  "variant": "no_json",
+  "wall_ms": 13976
+}

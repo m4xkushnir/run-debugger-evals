@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.0009996200000000001,
+  "created_at": "2026-10-29T11:25:47+00:00",
+  "duration_api_ms": 9684,
+  "input_hash": "89b60f1887533656",
+  "key": "0095b9f5eec81df94fd4ada6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing Human-in-the-loop on a high-stakes action. The Run completed without error, but it took a costly, externally visible action (repricing 5,320 prices across 140 stores) with no approval step.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [3]. The Agent went straight from reading the recommendation (turn [2]) to `pricing.apply_markdown` with no checkpoint, validation, or confirmation.\n\n**Evidence:**\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- Turn [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`\n\nThe transcript also shows why the bad row got through. Turn [2] returned `{\"rows\": 38, \"markdown_pct\": 30}`, so the query yielded 38 rows but the Agent acted on a single `markdown_pct` of 30 without checking the rows for outliers. The AOP gives it no rule for that case. I can't see the bad row itself or how 30 was chosen from the 38 rows, so the exact bad-row mechanism is an inference. The missing gate is confirmed by the transcript.\n\n**Fix:** Add a Human-in-the-loop checkpoint before Step 2. Before calling the Pricing system, the Agent should post the category, the proposed markdown percentage, the store count, and the source rows to the user, and wait for approval. The AOP should also say what to do when the recommendation returns more than one row or a percentage that differs from the other rows: stop and ask, don't pick one.\n\n**Next step:** Hand this to `aop-writer` with Build `bld_h02` and the change request \"add a HITL gate above `pricing.apply_markdown`, and stop for review when the recommendation rows disagree.\" Its file would be `aops/<agent-id>.md`. I don't have the Agent ID, so please supply it.\n\nSeparately, the 5,320 price changes are already live. Reverting them is a Pricing-system task outside this diagnosis, and it's worth doing before the next Run. The Slack post at turn [5] also means #merchandising has already been told the markdown was applied, so that channel will need a correction.\n\n```json\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8342,
+    "input_tokens": 2,
+    "output_tokens": 1832,
+    "thinking_tokens": 1038
+  },
+  "variant": "main",
+  "wall_ms": 12101
+}

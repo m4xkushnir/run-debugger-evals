@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0091915,
+  "created_at": "2026-10-29T11:28:21+00:00",
+  "duration_api_ms": 7018,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "6d55304f40e2d2efebcf1580",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nWrong decomposition (taxonomy #7). The Run was stopped by the platform's idle timeout, which is the symptom. The cause is that one Agent holds a real-time phase (steps 1–5) and a multi-day wait-and-follow-up phase (steps 6–14) in a single Run.\n\n**Where it went wrong**\nAt step 6, \"Wait for the supplier's reply.\" The Run has no mechanism for waiting days, so it polled Gmail once, found nothing, said it would \"keep checking,\" and sat idle until the platform stopped it. Steps 7–8 (3-day and 7-day timers) cannot execute inside a Run that is killed on idle. Steps 9–14 were never reached.\n\n**Evidence**\n- AOP: \"6. Wait for the supplier's reply.\" / \"7. If no reply after 3 days, send a reminder.\"\n- Transcript: \"[4] Agent: No reply yet. I'll keep checking.\" followed by \"[5] System: Run stopped after idle timeout.\"\n\nThe claim email itself did go out ([1] \"Claim sent to supplier Mlékárna Polná\"), so the front half worked. The failure is only in the waiting.\n\n**Fix**\nSplit the AOP at step 6 into two Agents connected by a queue or `request_handover`:\n- **Agent A (intake):** steps 1–5. After sending the email, it hands off the claim (supplier, delivery, thread id) and ends cleanly.\n- **Agent B (follow-up):** steps 7–14, triggered when the supplier replies, or on a schedule that checks for claims at the 3-day and 7-day marks. It handles reminder, escalation, credit note, tracker, Slack, ServiceNow and archive for one claim.\n\nStep 6 disappears as a \"wait\" step. The platform's trigger or queue does the waiting, not the Agent.\n\nCaveats: I only have the transcript excerpt, so I can't confirm how the Agent is triggered or whether a queue exists. Also, the AOP has no terminal action on the no-reply path, so Agent B should end each branch with an explicit `complete_case`, `postpone_case` or `request_handover`.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w01` to draft the two AOPs from the split at step 6. Setting up the trigger or queue for Agent B is a Setup change you would make in Duvo.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8375,
+    "input_tokens": 2,
+    "output_tokens": 835,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8382
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B02",
+  "cost_usd": 0.00083549,
+  "created_at": "2026-10-29T11:27:37+00:00",
+  "duration_api_ms": 9012,
+  "input_hash": "0af3d12c460cedff",
+  "key": "0faf8585ba7e8cec05481b61",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Batch / iteration leak, amplified by two concurrent Runs.\n\n**Where it went wrong:** Step 1 of the AOP, at transcript turn [1]. The Agent read all 12 approved rows in one pass and then worked through them as a loop. Nothing in the AOP told it to re-check each row's status before refunding. When the second Run started 2 minutes later, it read the same sheet, still saw those rows as \"approved\", and issued the same refunds. Turn [5] is where the duplicate was detectable, and the Agent did not stop there.\n\n**Evidence:**\n- AOP Step 1: \"for each open return marked 'approved', issue the refund in **Stripe**\"\n- Transcript [5]: `\"a refund for this charge already exists (created 2 min ago)\"`, followed by [6]: \"Continuing with the remaining 11 rows.\"\n\nThe \"completed\" run status is misleading. The Stripe call returned `succeeded`, but the note was a warning that the refund was a duplicate, and the Agent treated it as a normal success and kept going. The 9 double-refunded customers came from two Runs each processing the full batch with no per-row claim.\n\n**Fix:** Rewrite Step 1 so each Run handles a single return, not the batch. Make the platform iterate over returns (for example, a queue with one case per approved row), so each Run works on one return. Add a pre-refund check inside that step: re-read the row, and only refund if it is still `approved` and not yet `refunded`. Treat any Stripe note indicating an existing refund as a stop condition for that case, not a success. This is one AOP change, and the per-row check is the part that prevents a repeat if two Runs ever overlap.\n\n**Next step:** I can invoke `aop-writer` on `bld_b02` to rewrite Step 1 to single-return processing with the re-check and the duplicate-refund stop condition. Separately, the 9 customers who were refunded twice need manual review and a reversal of the extra refunds in Stripe. That is outside the AOP fix and should be handled now, not after the rewrite.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8279,
+    "input_tokens": 2,
+    "output_tokens": 1505,
+    "thinking_tokens": 781
+  },
+  "variant": "main",
+  "wall_ms": 11097
+}

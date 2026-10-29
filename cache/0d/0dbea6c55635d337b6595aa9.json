@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.0252358,
+  "created_at": "2026-10-29T11:35:53+00:00",
+  "duration_api_ms": 8514,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "0dbea6c55635d337b6595aa9",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak. The Run finished \"completed\", but the outcome is wrong. Each case is one store. The AOP told the Agent to handle every store, so each of today's 60 Runs reordered stock for all 60 stores. That means up to 60× duplicate orders.\n\n**Where it went wrong**\n- **AOP Step 2** tells the Agent to check \"every store's stock level\". The single store the case gives it is never mentioned.\n- **Transcript [2] → [3]** is the decision point. `claim_case` returned the one store this case is about (`\"store\": \"CZ-007\"`). The Agent then ignored it and queried `\"scope\": \"all stores\"`, following Step 2 as written.\n- **[6]–[7]** is where the harm happened: 412 lines were submitted and 60 orders were placed, one per store, not just for CZ-007.\n- **[8]** closed the case cleanly, so the Queue shows it as healthy. Terminal closure is fine here. Closure is not the problem.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript: `[2] Tool result ← claim_case: {\"store\": \"CZ-007\"}` followed by `[3] Tool call → snowflake.query {\"scope\": \"all stores\"}`\n\n**Fix**\nRewrite AOP Step 2 so it covers only the case's store. Something like: \"Use **Snowflake** to check stock levels for the store returned by `claim_case` only, and reorder that store's below-minimum lines in the **Replenishment portal**. Do not query or reorder for any other store.\" The queue already makes one case per store, so the platform handles the looping.\n\n**Next step**\n1. **Urgent:** today's 60 Runs together placed about 60 copies of every store's orders, roughly 3,600 orders where about 60 were intended. Check the Replenishment portal now and cancel the duplicates before suppliers fulfil them. Do this before Start Work runs again.\n2. I can invoke `aop-writer` on Build `bld_b03` (`aops/<agent-id>.md`) with this request: \"Rewrite Step 2 to check and reorder stock only for the store returned by `claim_case`, never all stores.\"\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 965,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 802,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9604
+}

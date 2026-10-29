@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.009233499999999999,
+  "created_at": "2026-10-29T11:33:07+00:00",
+  "duration_api_ms": 6442,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "1b09d3f505fad98527777e91",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — AOP ambiguity (the AOP assumes a fixed portal layout and gives no navigation path). The Run did not fail because of a Connection or platform fault; the Login worked.\n\n**Where it went wrong** — Transcript [3]–[4], at AOP Step 2. After sign-in, the Agent clicked \"Export CSV\" immediately, without first navigating to the Invoices page. Step 2 says \"Click 'Export CSV' on the Invoices page\" but Step 1 never says how to get to that page. The portal had changed its layout, and the sign-in banner at [2] said where documents had moved. The Agent ignored that and tried the click on whatever page it was on. At [5] it gave up with no fallback.\n\n**Evidence**\n- Transcript [2]: `Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- Transcript [4]: `ERROR: Element not found: button 'Export CSV'`\n- AOP Step 2: `Click \"Export CSV\" on the Invoices page and save the file to Files.`\n\nThe \"Element not found\" error is the symptom. The root cause is that the AOP hardcodes an element on a page and assumes the Agent will already be there, with no navigation step and no instruction for what to do if the portal layout differs. I can't tell from the transcript whether an \"Invoices\" page still exists or whether the button is now under My Account → Billing. The banner suggests the latter, but that is unverified.\n\n**Fix** — Rewrite AOP Step 2 into explicit navigation plus a fallback, for example: *\"2. Navigate to My Account → Billing (the portal's invoices location; if the menu differs, look for Invoices or Billing in the main navigation). 3. Click 'Export CSV' and save the file to Files. 4. If no Export CSV control can be found after checking Billing and Invoices, use `fail_case` / report the error with the page you were on and the menu items visible, rather than stopping silently.\"* Confirm the real current path in the portal before landing it.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g01`, the AOP file `aops/<agent-id>.md`, and the change request: \"rewrite Step 2 to navigate to My Account → Billing before clicking Export CSV, and add a fallback branch for when the button isn't found.\" You'll need to confirm the current portal path first, since I only have the banner text to go on.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8195,
+    "input_tokens": 2,
+    "output_tokens": 841,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8015
+}

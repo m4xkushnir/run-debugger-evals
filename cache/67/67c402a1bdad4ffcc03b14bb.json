@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.011459900000000002,
+  "created_at": "2026-10-29T11:30:39+00:00",
+  "duration_api_ms": 7221,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "67c402a1bdad4ffcc03b14bb",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy 6). The symptom is the 30-minute timeout; the root cause is an AOP that asks one Run to process an entire statement's worth of records.\n\n**Where it went wrong**\nAt the decision point in transcript turn [3], the Agent took AOP Step 2 literally and started working through all 611 unmatched lines inside a single Run. By turn [4] it had matched 230 of 611 (about 38%) when the platform stopped the Run at turn [5]. Nothing went wrong with Fio banka or NetSuite. The Run was simply too much work for one execution.\n\n**Evidence**\n- AOP Step 2: \"Reconcile all unmatched lines in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [5]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix**\nChange the AOP (Step 2) so one Run handles one statement line rather than the whole statement. The platform's queue does the iterating: each unmatched line becomes its own case, and the Agent reconciles that single line against open invoices in NetSuite and closes the case with `complete_case`, or `request_handover` if there's no confident match. The statement download and the Slack summary move out of the per-line work, since they happen once per day, not once per line. That means the daily fetch and the summary should live in a separate step or Agent. That's a decomposition question, but the primary root cause is the batch loop.\n\nNote that the Run ended without any terminal outcome, so the 230 matches made before the stop may be partial or unrecorded. Check NetSuite before re-running so lines aren't double-matched.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s03` and the change request: \"Rewrite Step 2 to reconcile a single statement line per Run (one case per unmatched line) with terminal actions, and move the statement download and Slack summary out of the per-line procedure.\" It would edit `aops/<agent-id>.md` in place.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 858,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 729,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8615
+}

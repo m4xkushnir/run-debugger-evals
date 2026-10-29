@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.021259899999999998,
+  "created_at": "2026-10-29T11:33:26+00:00",
+  "duration_api_ms": 13403,
+  "input_hash": "82cebd8c79c09140",
+  "key": "08ab3d3faa36fb387b787c63",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nMissing terminal closure. The 429 is the trigger, but the root cause is that the AOP has no branch for \"DPD can't give a status right now\". A rate limit is not a Connection failure here: the Connection worked, and the carrier asked the Agent to come back later.\n\n**Where it went wrong**\nThe decision point is transcript [4]→[5]. After `dpd.track` returned a 429, the Agent had no instruction for that case. It wrote a status line and stopped without calling `postpone_case`, `fail_case`, or `request_handover`. AOP Step 2 (\"Get the latest status from the **DPD** Connection\") and Step 3 only describe the success path. The platform then settled the case itself, which is why it shows Failed with no reason.\n\n**Evidence**\n- Transcript [4]: `ERROR 429 Too Many Requests. Retry-After: 600`\n- Transcript [5]: `DPD is rate limiting. I can't get the status.`\n- AOP Step 3: `Call update_case with the status, then complete_case.` There is no alternative branch.\n\nYour context fits this: about 30% of Runs hit the same 429 during Black Friday load. Each of those cases is being failed instead of retried later, so a transient condition becomes permanent failures.\n\n**Fix**\nAdd a rate-limit branch to Step 2 of the AOP: *\"If the DPD Connection returns 429 (or any other transient error), call `postpone_case` with a delay of at least the `Retry-After` value (600 seconds). Do not call `update_case` or `complete_case`.\"* The case then goes back into the queue and is retried after the window instead of being failed.\n\nOne side observation, not a second fix: in [2] the tracking number was `0953 4412 8890`, but in [3] the Agent sent `09534412 8890`, with the spacing changed. The 429 came back before DPD could validate it, so this didn't cause the failure. It may cause a \"not found\" once the rate limit is out of the way. If it shows up on the retried cases, handle it as a separate change.\n\n**Next step**\nI can invoke `aop-writer` with:\n1. Build `bld_g02`, the AOP in effect.\n2. The change request above: add a 429 / transient-error branch to Step 2 that calls `postpone_case` using `Retry-After`.\n3. The file to edit in place, `aops/<agent-id>.md`.\n\nCases already marked Failed from this 429 won't recover on their own. After the AOP change lands, re-queue them.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 913,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1687,
+    "thinking_tokens": 820
+  },
+  "variant": "main",
+  "wall_ms": 14692
+}

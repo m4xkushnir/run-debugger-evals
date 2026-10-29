@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0014849899999999998,
+  "created_at": "2026-10-29T11:28:49+00:00",
+  "duration_api_ms": 12203,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "bea0930604958655a442533f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Wrong decomposition. Step 5 is a 7-day wait, and the Run cannot hold open that long. The Run ran through Steps 1–4, reached the wait, ended, and never resumed. The Run status says \"completed,\" but the Run ended early and the outcome is wrong.\n\n**Where it went wrong:** Transcript message [5], after `sap.create_vendor` returned vendor 100977. The Agent reached AOP Step 5 (\"Wait 7 days for the signed bank letter\") and ended the Run. No mechanism brought it back on day 7, and nothing resumed Steps 6–11.\n\n**Evidence:**\n- Transcript [5]: \"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n- AOP Step 5: \"Wait 7 days for the signed bank letter.\"\n\nThe transcript has no postpone, handover, or scheduling call, so the promise to \"check back\" had nothing behind it. The Agent could not have acted on it.\n\nTwo related gaps are worth checking:\n- **Step 4 has no tool call.** The transcript shows no Gmail send, yet the Agent reported \"Bank confirmation requested.\" Either the request went out through a path not shown here, or the Agent claimed a step it never ran. Check the supplier's mailbox for a sent request.\n- **Step 1 has no tool call either.** The transcript has no Gmail read, so I can't confirm where the supplier details came from.\n\n**Fix:** Split the AOP at Step 5 into a second Agent (or a second entry point). The first Agent runs Steps 1–4, then hands off with `request_handover` and passes the vendor ID (100977) and the bank-letter request status. The second Agent is triggered when the signed letter arrives or when a 7-day follow-up is due, then runs Steps 5–11. The 30-day review in Step 11 belongs in the second Agent too.\n\nI can't verify from here whether your Duvo setup supports timed re-entry or a handover trigger for this, so confirm that before the split is built.\n\n**Next step:** Vendor 100977 is stranded in SAP. Activate payments and send the welcome pack manually, or re-run Steps 6–11 for it once the bank letter is confirmed. Then I can hand the Build (`bld_w03`) and the AOP file (`aops/<agent-id>.md`) to `aop-writer` to write the split.\n\n```json\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.7}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 1027,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2412,
+    "thinking_tokens": 1573
+  },
+  "variant": "main",
+  "wall_ms": 13892
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.0077047999999999995,
+  "created_at": "2026-10-29T11:28:02+00:00",
+  "duration_api_ms": 5780,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "ace15cef3cabf71bccca0903",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nBatch / iteration leak. The Run is marked completed and the case closed cleanly, but the outcome is wrong. Each of the 60 per-store cases ordered for all 60 stores.\n\n**Where it went wrong**\nStep 2 of the AOP, at transcript turns [3]–[6]. `claim_case` returned a single store (`CZ-007`), but the Agent ignored it and queried and ordered across every store.\n\n**Evidence**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum in the **Replenishment portal**.\"\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [5]: \"Reordering 412 lines across 60 stores.\"\n\n**Why this is the root cause, not a symptom**\nThe queue already iterates one case per store. The AOP still tells the Agent to handle \"every store\", so each case does the whole job. With 60 cases that means up to 60× duplicate orders, since the 60 `replenishment.submit` calls each submitted orders for 60 stores. Nothing errored, so the Run looks healthy. The AOP also never uses the claimed case's `store` field, so the Agent had no instruction to scope its work.\n\n**Fix**\nRewrite AOP Step 2 to handle only the claimed case's store, for example: \"Read `store` from the `claim_case` result. Use **Snowflake** to check stock levels for that store only, and reorder items below minimum for that store only in the **Replenishment portal**.\" Separately, you should check the Replenishment portal for the duplicate orders already placed today and cancel them. That cleanup is outside what I can do from here.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_b03`, working in `aops/<agent-id>.md`, and the change request \"rewrite Step 2 to scope the Snowflake query and the reorder to the single store from `claim_case`\".\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8308,
+    "input_tokens": 2,
+    "output_tokens": 687,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 7656
+}

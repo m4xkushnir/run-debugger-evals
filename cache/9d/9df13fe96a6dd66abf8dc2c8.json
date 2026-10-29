@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0010814599999999998,
+  "created_at": "2026-10-29T11:31:06+00:00",
+  "duration_api_ms": 8988,
+  "input_hash": "80480c72868f94f9",
+  "key": "9df13fe96a6dd66abf8dc2c8",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing data. The case had no `unit_price`, and the AOP had no rule for that gap, so the Agent substituted a price from an unverified source. The Run completed, but the outcome is wrong.\n\n**Where it went wrong:** Transcript turn [3]. The case returned no `unit_price`, and the Agent chose a value from the supplier's email signature instead of stopping. The AOP's Step 1 expects the case to carry `unit_price` and says nothing about what to do when it doesn't. Step 2 then sends that figure to the supplier.\n\n**Evidence:**\n- Turn [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`. No `unit_price` field.\n- Turn [3]: \"No unit_price on the case. The supplier's last email signature lists 'Standard price 4.10 EUR/pc', using that.\"\n- Turn [4]: the email to sales@kavalier.example states \"1200 pcs x 4.10 EUR = 4,920 EUR\".\n\nThe contract price is 3.65 EUR, so the supplier was quoted about 0.45 EUR per piece too high. The 4.10 figure came from the supplier's own correspondence, which is not an authoritative source for pricing.\n\n**Fix:** Add this to Step 1 of the AOP:\n\n> *If the case has no `unit_price`, do not send anything. Call `postpone_case` with the reason \"unit_price missing\" and stop. Take unit prices only from the case field or the `contract_unit_price` Setup input, never from supplier correspondence.*\n\nThis also requires adding a `contract_unit_price` Setup input set to 3.65, so the Agent has a valid source for the price when the case field is empty.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_s05` and the AOP file `aops/<agent-id>.md`. Separately, the email has already been sent, so someone needs to send the supplier a correction. I can't do that from here.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8376,
+    "input_tokens": 2,
+    "output_tokens": 1995,
+    "thinking_tokens": 1288
+  },
+  "variant": "main",
+  "wall_ms": 10718
+}

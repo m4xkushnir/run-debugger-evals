@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.0144619,
+  "created_at": "2026-10-29T11:28:35+00:00",
+  "duration_api_ms": 9217,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "1ed9096d7a2fa67115b8e66c",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nWrong decomposition (with a Batch / iteration leak as a contributing factor). The surface error is a Connection-style session expiry, but the cause is upstream: one Agent is carrying a multi-phase, multi-day workflow and looping over every underperforming supplier inside a single Run.\n\n**Where it went wrong**\nAt Step 3, the AOP says \"For each supplier under 90%, sign in to their portal with Enterprise Browser…\". Snowflake returned 17 suppliers under 90%, and the Run was working through them serially in one browser session. At supplier 9 of 17 (Agrofert) the session hit its limit (55 minutes) and `browser.login` failed. The Run never reached Steps 4 to 11. The AOP also spans a real-time phase (Steps 1 to 5), a wait of a week (Step 6, \"Next week, check replies\"), and a later cycle (Steps 7 to 11). That is 11 steps with clear phase boundaries, and Step 6 cannot be done inside a single Run.\n\n**Evidence**\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\n**Fix**\nSplit the work so each Run handles one supplier and the platform does the iteration. Concretely: make the Step 1 to 2 Agent produce the scorecard and push each under-90% supplier as a separate case onto a queue. A second Agent then takes one supplier per case (Enterprise Browser portal download, draft email, send via Gmail), ending in `complete_case`. The weekly reply check (Step 6) and the later steps (Slack summary, escalation, SAP, archive, next-week tab) belong in a separate scheduled or handover Agent. This keeps each browser session short, so it never nears the 55-minute limit, and one supplier's failure no longer kills the other 16.\n\nI can't confirm from the transcript that the session limit is fixed at 55 minutes. It is only what the error string says. The same limit would still affect any single supplier if a portal download were very slow, but per-case Runs make that unlikely.\n\n**Next step**\nThis is a restructure, not a one-line edit. I can hand off to `aop-writer` with Build `bld_w02` to rewrite the AOP into the per-supplier version (Steps 3 to 5 for a single supplier, with an explicit `complete_case` / `fail_case` on the portal-login branch). The queue and the split into a second Agent have to be set up by you in Duvo.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 1091,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 936,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10629
+}

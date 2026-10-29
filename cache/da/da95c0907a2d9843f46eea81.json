@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.00075652,
+  "created_at": "2026-10-29T11:23:16+00:00",
+  "duration_api_ms": 9966,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "da95c0907a2d9843f46eea81",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Connection failure. The Login used for the Run is authorised for a different market than the one the Run needed.\n\n**Where it went wrong:** Step 2 of the AOP signs in with the Login **Alpenfrisch portal**, which is the CZ service account `svc-replen-cz`. Step 3 then selects market AT for store AT-114. The portal rejects that selection because the account has no AT authorisation. The Run stopped there and never reached the order entry or the log step.\n\n**Evidence:**\n- [3] `Signed in as svc-replen-cz@retailco.eu`\n- [5] `Access denied: this account is not authorised for market AT.`\n\n**Fix:** Give the portal account access to market AT. Either add AT to the permissions for `svc-replen-cz` on the Alpenfrisch portal, or point the Login **Alpenfrisch portal** at a service account that is authorised for AT. Re-run AT-114 after the change. The AOP itself is not at fault here, so no `aop-writer` handoff is needed for this fix.\n\n**Next step:** Ask whoever administers the Alpenfrisch portal to grant `svc-replen-cz` access to market AT, or to provide an AT-authorised account. Then update the Login if you choose the second option. The agent handled the denial correctly by not placing an order, so there is nothing to change on the agent's side.\n\nIf the business needs more than one market on this Agent, the AOP currently hardcodes a single Login for every run. That will keep failing for any market the account can't reach. Choosing a Login per market would be a separate AOP change, and I can hand that to `aop-writer` if you want it.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 1345,
+    "thinking_tokens": 760
+  },
+  "variant": "main",
+  "wall_ms": 12872
+}

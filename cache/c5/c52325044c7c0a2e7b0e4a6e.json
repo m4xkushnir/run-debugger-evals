@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G05",
+  "cost_usd": 0.0123632,
+  "created_at": "2026-10-29T11:39:39+00:00",
+  "duration_api_ms": 6238,
+  "input_hash": "4a001beca9456e30",
+  "key": "c52325044c7c0a2e7b0e4a6e",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity (the AOP leaves VAT ID extraction under-specified). The Run's status is \"completed\", so this is a wrong outcome, not a crash. A secondary gap is the missing validation or HITL gate before a bill is created.\n\n**Where it went wrong**\nTranscript [1], the extraction step, which is AOP Step 1: \"extract the supplier name, VAT ID and total.\" The invoice carries two VAT IDs, and the Agent took the bill-to customer's (CZ45272956, our own) instead of the supplier's (DE811203984). Everything after that followed from it. In [2]-[3], `find_vendor` matched our own entity (200140), and in [4]-[5] a bill for 8,412.00 EUR was created against the wrong vendor.\n\n**Evidence**\n- AOP Step 1: \"Read the invoice PDF and extract the supplier name, VAT ID and total.\"\n- Transcript [1]: \"supplier 'Frischeparadies KG'; VAT ID 'CZ45272956'\"\n- Transcript [3]: \"200140 RetailCo CZ s.r.o. (our own entity)\"\n\nThe supplier name and the VAT ID in [1] don't belong to the same party, and the Agent didn't notice. The result in [3] explicitly flagged the match as \"our own entity\", and the Agent went ahead and created the bill anyway.\n\n**Fix**\nRewrite AOP Steps 1-2 to say which VAT ID to take and to stop on a self-match. For example: *\"Extract the VAT ID belonging to the supplier (the issuer of the invoice), not the bill-to customer. Our own VAT ID is CZ45272956; if the extracted VAT ID equals it, or `find_vendor` returns our own entity, do not create a bill. Use **Human in the loop** to confirm the supplier instead.\"* Putting our own VAT ID in a Setup input rather than hardcoding it in the AOP would also work.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_g05`, in `aops/<agent-id>.md`, to make that Step 1-2 change. Separately, the bill already created in NetSuite against vendor 200140 for 8,412.00 EUR is wrong and needs to be reversed or corrected by hand. I can't see from the transcript whether it has been posted.",
+  "usage": {
+    "cache_creation_input_tokens": 953,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 783,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 7442
+}

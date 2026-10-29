@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0089913,
+  "created_at": "2026-10-29T11:27:30+00:00",
+  "duration_api_ms": 7516,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "0dcf5ed09a9ba87af7abb232",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode** — Batch / iteration leak (category 6). The Run was queue-driven, claimed one case, and the AOP told it to process every pending invoice instead.\n\n**Where it went wrong** — Step 2 of the AOP. At transcript [3]–[5] the Agent searched the whole AP inbox rather than the claimed case, found 47 messages, and started looping through them. After 30 minutes it had created only 19 vendor bills, so the platform stopped the Run. The \"exceeded maximum duration\" error is the symptom. The cause is that one Run was given the work of 47 cases.\n\n**Evidence**\n- AOP Step 2: \"process all pending supplier invoices in the AP inbox: extract fields and create a vendor bill in **NetSuite** for each.\"\n- Transcript [2]: `{\"title\": \"Invoice from Brenntag CZ\"}`. The claimed case is a single invoice.\n- Transcript [5]–[6]: \"47 pending invoices. Processing them one by one.\" / \"Created vendor bills 1-19 of 47.\"\n\n**Consequences to check**\n- Bills 1–19 were created in NetSuite, but `complete_case` was never reached. The case is Failed, and the other 28 invoices are still unread.\n- Because the Run ended with the work only partly done, a retry could create duplicate vendor bills for those 19 unless the AOP or NetSuite dedupes. Check NetSuite for them before re-running.\n- It is unclear whether the Brenntag CZ invoice, the one the case was actually about, was among the 19. The transcript doesn't say.\n\n**Fix** — Rewrite AOP Step 2 so the Agent handles only the invoice belonging to the claimed case. It should work from the case's own data, such as the title or message reference, and not search the inbox for everything pending. The platform already creates one case per invoice and iterates across them, so the Agent should not loop.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b01`, the file `aops/<agent-id>.md`, and this change request: \"Rewrite Step 2 to process only the single invoice tied to the claimed case (no inbox-wide search or 'all pending' loop), create one NetSuite vendor bill for it, then call `complete_case`.\" Separately, check NetSuite for duplicate bills from the 19 already created before restarting.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 816,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9462
+}

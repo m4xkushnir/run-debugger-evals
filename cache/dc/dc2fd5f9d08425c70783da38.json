@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.00117863,
+  "created_at": "2026-10-29T11:34:06+00:00",
+  "duration_api_ms": 11775,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "dc2fd5f9d08425c70783da38",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing terminal closure. The Gmail 503 was the trigger, but the AOP gave the Agent no way to handle it, so the Run ended without a terminal action.\n\n**Where it went wrong:** Step 3 of the AOP (\"Email the supplier the payment date via Gmail\") has no failure branch. When `gmail.send_message` returned an error at transcript [6], the Agent had no instruction for that case. It stopped at [7] without calling `complete_case`, `fail_case`, `postpone_case`, or `request_handover`. The platform then marked the case Failed with no reason, and nothing recorded that the bill had already been posted.\n\n**Evidence:**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Agent: Email failed with a temporary Gmail error.` (the run ends here, with no terminal action)\n- AOP Step 3 has no error path, and Step 4 (`complete_case`) is only reached on success.\n\n**Fix:** Add an error path to Step 3 of the AOP. For example: *\"If `gmail.send_message` fails, retry once after a short wait. If it still fails, call `postpone_case` with the reason `Bill INV-5512 posted in NetSuite; supplier payment-date email not sent (Gmail 503)`, and do not repost the bill.\"* The reason string matters because it tells the AP team the bill is already posted.\n\nThis also addresses the duplicate. Once the case records that the bill was posted and the email is pending, a re-run has a reason to check NetSuite before posting again. The AOP should also say explicitly to search for an existing bill for the invoice before posting, but I'd treat that as a second change and keep it separate from this one.\n\n**Next step:**\n1. **Now, outside the AOP:** Check NetSuite for the duplicate bill from the re-run, void one of them, and send the payment-date email to ar@supplier.example manually.\n2. **To fix the AOP:** I can hand this to `aop-writer` with Build `bld_g04` and the change request above. I'll need the Agent's file path (`aops/<agent-id>.md`) so the rewrite happens in place.\n\nConfidence is moderate. I'm inferring the case-closure behaviour from the \"Failed (no reason)\" state and the transcript ending at [7], not from the case record itself. If `getCase` shows a different outcome, this diagnosis may need revisiting.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8343,
+    "input_tokens": 2,
+    "output_tokens": 2190,
+    "thinking_tokens": 1335
+  },
+  "variant": "main",
+  "wall_ms": 12952
+}

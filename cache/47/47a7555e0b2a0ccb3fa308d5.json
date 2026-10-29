@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "S02",
+  "cost_usd": 0.028055800000000006,
+  "created_at": "2026-10-29T11:36:30+00:00",
+  "duration_api_ms": 10220,
+  "input_hash": "7df77d8d99342926",
+  "key": "47a7555e0b2a0ccb3fa308d5",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\n\nAOP ambiguity. The Agent followed the AOP literally, and the AOP never said the amount had to be a plain number.\n\nThe SAP Connection itself is fine. It authenticated, accepted the call, and returned a schema validation error. Nothing needs to change on the Connection side.\n\n**Where it went wrong**\n\nThe decision point is transcript turn [1]→[2]. The Agent read the total in the invoice's European display format (comma for decimals, period for thousands, with a currency symbol) and passed that string unchanged to `sap.create_invoice`. It did this because AOP Step 2 told it to enter the amount \"as shown on the invoice.\"\n\nThe 400 at [3] is only the symptom. The root cause is that Step 2 has no rule to normalize the amount before entry. A secondary gap: the Agent stopped at [4] without retrying, because the AOP gives no instruction for what to do when SAP rejects a field.\n\n**Evidence**\n\n- AOP Step 2: \"Create the invoice in **SAP**, entering the amount as shown on the invoice.\"\n- Transcript [2]: `sap.create_invoice {\"amount\": \"1.234,50 €\"}`\n- Transcript [3]: `ERROR 400 ValidationError: \"amount\" must be a number`\n\n**Fix**\n\nRewrite AOP Step 2 with an explicit normalization rule:\n\n> Convert the invoice total to a plain decimal number before entering it in SAP. Remove the currency symbol and thousands separators, and use a period as the decimal separator. For example, `1.234,50 €` becomes `1234.50`. Pass it as a number, not a string.\n\nFor this invoice, the value SAP should receive is `1234.50`.\n\n**Next step**\n\nI can invoke `aop-writer` to rewrite Step 2 with this rule. It would work from Build `bld_s02` and edit the AOP in place in `aops/<agent-id>.md`. I don't have the Agent ID, so you'll need to supply it for the file path.\n\nOnce Step 2 is fixed, re-run Start Work on this invoice.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 805,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1007,
+    "thinking_tokens": 279
+  },
+  "variant": "main",
+  "wall_ms": 11476
+}

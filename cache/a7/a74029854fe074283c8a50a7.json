@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S01",
+  "cost_usd": 0.00054975,
+  "created_at": "2026-10-29T11:30:05+00:00",
+  "duration_api_ms": 5530,
+  "input_hash": "1a25899d7045e182",
+  "key": "a74029854fe074283c8a50a7",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing data. The Setup input `alert_channel` was empty, so the Agent posted to a blank channel name and Slack rejected it.\n\n**Where it went wrong:** Transcript turn [1] shows `alert_channel = \"\"`. The AOP's Step 2 reads that input, but the Agent had no check for an empty value. It built the channel as `\"#\"` in turn [2] and posted anyway. The `channel_not_found` error in turn [3] is the end of that chain, not its origin.\n\n**Evidence:**\n- Transcript [1]: `Setup inputs: alert_channel = \"\".`\n- Transcript [2]: `slack.post {\"channel\": \"#\", ...}`\n- Transcript [3]: `{\"ok\": false, \"error\": \"channel_not_found\"}`\n\n**Fix:** Set the Setup input `alert_channel` to the store's real Slack channel (for example, `#store-cz-018`) and rerun. The Slack Connection works for other Agents, so the Connection is not the cause.\n\n**Next step:** Fill in `alert_channel` in Setup, then start a new Run. If you also want the Agent to stop instead of posting when the input is empty, that's an AOP change: I can hand Step 2 to `aop-writer` with a request to add \"if `alert_channel` is empty, stop and flag it rather than posting.\" That guard is optional. The Setup fix alone resolves this failure.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8205,
+    "input_tokens": 2,
+    "output_tokens": 935,
+    "thinking_tokens": 424
+  },
+  "variant": "main",
+  "wall_ms": 7073
+}

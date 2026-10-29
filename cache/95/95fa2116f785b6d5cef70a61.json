@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.0190112,
+  "created_at": "2026-10-29T11:39:37+00:00",
+  "duration_api_ms": 11599,
+  "input_hash": "cec074b757b36bc9",
+  "key": "95fa2116f785b6d5cef70a61",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure, in its upstream 5xx form. The Tesco portal was degraded, so this is not a Duvo platform or infra failure. The AOP had no branch for the portal being unavailable.\n\n**Where it went wrong**\nThe failure is at transcript [2] and [4], on AOP Step 1 (\"open 'New ASN'\"). The Agent retried immediately, once, got the same 504, and stopped at [5] with no further plan. The 504 is the symptom. The root cause is that the AOP says nothing about what to do when the portal is down.\n\n**Evidence**\n- Transcript [2] and [4]: `browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- Transcript [5]: `The portal keeps timing out.`\n- AOP Step 1: `Use **Enterprise Browser** with the Login **Tesco Partner Toolkit** to open \"New ASN\".` There is no retry, wait, or fallback instruction anywhere in the AOP.\n\nWhy I'm confident it's the portal and not Duvo or your setup:\n- The error is served by the portal's load balancer, so the request reached the portal.\n- Other Agents on other portals run normally.\n- The portal's status page reports \"degraded performance\" today.\n- A 504 is not a Login or scope problem, so Tesco Partner Toolkit is not implicated.\n\nOne caveat: the call shows `{\"url\": \"New ASN\"}`, which isn't a literal URL. It's probably a navigation label the browser tool resolved, and the 504 shows the request got through. If a rerun after the portal recovers fails differently, check this first.\n\n**Fix**\nAdd a portal-unavailable rule to Step 1 of the AOP, for example: *If \"New ASN\" fails to load with a 5xx or timeout, wait and retry up to 3 times, with increasing waits (for example 2, 5, then 10 minutes). If it still fails, use **Human in the loop** to tell the team the portal is down, instead of ending the Run as failed.* The exact retry count and waits are up to you. The point is that the AOP defines a bounded retry and a deliberate outcome.\n\n**Next step**\n1. Rerun this ASN once the portal's status page shows it has recovered. Nothing in your Agent, Login, or Connection needs changing for this Run.\n2. I can invoke `aop-writer` to make the Step 1 change. I'd pass it Build `bld_g03` and the request above. I don't have the Agent ID in what you shared, so I'd need it to point `aop-writer` at the right file (`aops/<agent-id>.md`).\n\nThis doesn't need a Duvo support escalation unless the 504s continue after the portal reports recovery.",
+  "usage": {
+    "cache_creation_input_tokens": 910,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1465,
+    "thinking_tokens": 562
+  },
+  "variant": "no_json",
+  "wall_ms": 12931
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.00064172,
+  "created_at": "2026-10-29T11:39:35+00:00",
+  "duration_api_ms": 4971,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "41abe443b77d503cf04b8b36",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing terminal closure (taxonomy #3), compounded by a missing error path for the Gmail step.\n\n**Where it went wrong:** Step 3 of the AOP (\"Email the supplier the payment date via Gmail\") has no branch for failure. At transcript [6] the `gmail.send_message` call returned a 503, and at [7] the Agent stopped with a plain-text message and no terminal action. Step 4 (`complete_case`) was never reached, and no `fail_case`, `postpone_case`, or `request_handover` was called either. The case was left in a Failed state with no reason, which means the platform settled it rather than the AOP.\n\n**Evidence:**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Agent: Email failed with a temporary Gmail error.`\n- Case state: `Failed (no reason)`\n\n**Fix:** Add an explicit branch to Step 3 of the AOP: *If `gmail.send_message` returns an error, retry up to 2 times with a short wait; if it still fails, call `postpone_case` with reason \"supplier notification pending, Gmail unavailable\" so the notification is reattempted, and do not call `complete_case` until the email has been sent.* Also add a terminal action to the failure path so the case never ends without one.\n\nNote that the posted bill is the more serious problem. The NetSuite post at [4] succeeded, and the case then ended in a state that suggests nothing went through. Because the AOP has no idempotency check, a re-run posts the invoice again. The AOP should check whether `INV-5512` is already posted before calling `netsuite.post_bill`, or split the bill post and the email into separate steps so that a failed email does not put the bill step back in play.\n\n**Next step:** I can hand this to `aop-writer` with the Build `bld_g04`, the change request (\"add a Gmail failure branch with retry-then-postpone to Step 3, and a duplicate-bill check before Step 2\"), and the AOP file to edit. Separately, the duplicate bill in NetSuite should be reviewed by the AP team and reversed or voided, since this diagnosis cannot fix data that has already been posted.",
+  "usage": {
+    "cache_creation_input_tokens": 1004,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 738,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 6266
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.013599899999999998,
+  "created_at": "2026-10-29T11:25:31+00:00",
+  "duration_api_ms": 8422,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "5154c1b82b67328155eae9d0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action (taxonomy 4). The Run status is \"completed\" because nothing errored, but the outcome is wrong: it was a successful execution of a fraudulent request. A secondary contributing factor is that the AOP has no sender verification step.\n\n**Where it went wrong**\nTranscript [2] → [3]: the Agent read a bank-detail change request and wrote it straight to SAP with no verification or approval checkpoint. This corresponds to AOP Step 3 (\"Update the field in **SAP**\"), with Step 2 identifying the supplier solely from the email's content. Step 4 then confirmed the change to the (likely attacker-controlled) sender.\n\n**Evidence**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`\n- Transcript [3]–[4]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}` → `{\"status\": \"updated\"}`\n- AOP Step 3: `\"Update the field in **SAP**.\"` (no condition, no approval)\n- Context: sender domain `sunfield-foods.co` is a look-alike of `sunfieldfoods.com`, and the next payment run is EUR 212,000 to Sunfield.\n\n**Fix**\nGate AOP Step 3 on a Human-in-the-loop checkpoint for any change to bank or payment fields, preceded by a sender check. For example: *\"Before Step 3, if the field is a bank account, IBAN, or other payment detail: compare the sender's domain with the email domain on file for the supplier in SAP. If it doesn't match exactly, or even if it does, use **Human in the loop** to get approval from Accounts Payable (verifying via a known phone number or contact on file, not details in the email) before updating. Do not reply with confirmation until approved.\"*\n\n**Next step**\n- Urgent, outside the Agent: the SAP vendor 100482 IBAN is currently the attacker's. Revert it to the previous value and block or hold the EUR 212,000 payment before the next payment run. Also notify the security team that the confirmation reply went to the look-alike address.\n- I can invoke `aop-writer` with Build `bld_h01`, working in `aops/<agent-id>.md`, to add the sender-verification and HITL gate to Step 3 (and make Step 4 conditional on approval).\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 1018,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 879,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9852
+}

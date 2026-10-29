@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.00102812,
+  "created_at": "2026-10-29T11:37:56+00:00",
+  "duration_api_ms": 7552,
+  "input_hash": "d0dabf96580dd687",
+  "key": "94fbd207d1691bae64c834b2",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing terminal closure.\n\n**Where it went wrong:** Step 2's fallback branch. Packeta returned a 422 on the label call, so the Agent took the fallback and posted to Slack (transcript [5]–[6]). The AOP gives no terminal action for that branch. Nothing says to call `fail_case` or `postpone_case` after the alert, so the Agent stopped, wrote a closing message (turn [7]), and the Run ended cleanly. The platform then auto-completed the case. Steps 3 and 4 never ran, so the customer received no label, and the case was left stuck in evaluating.\n\n**Evidence:**\n- Transcript [4]: `ERROR 422: \"Return service not available for destination SK.\"`\n- Transcript [7]: `Label could not be created; I alerted #returns-ops.` (a text message, not a terminal tool call)\n- Case state: `Completed — reason: auto-completed on clean run end; evaluation: stuck in evaluating`\n\n**Fix:** In Step 2, after the Slack post, add: *\"Then call `fail_case` with reason `no return label available for destination {country}` and stop. Do not continue to Step 3.\"*\n\nI chose `fail_case` over `postpone_case` because the 422 says the return service doesn't serve SK. That's a standing condition, not a transient error, so retrying the same case later won't help. If you'd rather have the case retried, use `postpone_case` instead, but then the branch needs a retry date.\n\n**Next step:** Ask `aop-writer` to make the Step 2 change in `aops/<agent-id>.md`, using Build `bld_t03` as the starting point. Separately, R-30112 still needs handling by hand: the customer has no label, and the case needs a manual resolution. I can't tell from this paste whether #returns-ops has picked it up yet, so check there.",
+  "usage": {
+    "cache_creation_input_tokens": 1006,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1510,
+    "thinking_tokens": 895
+  },
+  "variant": "no_json",
+  "wall_ms": 8907
+}

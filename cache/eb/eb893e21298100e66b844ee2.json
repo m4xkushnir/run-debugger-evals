@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X03",
+  "cost_usd": 0.00080769,
+  "created_at": "2026-10-29T11:32:06+00:00",
+  "duration_api_ms": 5393,
+  "input_hash": "81884e18921f1d60",
+  "key": "eb893e21298100e66b844ee2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure (missing OAuth scope)\n\n**Where it went wrong:** Step 2 of the AOP (\"Send the RFQ via **Gmail**\") calls `gmail.send_message` at transcript turn [1]. The Gmail Connection doesn't have the scope that call needs, so Gmail rejects it at turn [2]. The Agent then stops at turn [3] with no fallback. The 403 is the end of the chain, not its origin. The origin is the Connection's granted scopes.\n\n**Evidence:**\n- Transcript [2]: `ERROR 403: Request had insufficient authentication scopes.`\n- Other context: \"Connection granted scopes after re-authentication: gmail.readonly.\"\n\nThe Connection holds only a read scope, and sending requires a send scope (`gmail.send` or `gmail.compose`). Re-authenticating produced the same error because the consent grant still didn't include send, so the problem persists across re-authentications.\n\n**Fix:** Extend the **Gmail** Connection's scopes to include `gmail.send`, then re-authenticate and confirm on the consent screen that send access is granted. The AOP doesn't need to change for this.\n\n**Next step:** Re-authenticate the Gmail Connection in Setup and approve send access, then start a new Run. If the consent screen does ask for send access and Gmail still returns only `gmail.readonly`, the scope grant is failing outside the AOP and the Connection itself is the problem. In that case, this is a platform issue and should go to Duvo support with run_x03, bld_x03, the exact 403 text, and the note that re-authentication granted readonly only.\n\n```json\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 868,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1121,
+    "thinking_tokens": 533
+  },
+  "variant": "main",
+  "wall_ms": 6886
+}

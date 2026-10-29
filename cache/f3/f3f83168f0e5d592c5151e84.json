@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.029871800000000004,
+  "created_at": "2026-10-29T11:36:41+00:00",
+  "duration_api_ms": 9837,
+  "input_hash": "80480c72868f94f9",
+  "key": "f3f83168f0e5d592c5151e84",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing data. The case arrived without `unit_price`, and the AOP had no instruction for that. The Agent filled the gap with a price it found elsewhere instead of stopping. This was not a Connection or platform problem: the Gmail send worked exactly as asked.\n\n**Where it went wrong:** Transcript turn [3], which corresponds to AOP Step 1.\n\n- Step 1 says the case \"carries PO number, supplier, quantity and `unit_price`\" but never says what to do when one of those is missing.\n- At [2], `claim_case` returned no `unit_price`.\n- At [3], the Agent decided on its own to use a \"Standard price\" from an old email signature.\n- Steps [4]–[7] then went through cleanly. The supplier was quoted the wrong price, and the case was closed as **Completed by Agent**. That's why the Run status is `completed` even though the outcome was wrong.\n\n**Evidence:**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}` has no `unit_price`.\n- Transcript [3]: *\"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"*\n- AOP Step 1: *\"the case carries PO number, supplier, quantity and `unit_price`.\"*\n\n**Fix:** Add a guard to AOP Step 1:\n\n> *If `unit_price` (or any of PO number, supplier, quantity) is missing or empty on the case, do not look for a price anywhere else and do not email the supplier. Call `fail_case` with the reason \"missing unit_price\".*\n\nUse `request_handover` instead of `fail_case` if you'd rather have a person fill in the price and continue. A price sent to a supplier can't be taken back, so the Agent should never infer it.\n\nSeparately, find out why the case for PO-88120 was created without `unit_price`. Whatever creates these cases is not passing the contract price through. The AOP guard stops wrong prices going out, but it won't make the price appear on future cases.\n\n**Next step:** I can invoke `aop-writer` on Build `bld_s05` (`aops/<agent-id>.md`) to rewrite Step 1 with the missing-field guard above. Meanwhile, someone should send Sklárny Kavalier a correction for PO-88120 with the contract price of 3.65 EUR/pc (1200 × 3.65 = 4,380 EUR).\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1012,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1015,
+    "thinking_tokens": 153
+  },
+  "variant": "main",
+  "wall_ms": 11110
+}

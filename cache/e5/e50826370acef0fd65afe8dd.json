@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X03",
+  "cost_usd": 0.0117926,
+  "created_at": "2026-10-29T11:32:27+00:00",
+  "duration_api_ms": 11008,
+  "input_hash": "81884e18921f1d60",
+  "key": "e50826370acef0fd65afe8dd",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nConnection failure: the Gmail Connection is missing the send scope. The re-authentication did not fix it because it granted only `gmail.readonly`, so this is not a platform fault.\n\n**Where it went wrong**\nThe failure is at transcript step [1]-[2], the `gmail.send_message` call, which matches AOP Step 2 (\"Send the RFQ via **Gmail**\"). The AOP and the input were fine. The Agent called the right tool with a recipient, and Gmail refused it for lack of permission. Step [3] (\"Sending failed.\") only reports the symptom.\n\n**Evidence**\n- Transcript [2]: `gmail.send_message: ERROR 403: Request had insufficient authentication scopes.`\n- Your context: \"Connection granted scopes after re-authentication: gmail.readonly.\"\n- AOP Step 2: \"Send the RFQ via **Gmail**.\"\n\nSending needs a send-capable scope such as `gmail.send`, and a read-only grant can never satisfy it. The repeat failure after re-authentication is expected: re-authenticating renewed the same read-only grant. It does not point to a platform problem, because the granted scopes explain the 403 on their own.\n\n**Fix**\nChange the Gmail Connection so it is authorized with `gmail.send`. In Setup, reconnect Gmail and approve the send permission on the consent screen, then confirm the Connection now lists `gmail.send`, not only `gmail.readonly`. If you are using a Connection type or preset that is read-only, switch to one that supports sending.\n\n**Next step**\nReconnect Gmail with send permission, then re-run this RFQ.\n\nIf the consent screen offers the send permission, you approve it, and the Connection still shows only `gmail.readonly`, that would be a platform issue. In that case raise it with Duvo support from the Duvo web app, with `run_x03`, `bld_x03`, the 403 error and the granted-scopes result.\n\nSeparately, the AOP has no branch for a failed send, so the Agent just stopped with \"Sending failed.\" Once the scope is fixed, I can hand `aop-writer` a change request to add a failure branch to Step 2.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8186,
+    "input_tokens": 2,
+    "output_tokens": 1097,
+    "thinking_tokens": 336
+  },
+  "variant": "main",
+  "wall_ms": 12943
+}

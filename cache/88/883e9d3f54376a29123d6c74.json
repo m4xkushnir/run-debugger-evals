@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.00100637,
+  "created_at": "2026-10-29T11:31:26+00:00",
+  "duration_api_ms": 9779,
+  "input_hash": "8cdd082843487845",
+  "key": "883e9d3f54376a29123d6c74",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** AOP ambiguity\n\n**Where it went wrong:** Step 2 of the AOP, at transcript turn [5]. The agent found vendor 100311 but judged the names \"differ\" and fell back to the AOP's \"If unsure about the supplier match, call `fail_case`.\" The AOP never defines what \"sure\" means, so the agent had no concrete rule for accepting a match.\n\n**Evidence:**\n- AOP Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4]: `\"vat\": \"DE811145120\"`. Your context says the invoice carries the same VAT ID, so the search result matched on the field that identifies a supplier legally, and the agent ignored it.\n\nThe run itself completed normally. The wrong outcome is a deliberate `fail_case` that the AOP invited. The Run didn't error, which is why it looks like a clean run in the status field.\n\n**Fix:** Rewrite Step 2 to name a deterministic match rule, with the VAT ID as the primary key and the name as a fallback:\n\n> 2. Search SAP with `sap.search_vendor` using the supplier name from the invoice. If a result has the same VAT ID as the invoice, that is the match, even when the names differ. If there is no VAT match, accept a single result only if the names are the same legal entity after ignoring legal-form suffixes (GmbH, mbH, AG, Ltd., and similar). If neither applies, call `fail_case` with reason `no supplier match: <invoice supplier name>, VAT <invoice VAT>`.\n\nThis changes one step in one AOP. It also makes the failure reason specific enough to group the 31% of cases in your weekly count.\n\n**Next step:** Hand off to `aop-writer` with Build `bld_s06`, the change request above, and the AOP file `aops/<agent-id>.md`. Before that, check that the other failed cases share the reason string `unable to match supplier` and an invoice VAT that matches a vendor in SAP. If some don't, they may have a different cause and need a separate diagnosis.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8417,
+    "input_tokens": 2,
+    "output_tokens": 1844,
+    "thinking_tokens": 1088
+  },
+  "variant": "main",
+  "wall_ms": 10981
+}

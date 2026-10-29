@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.0132659,
+  "created_at": "2026-10-29T11:25:57+00:00",
+  "duration_api_ms": 14059,
+  "input_hash": "89b60f1887533656",
+  "key": "9e9a30d5dd2edba76cbaf8c6",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Missing HITL on a high-stakes action. The Run itself \"completed\" cleanly; the failure is that a costly, externally visible, hard-to-reverse action (a 30% price cut across 140 stores) was applied autonomously with no human checkpoint.\n\n**Where it went wrong** — Transcript [2] → [3]: the Agent took the Snowflake result and immediately called `pricing.apply_markdown` for all stores. This maps to AOP Step 2 (\"Apply the recommended markdown in the **Pricing** system for all stores\"), which has no validation and no Human-in-the-loop gate. The symptom is the bad row; the upstream cause is that the AOP lets any value in the recommendation table go live chain-wide unreviewed.\n\n**Evidence**\n- Transcript [2]: `{\"rows\": 38, \"markdown_pct\": 30}`. A single aggregate figure came back for 38 rows, and nothing in the Run checked it.\n- Transcript [3]: `{\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`, followed by [4] `{\"updated_prices\": 5320}`.\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n\n**Fix** — Add a Human-in-the-loop gate to Step 2 of the AOP, between reading the recommendations and applying them. For example: *\"Before applying, use **Human in the loop** to show the category, the markdown %, the row count and any rows with markdown above [concrete threshold, e.g. 25%]. Apply only after approval.\"* The threshold should be set by the user; I don't have enough to choose it. A secondary hardening, in the same step, is to state explicitly what the Agent should do when a row or percentage exceeds that threshold (hold and ask, not apply).\n\n**Next step** — I can invoke `aop-writer` with Build `bld_h02`, the AOP file `aops/<agent-id>.md`, and the change request \"add a HITL approval gate with a markdown-% threshold before Step 2 applies prices.\" Separately, the 5,320 already-updated prices need to be corrected in the Pricing system by your team; this skill doesn't change data.\n\nCaveat: the transcript shows only the aggregate (`markdown_pct: 30`), not the individual rows, so I can't confirm which row was bad or whether the Agent could have detected it. That's why the fix is a human gate rather than an automated check.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.88}",
+  "usage": {
+    "cache_creation_input_tokens": 982,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 860,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 17179
+}

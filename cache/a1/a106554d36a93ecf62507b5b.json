@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C02",
+  "cost_usd": 0.038878,
+  "created_at": "2026-10-29T11:37:36+00:00",
+  "duration_api_ms": 5851,
+  "input_hash": "b03fc180112aa5af",
+  "key": "a106554d36a93ecf62507b5b",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nConnection failure (missing scope). The **Purchasing** Gmail Connection was authorized without send permission.\n\n**Where it went wrong**\nTranscript turn [2]–[3], at AOP Step 2 (\"Use **Gmail** to send the supplier a reminder\"). The Agent's call was well formed; the Connection could not perform it. Step 3 (Google Sheets log) never ran, which is correct given the AOP's sequence, since there was nothing to log.\n\n**Evidence**\n- Transcript [3]: `ERROR 403: Request had insufficient authentication scopes. Required: https://www.googleapis.com/auth/gmail.send`\n- Context: Gmail Connection 'Purchasing' granted scopes: `gmail.readonly, gmail.labels.`\n\nThe Connection holds only read and label scopes, while Step 2 needs `gmail.send`. No change to the Agent's reasoning or the input data would have avoided this.\n\n**Fix**\nRe-authorize the **Purchasing** Gmail Connection with the `gmail.send` scope added (keeping the existing scopes), then start a new Run for PO 4500918821. The reminder is still outstanding, since the due date of 2026-10-20 is already nine days past.\n\nA secondary AOP gap exists, but I would not bundle it with this fix: Step 2 has no branch for a failed send, so the Agent only reported the failure in its final turn rather than handing off to a human. If you want that, it is a separate, later AOP change.\n\n**Next step**\nRefresh the Gmail Connection **Purchasing** in Setup and grant `gmail.send`. After that, re-run the PO reminder. If you also want a failure branch added to Step 2 (e.g. `request_handover` when the send fails), I can invoke `aop-writer` against Build `bld_2c9` for that.",
+  "usage": {
+    "cache_creation_input_tokens": 8181,
+    "cache_read_input_tokens": 0,
+    "input_tokens": 2,
+    "output_tokens": 615,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 7795
+}

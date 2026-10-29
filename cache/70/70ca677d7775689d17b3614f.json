@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.024979799999999996,
+  "created_at": "2026-10-29T11:35:27+00:00",
+  "duration_api_ms": 8345,
+  "input_hash": "89b60f1887533656",
+  "key": "70ca677d7775689d17b3614f",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing HITL on a high-stakes action. The Run finished as `completed` and every tool call succeeded. Nothing errored. The Agent did exactly what the AOP said, and the AOP never asked a human to check before a chain-wide price change went live.\n\n**Where it went wrong**\nThe decision point is transcript turn [3], which matches AOP Step 2. The Agent took the Snowflake result from [2] and went straight to `pricing.apply_markdown` for all 140 stores. There was no review step between reading the recommendation and applying it. Step 1 has no sanity check on the recommendation, and Step 2 says \"for all stores\" without any gate. So a bad row in the recommendation table went straight into 5,320 live prices. The Slack post in [5] came after the change, so it reported the damage instead of preventing it.\n\n**Evidence**\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\"\n- Transcript [3]–[4]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}` → `{\"updated_prices\": 5320}`\n\n**Fix**\nRewrite AOP Step 2 so it opens with a **Human in the loop** checkpoint before `pricing.apply_markdown` is called. The checkpoint should show the category, the markdown %, the number of stores and prices affected, and the source recommendation rows. It applies the markdown only after approval. If the request is rejected, the Run ends without changing any prices.\n\nA threshold rule could later let small markdowns skip the review. That needs a concrete number from you. Gating every application is the safe default, and it's what would have caught this bad row.\n\n**Next step**\nI can invoke `aop-writer` on Build `bld_h02` (file `aops/<agent-id>.md`) with this request: \"Rewrite Step 2 to require a Human-in-the-loop approval showing category, markdown %, store count, and source rows before applying any markdown in Pricing; on rejection, stop without changes.\"\n\nSeparately, the 30% markdown on Outdoor furniture is still live in all 140 stores. That needs to be reverted in Pricing now. The AOP fix only prevents the next one.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 978,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 784,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9461
+}

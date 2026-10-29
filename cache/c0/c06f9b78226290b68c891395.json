@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.0098238,
+  "created_at": "2026-10-29T11:26:21+00:00",
+  "duration_api_ms": 9874,
+  "input_hash": "28456be35269bb05",
+  "key": "c06f9b78226290b68c891395",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Missing HITL on a high-stakes action (Run status is \"completed\", but the outcome was wrong: the Agent autonomously cancelled a EUR 62,400 PO and reordered at a higher price, with no human checkpoint).\n\n**Where it went wrong** — Step 2 of the AOP. The condition \"more than 1 day late\" is the only gate, and it triggers an irreversible cancel plus a reorder with no approval. At transcript turns [2]–[5] the Agent cancelled the PO in SAP and created a replacement. The AOP never asks it to weigh cost, slot loss, or the option of keeping the original supplier. Secondary contributor: Step 2 has no price or value guard on the reorder.\n\n**Evidence**\n- AOP Step 2: \"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier…\"\n- Transcript [1]: \"PO 4500921177 (EUR 62,400) is now 2 days late. Cancelling and reordering from the backup supplier.\"\n- Transcript [4]: `sap.create_po {\"supplier\": \"Backup: Nordpack AB\", \"value_eur\": 66100}`. The replacement costs EUR 3,700 more than the original, which matches the user's report.\n\nNote: the transcript shows the cancel happened before the replacement was created, so the main supplier's slot was lost the moment `sap.cancel_po` returned. Nothing in the transcript shows that the Agent checked whether the backup could actually deliver sooner, so I can't say whether the reorder even recovered the delay.\n\n**Fix** — In AOP Step 2, put a Human in the loop checkpoint before the cancel: *\"If the delivery is more than 1 day late, use **Human in the loop** to present the PO value, the new delivery date, and the backup supplier's quoted price and delivery date, and wait for approval before cancelling in SAP. Do not cancel until approved. If the backup price exceeds the original by more than [threshold, e.g. 2%], or the PO value exceeds [e.g. EUR 10,000], always require approval.\"* The threshold values are the user's call, so I've left them as placeholders. Also reorder the steps so the backup order is confirmed before the original is cancelled.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_h03`, the change request above (\"add a HITL gate before the SAP cancel in Step 2 and create the backup PO before cancelling the original\"), and the file `aops/<agent-id>.md`. I need the Agent ID for that path.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8298,
+    "input_tokens": 2,
+    "output_tokens": 899,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12111
+}

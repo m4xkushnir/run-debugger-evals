@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.00044478,
+  "created_at": "2026-10-29T11:29:14+00:00",
+  "duration_api_ms": 4575,
+  "input_hash": "a422d48d55a66c92",
+  "key": "26f638cb7023a232c64822d0",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "## Failure mode\nPlatform / infra failure. The Run died before any Agent turn: the sandbox never started because the container image pull timed out on all three attempts.\n\n## Where it went wrong\nTranscript line [2], before the Agent ran anything: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`. Lines [1] and [3] are just the start and end markers. The AOP never got a chance to execute, so neither Snowflake (step 1) nor Slack (step 2) was touched.\n\n## Evidence\n- `[2] System: ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Other context: \"The last 3 Runs of this Agent (different days) failed with the identical sandbox error before any Agent turn.\"\n\n## Fix\nNone in your artifacts. The AOP, Setup, and Connections are not involved: the failure happens at container provisioning, before the Build's steps run. Changing the AOP, the Snowflake or Slack Connections, or Setup inputs would not prevent it. What I ruled out:\n- AOP ambiguity or missing terminal closure: no Agent turn occurred.\n- Connection failure: neither Connection was reached.\n- Missing data: the Run never read any inputs.\n\nThe recurrence across four days with an identical error points to the platform's image registry or sandbox provisioning, not to anything in this Agent.\n\n## Next step\nSend this to Duvo support, since no change on your side will fix it. I can't submit anything from here. If you have a Duvo in-product support chat, paste in the details below. Include:\n- Run ID: `run_p01`\n- Build ID: `bld_p01`\n- Error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- Pattern: the same error on the last 3 Runs of this Agent, all before any Agent turn\n- Ruled out: AOP, Connections, and Setup, since no Agent code executed\n\nUntil it's resolved, re-running this Agent will likely fail the same way.\n\n```json\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8158,
+    "input_tokens": 2,
+    "output_tokens": 726,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 6338
+}

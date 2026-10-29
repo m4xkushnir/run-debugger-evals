@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0008288,
+  "created_at": "2026-10-29T11:26:31+00:00",
+  "duration_api_ms": 7944,
+  "input_hash": "531aa89fc651bef5",
+  "key": "fe7a394dd708d5db2caf11c2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing data. The AOP referenced a File that the Run couldn't find, and the Agent substituted a made-up benchmark instead of stopping. The Run reports `completed`, but the audit is invalid.\n\n**Where it went wrong:** Transcript [2] to [4], against AOP Step 2 (\"Open the rate card in Files\"). The search returned no results, and at [3] the Agent switched to \"typical market rates,\" a comparison the AOP never specified. Its conclusion at [4] (\"All lines are within typical market range\") was therefore not based on the rate card at all.\n\n**Evidence:**\n- `[2] Tool result ← files.search: {\"results\": []}`\n- `[3] Agent: The rate card isn't available. I'll compare against typical market rates for these lanes instead.`\n\n**Fix:** Make \"Carrier rate card 2026.xlsx\" available in Files. Before re-running, confirm the exact filename matches what the AOP and search use, since a name mismatch would produce the same empty result.\n\n**Next step:**\n- Clean up the damage: the `sheets.append_row` at [5] wrote a \"no flags\" row to \"Freight audit\" that is not a real audit result. Mark it or remove it before anyone relies on it.\n- Recurrence: the Agent had no instruction for a missing rate card, so it improvised. Ask `aop-writer` to add a branch to Step 2: if the file isn't found, stop, write nothing to the sheet, and fail or hand over the task. That keeps the Agent from producing a false clean result next time.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.88}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8260,
+    "input_tokens": 2,
+    "output_tokens": 1492,
+    "thinking_tokens": 935
+  },
+  "variant": "main",
+  "wall_ms": 10042
+}

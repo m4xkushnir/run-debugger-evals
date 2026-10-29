@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.00126086,
+  "created_at": "2026-10-29T11:29:02+00:00",
+  "duration_api_ms": 11456,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "8ba60f943034c5c98044470a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** AOP ambiguity. Step 5 (\"Wait 7 days for the signed bank letter\") doesn't say how to wait, so the Run had no way to pause and resume.\n\n**Where it went wrong:** Transcript [5], right after the bank confirmation step (AOP step 4). The Agent wrote \"I'll check back in 7 days\" and the Run completed. Nothing in the AOP or the transcript schedules that check-back, so nothing ever resumed the Run. The Run status says \"completed,\" but the AOP was only partly executed. Steps 5–11 never ran.\n\n**Evidence:**\n- Transcript [5]: \"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n- AOP step 5: \"Wait 7 days for the signed bank letter.\" No mechanism is named.\n\n**Other observations:**\n- Step 4 has no tool call. No send or email action appears before [5], so the Agent may have claimed the request was sent without sending it. Check the supplier's inbox or Gmail to confirm.\n- Step 1 (read the supplier form from Gmail) also has no tool call. The vendor name may have come from case input, but I can't confirm that from what you shared.\n- The transcript shows no `case_id`. I'm assuming this is a standalone Run. If it runs from a queue, the fix changes (see below).\n\n**Fix:** Rewrite AOP step 5 to name a concrete way to wait. For a queue-driven Agent, use `postpone_case` until 7 days from now, with the reason \"awaiting signed bank letter.\" When the case resumes, branch on step 6 (letter received) or step 7 (not received). For a standalone Agent, the platform may not support a timed pause, so the wait would need a `request_handover` to a second Agent that runs the chase/activation branch, or a scheduled follow-up. Confirm which is available before choosing.\n\n**Next step:**\n1. Hand the AOP change to `aop-writer` with Build `bld_w03` and the file `aops/<agent-id>.md`.\n2. For vendor 100977, check the bank letter status manually. If it's been received, start a new Run from step 6 for that vendor. If not, start from step 7. Don't re-run from step 1, because it would create a duplicate vendor.\n\n```json\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8366,
+    "input_tokens": 2,
+    "output_tokens": 2354,
+    "thinking_tokens": 1554
+  },
+  "variant": "main",
+  "wall_ms": 13774
+}

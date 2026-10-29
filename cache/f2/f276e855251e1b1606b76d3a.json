@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.013171900000000002,
+  "created_at": "2026-10-29T11:28:15+00:00",
+  "duration_api_ms": 6757,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "f276e855251e1b1606b76d3a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nWrong decomposition. One Agent is carrying a real-time phase (steps 1–5: read claim, look up, draft, send) and a multi-day wait-and-reminder cycle (steps 6–8, up to 7 days), followed by a resolution phase (steps 9–14) that spans five more Connections (SAP, Sheets, Slack, ServiceNow, Gmail). A Run cannot sit idle for days, so the idle timeout killed it.\n\n**Where it went wrong**\nAt step 6 (\"Wait for the supplier's reply\"). After sending the claim, the Agent had no way to actually wait. It polled Gmail once, found nothing, and kept idling until the platform stopped the Run. Steps 7–8 (3-day reminder, 7-day escalation) can never execute inside a single Run, and nothing in the AOP closes, postpones, or hands off the work at that point.\n\n**Evidence**\n- AOP: \"6. Wait for the supplier's reply.\" / \"7. If no reply after 3 days, send a reminder.\"\n- Transcript: \"[4] Agent: No reply yet. I'll keep checking.\" followed by \"[5] System: Run stopped after idle timeout.\"\n\n**Fix**\nSplit the AOP at step 6 into two Agents. Agent A handles steps 1–5 (read claim, look up in SAP, fetch photos, draft and send) and ends by handing the claim off via `request_handover` or a queue. Agent B is triggered by the supplier's reply (or by a scheduled reminder/escalation check at 3 and 7 days) and handles steps 7–14. Each Run then does bounded work and finishes, rather than waiting.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w01`, the change request \"split the AOP at step 6: Agent A ends after step 5 with a handover; Agent B starts at step 7 and covers reminder, escalation, and the resolution steps 9–14\", working in `aops/<agent-id>.md`. Note this is a decomposition change, so you'll also need to create the second Agent and the handover or queue link in Setup. One caveat: I only have the pasted excerpt, so I can't confirm whether this was queue-driven or whether the case was left unclosed. If it was, the claim case also needs a terminal action (`postpone_case` or `request_handover`) on the waiting branch.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1036,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 829,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8412
+}

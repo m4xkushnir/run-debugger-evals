@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.0115619,
+  "created_at": "2026-10-29T11:33:10+00:00",
+  "duration_api_ms": 10227,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "fabd3a6f0cde9a56d23211a5",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — AOP ambiguity (the AOP assumes a fixed portal layout and gives no navigation path or fallback). The visible symptom is \"Element not found\", but the upstream cause is that the AOP hard-codes a UI location the portal has since moved.\n\n**Where it went wrong** — Transcript [2]→[3]. After login, the portal displayed a banner saying documents moved. The Agent ignored it and went straight to AOP Step 2 (\"Click 'Export CSV' on the Invoices page\"). It never navigated to an Invoices page, because the AOP doesn't say how to get there, and the click failed at [4]. At [5] the Agent stopped with no recovery, and no terminal action or fallback exists in the AOP for this case.\n\n**Evidence**\n- Transcript [2]: `Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- Transcript [4]: `ERROR: Element not found: button 'Export CSV'`\n- AOP Step 2: `Click \"Export CSV\" on the Invoices page and save the file to Files.`\n\nThe portal appears to have been redesigned, so the old \"Invoices page\" and its \"Export CSV\" button are likely at a different path or labelled differently now. I can't confirm the new layout from this transcript, since the Agent never opened My Account → Billing.\n\n**Fix** — Rewrite AOP Step 2 to include explicit navigation and a failure branch, for example: \"Navigate to My Account → Billing. Locate the invoices export for the current week and click the CSV export control. If you cannot find it, use **Human in the loop** to ask for guidance rather than ending the Run.\" The exact button label should be confirmed by someone who has seen the new Billing page.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_g01`, the AOP file `aops/<agent-id>.md`, and the change request: \"rewrite Step 2 to navigate via My Account → Billing and add a fallback when the export control isn't found.\" Before that, it would help to have someone open the GLS portal and confirm the current label and location of the export control.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 856,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 740,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 11916
+}

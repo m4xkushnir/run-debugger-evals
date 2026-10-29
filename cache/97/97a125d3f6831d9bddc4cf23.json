@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.017836199999999997,
+  "created_at": "2026-10-29T11:34:20+00:00",
+  "duration_api_ms": 13180,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "97a125d3f6831d9bddc4cf23",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nMissing terminal closure (taxonomy 3). The trigger was a transient Gmail 503, which is the symptom, not the root cause.\n\n**Where it went wrong**\n- **Transcript [6]–[7]:** after the 503, the Agent wrote a message and stopped. It made no further tool call, so the case was never closed by the AOP.\n- **AOP Step 3:** \"Email the supplier the payment date via **Gmail**\" has no branch for a failed send. There is no retry and no `fail_case`, `postpone_case` or `request_handover`. Only Step 4 (`complete_case`) closes the case, and it was never reached.\n- **Case state:** the platform settled the case as Failed with no reason, because the Run errored mid-work. Nothing told the AP team that the NetSuite bill was already posted.\n- **Duplicate bill:** Step 2, the non-repeatable action, runs before Step 3, the fallible one. A Failed case with no reason looks like nothing happened, so AP re-ran it. The AOP never checks whether the bill is already posted, so the re-run posted INV-5512 again.\n\n**Evidence**\n- Transcript [6]: `ERROR 503 Service Unavailable: backend error, try again later`\n- Transcript [7]: `Email failed with a temporary Gmail error.`\n- AOP Step 3 contains nothing about failure, and Step 4 is the only terminal action.\n\n**Fix**\nMake one change to the AOP, covering Steps 2 and 3:\n- In Step 3, add: if `gmail.send_message` returns a 5xx or other transient error, retry up to 2 times. If it still fails, call `postpone_case` with the reason \"NetSuite bill for {invoice} already posted; only the supplier email is pending. Do NOT re-post the bill.\"\n- In Step 2, add a guard: before `netsuite.post_bill`, check whether the invoice is already posted. If it is, skip to Step 3.\n\nThe guard is part of the same fix. A retry or manual re-run is only safe if Step 2 can't post twice.\n\n**Next step**\n- I can invoke `aop-writer` with Build `bld_g04`, working in `aops/<agent-id>.md`, and the change request above.\n- Separately, someone on the AP team needs to void the duplicate INV-5512 bill in NetSuite and send the supplier the payment-date email, which was never sent. Both are outside this skill, and I haven't verified NetSuite or Gmail state beyond the transcript.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8322,
+    "input_tokens": 2,
+    "output_tokens": 1700,
+    "thinking_tokens": 823
+  },
+  "variant": "main",
+  "wall_ms": 14444
+}

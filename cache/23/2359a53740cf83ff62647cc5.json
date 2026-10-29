@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G01",
+  "cost_usd": 0.00072636,
+  "created_at": "2026-10-29T11:32:59+00:00",
+  "duration_api_ms": 7209,
+  "input_hash": "fb783d27b8faf41c",
+  "key": "2359a53740cf83ff62647cc5",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Named pattern: upstream UI change. The portal moved the invoices, and the AOP still points at the old location. This is not a Connection failure, since the sign-in succeeded.\n\n**Where it went wrong:** Step 2 of the AOP, at transcript [3]. The Agent clicked \"Export CSV\" on the Invoices page. The login succeeded at [2], but the page it landed on no longer has that button.\n\n**Evidence:**\n- Transcript [2]: `Banner: \"We've refreshed our look! Find your documents under My Account → Billing.\"`\n- Transcript [4]: `ERROR: Element not found: button 'Export CSV'`\n\nThe banner indicates the portal was redesigned and the invoices now live under My Account → Billing. The AOP's \"Invoices page\" reference is stale, so the Agent looked for the button in the wrong place.\n\n**Fix:** Change Step 2 of the AOP to navigate to My Account → Billing before clicking Export CSV, and add an explicit stop if the button is still not found. For example: \"Open My Account → Billing. Click 'Export CSV' and save the file to Files. If the button is not found, stop and fail the Run with the message 'Export CSV not found on Billing page.'\"\n\nBefore you hand this off, check the Billing page yourself to confirm that Export CSV exists there. I can only see the banner text, not the new page, so the button's label or location may also have changed.\n\n**Next step:** Confirm the Billing page has the export option, then I can hand the Build `bld_g01` and this change request to `aop-writer` to update `aops/<agent-id>.md`.\n\nAlso worth noting: after the single failed click, the Agent stopped and did not fail or report the problem. The AOP has no fallback for a missing element, so the Run ended without a clear outcome. The fix above adds that handling.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8216,
+    "input_tokens": 2,
+    "output_tokens": 1288,
+    "thinking_tokens": 644
+  },
+  "variant": "main",
+  "wall_ms": 8793
+}

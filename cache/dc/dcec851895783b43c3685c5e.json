@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.0161146,
+  "created_at": "2026-10-29T11:36:09+00:00",
+  "duration_api_ms": 7316,
+  "input_hash": "a422d48d55a66c92",
+  "key": "dcec851895783b43c3685c5e",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nPlatform / infra failure. The Run died before the Agent took a single turn. Nothing in the AOP, Setup, or Connections ran, so none of them could have caused it.\n\n**Where it went wrong**\nIt failed at transcript turn [2], during sandbox startup, before Step 1 of the AOP (\"Query yesterday's sales in **Snowflake**\"). The Snowflake and Slack Connections were never called. The AOP never started.\n\n**Evidence**\n- Transcript [2]: `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Context: \"The last 3 Runs of this Agent (different days) failed with the identical sandbox error before any Agent turn.\"\n\nThe error comes from the platform pulling the container image, not from Snowflake or Slack. It already retried three times inside this Run. The same error has also happened on four Runs across different days. That pattern doesn't depend on the input data, and no AOP, Setup, or Connection change would have prevented it.\n\n**Fix**\nThere's nothing to change on your side. The AOP is fine as written: it's two steps, scoped to one Run, and never reached execution. This needs to be fixed by Duvo in the sandbox and image-pull layer.\n\n**Next step**\nRaise this with Duvo support from the Duvo web app (app.duvo.ai) and include:\n- **Symptom:** the sandbox fails to start with `container image pull timed out after 120s (attempt 3/3)` before any Agent turn.\n- **Run ID:** `run_p01`. **Build ID:** `bld_p01`.\n- **Recurrence:** the last 3 Runs of this Agent, on different days, failed with the identical error. Include their Run IDs if you have them.\n- **Ruled out:** the AOP (it never started), the Snowflake and Slack Connections (never called), and the input data (the failure happens before the input is read).\n\nUntil it's fixed, the daily sales summary won't post to #leadership-daily. If leadership depends on it, consider posting it by hand.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8133,
+    "input_tokens": 2,
+    "output_tokens": 724,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8473
+}

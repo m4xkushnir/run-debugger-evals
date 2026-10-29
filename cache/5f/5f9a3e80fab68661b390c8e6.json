@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "P03",
+  "cost_usd": 0.00119709,
+  "created_at": "2026-10-29T11:29:44+00:00",
+  "duration_api_ms": 9437,
+  "input_hash": "9f7cd0de7882eeac",
+  "key": "5f9a3e80fab68661b390c8e6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nPlatform / infra failure. The `update_case` tool returned HTTP 500 on every attempt, across different cases, since 14:00.\n\n**Where it went wrong**\nTranscript [5] and [7]. The Agent called `update_case` correctly, per Step 3 of the AOP, and the platform's tool layer returned a 500 both times. Nothing in the Agent's logic caused it.\n\n**Evidence**\n- `[6] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c1e)`\n- `[8] Tool result ← update_case: ERROR 500 Internal Server Error (request_id=req_9a7c52)`\n- \"Every Run on this queue since 14:00 fails on `update_case` with the same 500, across different cases.\"\n\nWhat I ruled out:\n- **AOP:** Step 3 calls `update_case` with `credit_offered`, and the payload matches. The Agent extracted the value correctly (EUR 840 in [4]).\n- **Connection:** Gmail worked fine at [3]–[4]. `update_case` is a platform tool, not a user Connection, and it returns a 500 rather than a 4xx auth or scope error.\n- **Data:** The value was present and well-formed, and the failure is independent of case data.\n- **Transience:** The Agent retried with the identical payload and got a second 500 with a different request ID. Queue-wide failures since 14:00 point the same way.\n\nCase `case_p03` is in `Failed (no reason)` because the Run errored before reaching `complete_case`. The platform settled the case, not the AOP.\n\n**Fix**\nNo change to your AOP, Connections, Setup, or Files will prevent this. The fix sits with Duvo: the `update_case` service needs to be investigated and restored.\n\nOptional hardening, separate from the fix: the AOP has no branch for a failed save. Adding one (for example, call `fail_case` with a reason if `update_case` errors) would make the case end with a stated reason instead of `no reason`. That would not have prevented this outage, though.\n\n**Next step**\n1. Report this to Duvo support. I can't send it from here, and I don't have a support-escalation tool in this session. Raise it through Duvo support in the web app at app.duvo.ai. Include:\n   - Run `run_p03`, Build `bld_p03`, case `case_p03`\n   - The 500 errors with request IDs `req_9a7c1e` and `req_9a7c52`\n   - The queue-wide pattern since 14:00 on `update_case`\n   - What's been ruled out (AOP, Gmail Connection, input data, case-specific cause)\n2. Hold off on editing the AOP for this. Once Duvo restores `update_case`, the Runs on this queue should be retried.\n\n```json\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 1070,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1819,
+    "thinking_tokens": 849
+  },
+  "variant": "main",
+  "wall_ms": 11284
+}

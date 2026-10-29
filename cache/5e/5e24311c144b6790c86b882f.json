@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.016227900000000003,
+  "created_at": "2026-10-29T11:33:50+00:00",
+  "duration_api_ms": 11541,
+  "input_hash": "cec074b757b36bc9",
+  "key": "5e24311c144b6790c86b882f",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nNamed pattern: **third-party portal outage**. This is not Duvo platform/infra failure, a Connection failure, or an AOP defect. The Tesco supplier portal was unavailable, and nothing in the Agent's configuration caused or could have prevented that.\n\n**Where it went wrong**\nAt transcript [1]-[4], on AOP Step 1 (\"open 'New ASN'\"). Both `browser.open` attempts failed with a 504, so the Run never reached Step 2 (entering the shipment lines and submitting). At [5] the Agent stopped. Nothing in this AOP tells it what to do when the portal is down.\n\n**Evidence**\n- Transcript [2] and [4]: `browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- Your context: \"The portal's status page reports 'degraded performance' today.\"\n- Other Agents on other portals run normally, which points away from the Duvo platform and the browser tool layer.\n- The Login **Tesco Partner Toolkit** was not the problem. A 504 comes from the portal's load balancer, not from an auth rejection (401/403).\n\n**Fix**\nRe-run the Run once the portal's status page shows it has recovered. No artifact of yours needs changing to resolve this failure. If this portal is flaky often enough to matter, the one change worth making is to Step 1 of the AOP: add a rule such as \"*If the portal returns a 5xx or timeout after 3 attempts spaced a few minutes apart, stop and report that the portal is unavailable, rather than continuing to retry.*\" That makes a future outage fail cleanly instead of ending on \"The portal keeps timing out.\" I'd treat it as optional hardening, not the cause of this failure.\n\n**Next step**\nWait for the portal to recover, then use Start Work to re-run the ASN submission. If you want the optional retry or give-up rule added to Step 1, I can invoke `aop-writer` with Build `bld_g03` and that change request. Because the 504 comes from the portal and not from Duvo, there is nothing to escalate to Duvo support. If the 504s continue after the portal's status page shows it healthy, send me the new Run and I'll re-check.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"none\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 910,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1185,
+    "thinking_tokens": 410
+  },
+  "variant": "main",
+  "wall_ms": 13065
+}

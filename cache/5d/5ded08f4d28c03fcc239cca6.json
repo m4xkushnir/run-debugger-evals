@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.015307000000000001,
+  "created_at": "2026-10-29T11:28:51+00:00",
+  "duration_api_ms": 17145,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "5ded08f4d28c03fcc239cca6",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nBatch / iteration leak. The AOP has one Run loop over every underperforming supplier in a single Enterprise Browser session. \"Session expired\" is the symptom, not the root cause.\n\n**Where it went wrong**\nStep 3 of the AOP: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\" Step 1 returned 17 suppliers under 90%, and the Run worked through them one after another in one browser session. By supplier 9 of 17 the session had been open about 55 minutes and the next Login failed. The Run died before Steps 4-11, so no emails, Slack post, or SAP updates happened.\n\n**Evidence**\n- AOP: \"3. For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\n**Fix**\nChange the AOP so one Run handles one supplier, and the platform iterates over the 17. Steps 3-5 would then read as a per-supplier unit, such as \"For this supplier, sign in to their portal, download open-order status, draft and send the email.\" Scorecard creation (Steps 1-2) would be a separate, one-time piece. Each supplier's Run would then get a fresh browser session instead of sharing one that times out.\n\nTwo caveats:\n- The Steps 6-11 \"next week\" cycle (follow-up, reply check, escalation) is a second problem in the same AOP. It mixes a real-time scan with a week-long wait, so it is a likely decomposition issue. I'm not bundling it into this fix, but it's worth addressing in the same rewrite.\n- I only have an excerpt, so I can't see whether suppliers 1-8 succeeded or how long each took. If a single supplier's portal work is slow on its own, a per-supplier Run could still hit the limit, but that would show up as a different failure.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w02`, the change request \"rewrite Steps 3-5 to handle a single supplier per case instead of looping over all suppliers under 90%\", and the AOP file `aops/<agent-id>.md`. I don't have the Agent ID, so please supply it.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.62}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8430,
+    "input_tokens": 2,
+    "output_tokens": 1446,
+    "thinking_tokens": 623
+  },
+  "variant": "main",
+  "wall_ms": 18353
+}

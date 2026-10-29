@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.011913899999999998,
+  "created_at": "2026-10-29T11:27:25+00:00",
+  "duration_api_ms": 8815,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "e7221e48d6a883b26a4e0f8b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Batch / iteration leak (the Run was claimed for one case, \"Invoice from Brenntag CZ\", but the AOP told the Agent to process the whole inbox).\n\n**Where it went wrong** — Step 2 of the AOP. After `claim_case` returned a single case, the Agent ignored that scope and searched the whole AP inbox (`is:unread label:ap`, 47 results). It then created vendor bills one by one until the 30-minute limit stopped the Run at 19 of 47. `complete_case` (Step 3) was never reached, so the case ended Failed.\n\n**Evidence**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox: extract fields and create a vendor bill in **NetSuite** for each.\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\nThe duration limit is the symptom. The root cause is that the AOP gives a queue-driven Agent a batch job. The platform already iterates over cases, so each Run should handle only the claimed case. There is also a data-integrity risk: 19 bills were created in NetSuite from invoices that no case claimed. When those invoices come up under their own cases, they may be registered twice.\n\n**Fix** — Rewrite Step 2 of the AOP to handle only the claimed case: use the case's title or reference to find that one supplier invoice email in Gmail, extract its fields, and create a single vendor bill in NetSuite. Remove \"all pending\" and \"for each\".\n\n**Next step**\n- I can invoke `aop-writer` with Build `bld_b01` and the file `aops/<agent-id>.md`, asking it to \"rewrite Step 2 to process only the invoice for the claimed case, not the whole AP inbox\".\n- Separately, check NetSuite for the 19 vendor bills created in this Run so they aren't duplicated when the remaining invoices are processed. I couldn't see which invoices they were, because the transcript only says \"Created vendor bills 1-19 of 47\".\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 934,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 744,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10744
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "W03",
+  "cost_usd": 0.0335118,
+  "created_at": "2026-10-29T11:36:07+00:00",
+  "duration_api_ms": 11428,
+  "input_hash": "51bb5071bf6ac064",
+  "key": "3da1ef0809cb62a6660ed84e",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Wrong decomposition. One Agent is doing two Agents' work: a real-time onboarding phase (Steps 1–4) and a delayed follow-up phase (Steps 5–11) separated by a 7-day wait. A single Run cannot wait 7 days, so the Run ended cleanly after Step 4 and nothing was ever set up to pick up Step 5. That is why the Run shows **completed** even though the work stopped.\n\n**Where it went wrong:** At transcript turn [5], right after `sap.create_vendor` returned vendor `100977` (Step 3), the Agent reached Step 5 (\"Wait 7 days for the signed bank letter\"). It had no way to wait inside the Run, so it said it would \"check back\" and the Run ended. No later Run, case, or handover was created, so Steps 6–11 (activate payments, chase, welcome pack, Coupa, Slack, 30-day review) never ran.\n\n**Evidence:**\n- AOP Step 5: \"Wait 7 days for the signed bank letter.\"\n- Transcript [5]: \"Bank confirmation requested. I'll check back in 7 days for the signed letter.\"\n\nTwo side observations from the excerpt, not separate root causes:\n- No tool call is shown for Step 1 (reading the form from **Gmail**) or for Step 4 (requesting bank confirmation). The Agent's turn [5] claims the request was sent, but the transcript you shared doesn't show it. Please confirm in the supplier's inbox that the request actually went out.\n- The excerpt may simply be partial, so I'm not treating this as a cause.\n\n**Fix:** Split the AOP at Step 5 into two Agents.\n- **Agent A** (Steps 1–4): read the form, check VIES, create the SAP vendor, request bank confirmation. It ends by handing off via `request_handover` or by putting a case on a queue that carries the SAP vendor number and supplier contact.\n- **Agent B** (case-driven, one supplier per case): checks for the signed bank letter. It uses `postpone_case` to retry later when the letter hasn't arrived, and chases the supplier on the 7-day mark. Once the letter is received, it runs Steps 6 and 8–11 and ends with `complete_case`. If chasing is exhausted, it ends with `fail_case`.\n\n**Next step:** I can invoke `aop-writer` against Build `bld_w03` (`aops/<agent-id>.md`) with this request: \"Split the AOP at Step 5 into two Agents connected via `request_handover`/queue, with the second Agent postponing until the signed bank letter arrives.\" In the meantime, vendor `100977` needs manual follow-up. Check whether the bank letter has arrived, and if so, activate payments in **SAP** yourself.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1002,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1201,
+    "thinking_tokens": 233
+  },
+  "variant": "main",
+  "wall_ms": 12527
+}

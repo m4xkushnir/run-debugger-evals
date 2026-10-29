@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.0174989,
+  "created_at": "2026-10-29T11:33:57+00:00",
+  "duration_api_ms": 13599,
+  "input_hash": "cec074b757b36bc9",
+  "key": "7c41a4945c6919c386b8223a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nNamed pattern: transient outage on the third-party portal, with no change to your artifacts needed. Under the taxonomy it is closest to *Connection failure* (upstream 5xx), but nothing about the Login or its scopes is implicated. It is not *Platform / infra failure*, because the error comes from the retailer's portal, not from Duvo.\n\n**Where it went wrong**\nThe Run failed at AOP Step 1, when it tried to open \"New ASN\". The portal returned a 504 on the first attempt [1-2] and again on the retry [3-4]. The Agent never reached Step 2, so no shipment lines were entered and nothing was submitted.\n\n**Evidence**\n- `[2] browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- `[4] browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- Your context: other Agents on other portals run normally, and the portal's status page reports \"degraded performance\" today.\n\nThe 504 comes from the portal's load balancer, so the request reached the portal. That points to a server-side problem, not a bad URL, a Login failure or a Duvo issue. The failure repeated identically across two attempts, which fits an ongoing outage better than a one-off. The Agent's last turn, \"The portal keeps timing out.\", is a symptom, not a cause.\n\n**Fix**\nRe-run the Agent (Start Work) once the portal's status page shows it has recovered. Nothing in the AOP, Login, Setup or Files caused this failure, so no change to them would have prevented it.\n\n**Next step**\nWait for the portal to recover, then re-run. If this portal is flaky often, I can invoke `aop-writer` to add a \"portal unavailable\" branch to Step 1 (for example, retry later or hand over to a human after repeated 5xx errors). That is optional hardening, not the cause of this failure.\n\nLimits of this diagnosis: the transcript shows only two tool calls. It never shows the Login being used, so I can't rule out Login problems that would have appeared after the portal recovered. I also can't tell whether this Run was queue-driven. If it was, check that the case wasn't left auto-completed with the ASN unsubmitted.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"none\", \"confidence\": 0.7}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8249,
+    "input_tokens": 2,
+    "output_tokens": 1667,
+    "thinking_tokens": 882
+  },
+  "variant": "main",
+  "wall_ms": 15412
+}

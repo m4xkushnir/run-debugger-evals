@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.0231068,
+  "created_at": "2026-10-29T11:35:33+00:00",
+  "duration_api_ms": 10390,
+  "input_hash": "28456be35269bb05",
+  "key": "cb7caf381f385e898c76426a",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action\n\nThe Run didn't error; its status is `completed`. It did exactly what the AOP told it to do. The problem is that the AOP let it cancel a EUR 62,400 PO and place a EUR 66,100 replacement with no human checkpoint. The 401-style \"symptom\" here is the user's report: a lost supplier slot and EUR 3,700 extra over a 2-day slip. The root cause is that Step 2 makes an expensive, hard-to-reverse action fully autonomous.\n\n**Where it went wrong:** Transcript turns [1]–[5], matching **AOP Step 2**.\n\n- At [1] the Agent saw the PO was 2 days late, which crossed Step 2's \"more than 1 day\" trigger.\n- It went straight to `sap.cancel_po` at [2] and `sap.create_po` at [4].\n- Nobody was asked first. Once the cancellation happened, the main supplier's slot was gone. No later step could undo that.\n\n**Evidence:**\n\n- AOP Step 2: *\"If the delivery is more than 1 day late: cancel the PO in **SAP** and reorder the same lines from the backup supplier listed in Files (\"Backup suppliers\").\"*\n- Transcript [1]: *\"PO 4500921177 (EUR 62,400) is now 2 days late. Cancelling and reordering from the backup supplier.\"*\n\n**Fix:** Change AOP Step 2 so that it does not cancel automatically. When the delivery is more than 1 day late, the Agent should use **Human in the loop** before any SAP action. That request should show:\n\n- the PO number and value\n- the new delivery date\n- the backup supplier's quoted value and the price difference\n\nThe Agent cancels and reorders only after a human approves. If the human rejects, it keeps the original PO and goes on to Step 3.\n\n**Next step:** I can invoke `aop-writer` on Build `bld_h03` (file `aops/<agent-id>.md`) with this request: \"Rewrite Step 2 to require a Human in the loop approval, showing PO value, new date, and backup price delta, before cancelling or reordering in SAP.\"\n\nA separate observation, not part of this fix: the transcript ends at [5] with no Gmail call, so Step 3 (\"Email both suppliers\") never ran. Neither supplier was notified of the cancellation or the new order. Check this directly with both suppliers. If it shows up again on other Runs, it's worth its own look.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8294,
+    "input_tokens": 2,
+    "output_tokens": 1072,
+    "thinking_tokens": 210
+  },
+  "variant": "main",
+  "wall_ms": 11522
+}

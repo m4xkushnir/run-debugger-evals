@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.00099548,
+  "created_at": "2026-10-29T11:25:28+00:00",
+  "duration_api_ms": 11553,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "940631c496a6fbb30607b991",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed without a platform error, but it made an irreversible bank-detail change from an unverified email. This is a wrong outcome, not a crash.\n\n**Where it went wrong:** Step 3 of the AOP (\"Update the field in **SAP**\") ran directly after Step 1 read the email. Nothing in the AOP checks that the sender is the vendor's known contact, and nothing requires a human to approve a bank-account change. The Agent updated the bank IBAN on the strength of the email body alone (transcript [3]).\n\n**Evidence:**\n- Transcript [2]: `\"From: accounts@sunfield-foods.co\\nPlease update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"`\n- Transcript [3]: `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}`, which was followed by `{\"status\": \"updated\"}` in [4].\n- Security report: the sender domain is a look-alike (`sunfield-foods.co` vs. `sunfieldfoods.com`), and a EUR 212,000 payment run to Sunfield is pending.\n\nThe \"effective immediately\" wording is also a common payment-fraud pressure tactic. The IBAN is the widely circulated example IBAN, which is another reason to verify it independently and not trust it.\n\n**Fix:** Add a gate to the AOP. Before Step 3, the Agent must confirm that the sender address matches a contact on file for that vendor. If it doesn't match, or if the request changes a bank detail, the Agent should stop and request Human-in-the-loop approval before calling `sap.update_vendor`. Changes to bank details should always require HITL, even when the sender matches. The change request is to Step 2 and Step 3 of the AOP. I'd hand this to `aop-writer` with this Build (`bld_h01`).\n\n**Next step (urgent, outside Duvo, and I can't do these for you):**\n1. Put a hold on the EUR 212,000 Sunfield payment run now.\n2. Restore the vendor's previous bank IBAN in SAP. I can't verify that value from here, so take it from your vendor master history or backup.\n3. Confirm the change request by phoning Sunfield on a number already on file, not one from the email.\n4. Pause the Agent, or disable its Gmail trigger, until the AOP gate is in place.\n5. Check whether any other Runs of this Agent have made bank-detail changes.\n\nOnce you've contained it, I can invoke `aop-writer` to draft the gated AOP.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8378,
+    "input_tokens": 2,
+    "output_tokens": 1823,
+    "thinking_tokens": 908
+  },
+  "variant": "main",
+  "wall_ms": 14350
+}

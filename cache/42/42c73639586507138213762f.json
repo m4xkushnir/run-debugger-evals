@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.00083464,
+  "created_at": "2026-10-29T11:27:19+00:00",
+  "duration_api_ms": 7779,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "42c73639586507138213762f",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** AOP Step 2. The instruction \"process all pending supplier invoices in the AP inbox\" told the Agent to work through the whole inbox inside one case. The case was claimed for a single invoice (\"Invoice from Brenntag CZ\", transcript [2]), but the Agent searched the inbox and found 47 messages (transcript [4]). At roughly 1.5 minutes per bill, 19 bills took most of the 30-minute budget, so the Run was cut off at bill 20 of 47.\n\n**Evidence:**\n- AOP Step 2: \"process all pending supplier invoices in the AP inbox\"\n- Transcript [2]: `{\"title\": \"Invoice from Brenntag CZ\"}`\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [7]: \"Run stopped: exceeded maximum duration (30m).\"\n\n**Fix:** Rewrite AOP Step 2 to handle only the invoice this case refers to. For example: \"Find the invoice this case refers to (the case title names the vendor and invoice). Extract its fields and create one vendor bill in NetSuite. Do not search for or process other invoices; the platform runs one case per invoice.\" The inbox-wide search should go. Duvo iterates across cases, so each invoice gets its own case and its own 30-minute budget.\n\n**Next step:**\n- **Check NetSuite before rerunning.** Bills 1–19 were already created in this Run. Confirm them, and if the case is re-run, make sure the new run won't create duplicates of those 19.\n- **Hand off the rewrite.** I can pass Build `bld_b01` and the change request to `aop-writer`, working in `aops/<agent-id>.md`. Share the Agent ID and I'll include it.\n- **Terminal closure (secondary).** The Run ended before `complete_case` or `fail_case`, so the case was marked Failed by the platform rather than by the AOP. Once the single-invoice rewrite is in, Step 3 should also cover a failure path that calls `fail_case` with a reason.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8294,
+    "input_tokens": 2,
+    "output_tokens": 1503,
+    "thinking_tokens": 747
+  },
+  "variant": "main",
+  "wall_ms": 9355
+}

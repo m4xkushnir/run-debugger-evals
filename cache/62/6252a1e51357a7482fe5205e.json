@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.007736099999999999,
+  "created_at": "2026-10-29T11:22:44+00:00",
+  "duration_api_ms": 6205,
+  "input_hash": "904fcbb04475a734",
+  "key": "6252a1e51357a7482fe5205e",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Connection failure (expired/revoked OAuth token on the Gmail Connection \"AP inbox\").\n\n**Where it went wrong** — Transcript step [1]–[2], the very first tool call, made for AOP Step 1 (\"Use **Gmail** to find the newest unread email in the AP inbox…\"). The Run never reached Steps 2–4. The Agent behaved sensibly once it hit the error; the cause is upstream of the Agent's behaviour: the Connection's authorisation had lapsed.\n\n**Evidence**\n- `[2] gmail.search_messages: ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- Context: \"Gmail Connection 'AP inbox' last authorised 2026-07-30 (91 days before this Run).\"\n\nThe `invalid_grant` response and the 91-day gap are consistent with an expired or revoked grant. I can't tell from the data given which of the two it was, and it doesn't change the fix. Because this is a user-side authorisation problem, it is not a platform/infra failure, and it would recur on every Run until fixed, independent of the case data.\n\n**Fix** — Reauthorise the **Gmail** Connection \"AP inbox\" in Setup (sign in again and grant access). Then start a new Run. If it fails again with the same 401 straight after a successful reauthentication, that would change the diagnosis to a platform issue worth raising with Duvo. Nothing in the data shows that so far.\n\n**Next step** — Reauthorise the \"AP inbox\" Connection now. Optionally, once that's done, I can invoke `aop-writer` to add a Step 1 fallback (for example, \"If Gmail returns an authorisation error, use **Human in the loop** to notify the AP owner to reauthorise the Connection, then stop\"), so a future lapse surfaces to a person rather than ending as a failed Run. That is hardening, not the fix for this failure.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8321,
+    "input_tokens": 2,
+    "output_tokens": 690,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8008
+}

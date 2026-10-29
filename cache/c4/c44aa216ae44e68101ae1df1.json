@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "N02",
+  "cost_usd": 0.0107219,
+  "created_at": "2026-10-29T11:32:49+00:00",
+  "duration_api_ms": 5288,
+  "input_hash": "1c85333d7be4398e",
+  "key": "c44aa216ae44e68101ae1df1",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Not a failure. The Run behaved exactly as the AOP specifies. The Agent followed the Step 2 early-exit branch.\n\n**Where it went wrong:** Nowhere in the Run's logic. At transcript [4], SAP reported PO-61204 as already received, so Step 2 applied: \"If it is already marked received: call `complete_case` and stop.\" The Agent did that at [6], and the case closed as Completed by the Agent. Step 3 (the Gmail email) only applies to POs that are not yet received, so skipping it was correct.\n\n**Evidence:**\n- Transcript [4]: `{\"status\": \"received\", \"received_at\": \"2026-10-27\"}`\n- AOP Step 2: \"If it is already marked received: call `complete_case` and stop.\"\n- Transcript [5]: \"PO-61204 was received on 2026-10-27. No chase needed.\"\n\n**Fix:** None is needed for the Run as it ran. If you expected a chase, the question is whether SAP's \"received\" status is wrong for this PO (for example, a partial delivery or a goods receipt booked against the wrong line). That would be a data issue in SAP, not an Agent or AOP problem. If partial receipts should still be chased, the AOP would need a rule for them. The transcript doesn't show any partial-delivery data, so I can't say that's the case here.\n\n**Next step:** Check PO-61204 in SAP and confirm whether the 2026-10-27 receipt is accurate. If it is, no action is needed. If partial receipts should trigger a chase, tell me the rule (for example, \"chase if received quantity < ordered quantity\") and I can hand the change request to `aop-writer` against Build `bld_n02`, editing `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 956,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 616,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 6929
+}

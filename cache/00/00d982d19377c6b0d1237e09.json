@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.0013084899999999998,
+  "created_at": "2026-10-29T11:28:29+00:00",
+  "duration_api_ms": 11112,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "00d982d19377c6b0d1237e09",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure. The Enterprise Browser login for the Agrofert portal expired after 55 minutes, and the AOP has no re-authentication path for that case.\n\n**Where it went wrong:** Step 3 of the AOP, the per-supplier portal loop. Message [5] shows the Agent working through portal 9 of 17 in a single serial pass. By the time it reached Agrofert, the browser session had outlived its window, and the Agent had no branch for recovery. Message [6] attempted a fresh `browser.login` call, but the transcript doesn't show a retry or a fallback. The Run ended there.\n\n**Evidence:**\n- Message [7]: `ERROR: browser session expired after 55 minutes`\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n\n**Fix:** Change one artifact: AOP Step 3. Add a rule that re-signs in to the portal when the Enterprise Browser session expires, and sets a limit on how many portals a single Run handles before it hands off the remainder. For example: \"Before each supplier portal, if the Enterprise Browser session has expired, re-run the **Login** for that portal and retry once. If the retry fails, record that supplier as unchecked and continue to the next.\" Since the 17-supplier loop is what pushed the session past 55 minutes, the fix should also cap the portal batch size per Run.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_w02` and the change request above, so it rewrites Step 3 in `aops/<agent-id>.md`.\n\nTwo things to check before you rerun:\n- **Partial state.** Message [3] already wrote the `W43` tab in Google Sheets. A rerun from Step 1 will create a duplicate, so the rerun needs to check for the existing tab first.\n- **Count mismatch.** Message [5] says \"9 of 17\", but the excerpt shows only one browser call. Earlier portal calls may have been left out of the excerpt. If the session really was valid for 9 portals, the 55-minute window may be a hard platform cap, not something the AOP alone can avoid. In that case, splitting the portal work into separate Runs is the fix, and the diagnosis would shift toward a platform limit.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 1112,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2025,
+    "thinking_tokens": 1224
+  },
+  "variant": "main",
+  "wall_ms": 12870
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0130152,
+  "created_at": "2026-10-29T11:38:35+00:00",
+  "duration_api_ms": 8242,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "0be985c05b928e118a6505fd",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode**\nWrong decomposition (primary). One Agent is carrying two Runs of work: a real-time claim-filing phase (steps 1–5) and a multi-day wait-and-follow-up phase (steps 6–14). The Run status \"stopped\" with \"idle timeout\" is the symptom, not a Connection or platform fault.\n\n**Where it went wrong**\nAt step 6 (\"Wait for the supplier's reply\"), after step 5 sent the claim. The Agent has no way to wait for days, so it polled Gmail once, found nothing, and idled until the platform stopped the Run. Steps 7–14 (3-day reminder, 7-day escalation, credit note, tracker, Slack, ServiceNow, archive) could never be reached in a single Run.\n\n**Evidence**\n- AOP: `6. Wait for the supplier's reply.` / `7. If no reply after 3 days, send a reminder.` / `8. If no reply after 7 days, escalate to the category manager.`\n- Transcript: `[4] Agent: No reply yet. I'll keep checking.` followed by `[5] System: Run stopped after idle timeout.`\n\nThe Gmail search returned `{\"count\": 0}` without error, so the Connection worked. The AOP gave no mechanism for waiting, so the timeout was inevitable.\n\nCaveat: I only have the pasted excerpt. I can't see whether the claim email was actually sent (the transcript starts after step 5), or whether this was a queue-driven Run with a case that was left unclosed. If it was, the case was settled by the platform rather than the AOP, so check its outcome too.\n\n**Fix**\nSplit the AOP at step 6 into two Agents connected by `request_handover` (or a queue):\n- **Agent A (file the claim):** steps 1–5, ending by handing the claim over to Agent B, with the supplier, delivery, and thread id.\n- **Agent B (follow up and close):** steps 6–14, started when the supplier replies or when the 3-day and 7-day timers fire, rather than waiting inside a Run. The reminder (step 7) and escalation (step 8) become separate triggered branches, each with a concrete condition.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w01`, working in `aops/<agent-id>.md`, to split the AOP at step 6 into the two Agents described above. Please share the Agent ID, or confirm the file path, so the edit lands in the right file.",
+  "usage": {
+    "cache_creation_input_tokens": 1036,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 815,
+    "thinking_tokens": 0
+  },
+  "variant": "no_json",
+  "wall_ms": 9263
+}

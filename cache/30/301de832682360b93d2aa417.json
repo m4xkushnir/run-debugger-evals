@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S02",
+  "cost_usd": 0.0117939,
+  "created_at": "2026-10-29T11:30:26+00:00",
+  "duration_api_ms": 8129,
+  "input_hash": "7df77d8d99342926",
+  "key": "301de832682360b93d2aa417",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nAOP ambiguity. The symptom is a SAP `ValidationError`. The upstream cause is that Step 2 says to enter the amount \"as shown on the invoice\", and the Agent followed that literally.\n\n**Where it went wrong**\nAt transcript turn [1]-[2], the decision point where the Agent passed the raw, formatted string to `sap.create_invoice`. This corresponds to AOP Step 2. The AOP has no instruction to convert the displayed amount (European format with a locale-specific decimal comma, thousands dot, and currency symbol) into the plain numeric value SAP expects. After the 400 at [3], the Agent also had no guidance on what to do, so it stopped at \"SAP rejected the amount.\" with no retry or terminal action.\n\n**Evidence**\n- AOP Step 2: `entering the amount as shown on the invoice`\n- Transcript [2]: `sap.create_invoice {\"amount\": \"1.234,50 €\"}`\n- Transcript [3]: `ERROR 400 ValidationError: \"amount\" must be a number`\n\n**Fix**\nChange AOP Step 2 to replace \"as shown on the invoice\" with an explicit normalization rule, for example: *\"Enter the amount as a plain number with a period as the decimal separator and no thousands separators or currency symbol (invoice shows `1.234,50 €` → enter `1234.50`). Enter the currency separately if SAP requires it.\"* A secondary improvement is to add a branch for what to do if SAP still rejects the payload (for example, use **Human in the loop** or fail the Run explicitly), but the normalization rule is the primary fix.\n\nCaveats: I only have the pasted transcript, so I'm assuming `sap.create_invoice` accepts a numeric string or number with a `.` decimal separator and takes currency separately or implicitly. Verify this against the SAP Connection's expected schema.\n\n**Next step**\nI can invoke `aop-writer` to rewrite Step 2 in `aops/<agent-id>.md` against Build `bld_s02` with the change request: \"Step 2: normalize the invoice amount to a plain decimal number (period decimal separator, no thousands separator, no currency symbol) before calling SAP.\"\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 809,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 782,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10713
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.0100579,
+  "created_at": "2026-10-29T11:26:50+00:00",
+  "duration_api_ms": 7358,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "e917f29de382009565be06e0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode** — Missing data. The AOP's Step 2 depends on the Setup input `safety_stock_days`, which was not set, and the Agent silently substituted 0. The Run status is \"completed\" because nothing errored; the outcome was wrong, not the execution.\n\n**Where it went wrong** — Transcript turn [3], at AOP Step 2. The Agent found the Setup input empty and chose to treat it as 0 instead of stopping or escalating. That removed the safety-stock term from the formula, so the order covered only forecast demand minus current stock, with no buffer. Step 2 also uses \"forecast weekly demand\", but the Snowflake result in [2] returns only `daily_demand`. The Agent computed 294 (42 × 7) in [4], so it derived the forecast on its own. That is a secondary gap and not the main cause.\n\n**Evidence**\n- Transcript [3]: \"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"\n- Transcript [4]: \"SKU-1101: 294 + 0 - 260 = 34 units.\"\n- AOP Step 2: \"Order quantity = forecast weekly demand + (daily demand × Setup input `safety_stock_days`) − current stock.\"\n\nWith any buffer, the order would have been larger. For example, 3 days would add 126 units, for 160 in total. I'm only illustrating the effect here. I don't know what value the user intended. An order of 34 units against 42 units/day of demand leaves almost no cover for any demand variance or delivery delay. That fits the Thursday stockout, though the transcript doesn't show Thursday's sales or the delivery timing, so I can't confirm it directly.\n\n**Fix** — Change the AOP (Step 2) so that an unset or empty `safety_stock_days` is not defaulted. Add a rule like: *\"If `safety_stock_days` is not set, do not calculate or submit the order. Use **Human in the loop** to ask for the value, or fail the case.\"* Separately, the user needs to set `safety_stock_days` in Setup. Both are needed, but the AOP change is what stops a silent default from happening again. Also define \"forecast weekly demand\" explicitly, for example as `daily_demand × 7`, so the Agent isn't improvising it.\n\n**Next step** — Set `safety_stock_days` in Setup to the intended value. I can then invoke `aop-writer` with Build `bld_d02`, working in `aops/<agent-id>.md`, and this change request: \"In Step 2, add an explicit guard that stops and asks via Human in the loop when `safety_stock_days` is unset, and define forecast weekly demand as daily demand × 7.\"\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8339,
+    "input_tokens": 2,
+    "output_tokens": 922,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 8929
+}

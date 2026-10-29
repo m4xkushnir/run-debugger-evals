@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.015497,
+  "created_at": "2026-10-29T11:28:44+00:00",
+  "duration_api_ms": 11789,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "0c00a85334fece06c48939e0",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nBatch / iteration leak. Step 3 makes one Run work through every underperforming supplier in a single sitting. The Enterprise Browser session expiry is the symptom, not the cause.\n\n**Where it went wrong**\nStep 3 of the AOP: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser**…\". Step 1 returned 17 suppliers under 90%, and the Run was on supplier 9 of 17 when the browser session hit its 55-minute limit. Sequential portal logins for all 17 suppliers in one Run take longer than the session lasts, so the Run was likely to fail at some supplier regardless of which portal was involved.\n\n**Evidence**\n- AOP: \"3. For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\nThis is not a Connection failure, because nothing suggests the Login or its scopes are wrong. The session simply outlived its limit because of how long the Run was. The transcript you pasted skips suppliers 1–8, so I'm inferring that they were processed successfully before the failure.\n\n**Fix**\nChange the AOP so each Run handles one supplier. Steps 1–2 (query Snowflake, build the scorecard) become a separate front-end that creates one case per underperforming supplier. The per-supplier work then becomes the single-case AOP: sign in to that one supplier's portal, download open-order status, draft the email, send it via Gmail. The platform iterates over the cases, so every Run opens a fresh browser session and stays well inside the 55-minute limit. A failure on one supplier no longer discards the work on the other 16.\n\nA second, related problem is that the AOP also spans a week-long wait (steps 5–6 \"schedule a follow-up for next week… Next week, check replies\"), and it has 11 steps across Snowflake, Sheets, Gmail, Slack and SAP. That is a wrong-decomposition signal. Splitting out the per-supplier case work fixes the immediate failure, and the follow-up cycle can be separated the same way later. The per-case AOP should also end each branch with `complete_case` / `fail_case` / `postpone_case`.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w02`, working in `aops/<agent-id>.md`, and this change request: \"Rewrite Step 3 and the steps after it so the Agent handles a single supplier per Run, with one case per supplier under 90%, and move the weekly Snowflake/Sheets scan into a separate Agent that creates those cases.\" I'd run this one change before touching anything else.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8430,
+    "input_tokens": 2,
+    "output_tokens": 1465,
+    "thinking_tokens": 496
+  },
+  "variant": "main",
+  "wall_ms": 13190
+}

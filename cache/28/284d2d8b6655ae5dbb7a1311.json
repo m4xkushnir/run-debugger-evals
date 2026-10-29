@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.0013448899999999998,
+  "created_at": "2026-10-29T11:33:15+00:00",
+  "duration_api_ms": 11233,
+  "input_hash": "82cebd8c79c09140",
+  "key": "284d2d8b6655ae5dbb7a1311",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Connection failure. DPD returned `429 Too Many Requests` with `Retry-After: 600`, and the AOP has no branch for it.\n\n**Where it went wrong:** Step 2 of the AOP says \"Get the latest status from the **DPD** Connection\" and has no fallback. At transcript [4] the rate limit came back, and at [5] the Agent stopped with \"I can't get the status.\" It made no terminal call (`postpone_case` or `fail_case`) and did not complete the case. That is why the case shows `Failed` with no reason: the Run errored, so the platform marked the case failed rather than the AOP deciding its outcome.\n\n**Evidence:**\n- [4] `ERROR 429 Too Many Requests. Retry-After: 600`\n- [5] `Agent: DPD is rate limiting. I can't get the status.`\n\n**Second issue to check:** The tracking number changed between [2] and [3]. The claim returned `\"0953 4412 8890\"`, but the call sent `\"09534412 8890\"`. That is a different string, so the 429 may have been returned for a malformed query. Retrying with the correct number is still needed, but the AOP should also tell the Agent to pass the tracking number exactly as claimed.\n\n**Fix:** Add one branch to Step 2 of the AOP: *\"If the DPD call returns 429, do not complete the case. Call `postpone_case` with the reason 'DPD rate limited, Retry-After 600s' and stop. Pass the tracking number exactly as returned by `claim_case`, with no reformatting.\"*\n\n**Recurrence:** Black Friday is queueing about 1,900 cases and roughly 30% of Runs are hitting the same limit. The AOP fix makes these cases postpone instead of failing, but the underlying cause is concurrency against DPD's quota. Whether the queue has a concurrency cap is a platform setting, so raise it with Duvo support rather than changing the AOP for it.\n\n**Next step:** I can hand this to `aop-writer` with the Build `bld_g02` and ask for the 429 postpone branch in Step 2 and the exact-tracking instruction. Separately, ask Duvo support whether the queue can cap concurrent DPD calls during the Black Friday window.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 934,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2169,
+    "thinking_tokens": 1383
+  },
+  "variant": "main",
+  "wall_ms": 12736
+}

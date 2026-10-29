@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.0095422,
+  "created_at": "2026-10-29T11:23:37+00:00",
+  "duration_api_ms": 8222,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "31e9df6a8f0ca83d7c708f4b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nAOP ambiguity. The Run itself completed cleanly with no tool errors. The wrong outcome came from a vague decision point in the AOP.\n\n**Where it went wrong**\nTranscript turn [3], at AOP Step 2. The AOP says \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\" It gives no definition of \"significant\", no cosmetic-versus-functional distinction, and no refund percentage. The 15% cosmetic policy appears nowhere in the AOP. The Agent had to guess, and it guessed full refund. Nothing in the AOP required a human check before Step 3 either, so a EUR 480 refund went out unreviewed.\n\n**Evidence**\n- AOP: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent's own reasoning describes a \"3 cm surface scratch on one leg\" and then calls it significant. That reads as a guess paraphrasing the vague AOP language, not the application of a rule.\n\n**Fix**\nReplace the judgment clause in Step 2 with concrete rules that encode the policy. For example: \"If the damage is cosmetic only (scratches, scuffs, small marks that do not affect function or structure), refund 15% of the item price. If the damage is structural or the item is unusable, refund in full.\" The wording of the cosmetic and structural definitions and any other tiers should come from the user's actual policy.\n\nA secondary hardening step the user may consider, but which is not the root cause: gate any full refund above a set amount on Human in the loop. I am not treating that as a second fix, since the clear policy rule alone would have produced EUR 72.00 here.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_a01`, working in `aops/<agent-id>.md`, and the change request: \"rewrite Step 2 to replace the 'use your judgment' refund decision with a rule: cosmetic damage gets a 15% refund, structural or unusable damage gets a full refund.\" Please confirm the structural-damage rule and whether you want the amount-based Human in the loop gate included.\n\nOne caveat: the transcript shows the Agent describing the photos but no tool call that loaded them, so I cannot verify from the transcript how the photos were read. That does not change the diagnosis, since the missing rule is what let a cosmetic scratch become a full refund.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 870,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12517
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H02",
+  "cost_usd": 0.00088262,
+  "created_at": "2026-10-29T11:25:51+00:00",
+  "duration_api_ms": 9138,
+  "input_hash": "89b60f1887533656",
+  "key": "13019ce3cc8868401391b361",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run completed cleanly, so the platform didn't fail. The AOP let the Agent push a 30% markdown to 140 stores (5,320 price updates) with no human checkpoint and no sanity check on the recommendation it was acting on.\n\n**Where it went wrong:** Step 1 to Step 2 of the AOP. Step 1 reads the recommendation and Step 2 applies it, with nothing between them. The bad recommendation row passed straight through to the Pricing system at transcript turn [3].\n\n**Evidence:**\n- Transcript [2]: `{\"rows\": 38, \"markdown_pct\": 30}`. The Agent took the single `markdown_pct` value and used it without any check.\n- Transcript [3]: `pricing.apply_markdown {\"category\": \"Outdoor furniture\", \"pct\": 30, \"stores\": \"all (140)\"}`. The scope was hardcoded to all stores in one call.\n- AOP Step 2: \"Apply the recommended markdown in the **Pricing** system for all stores.\" No threshold, no approval, no check on the value.\n\nThe transcript doesn't show which row was bad, so I can't name the faulty value. What's clear is that the Agent had no step that would have stopped a bad value before it went live.\n\n**Fix:** Add a Human-in-the-loop gate to Step 2 of the AOP. Before calling Pricing, the Agent should post the category, the markdown percentage, the store count, and the number of price changes to the user, then wait for approval. Without approval, it should stop and not apply anything. This is a change to one artifact, the AOP.\n\n**Next step:**\n- **Right now:** check the Pricing system for the 5,320 price updates from run_h02 and revert or correct them. That's outside this skill, and the markdowns are already live.\n- **For the AOP:** I can hand off to `aop-writer` with build `bld_h02` and the change request \"add a HITL approval gate before Step 2 showing category, percentage, and store count.\" I'll need the Agent ID to point it at `aops/<agent-id>.md`.\n\n```json\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8342,
+    "input_tokens": 2,
+    "output_tokens": 1598,
+    "thinking_tokens": 857
+  },
+  "variant": "main",
+  "wall_ms": 12222
+}

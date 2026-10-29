@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S01",
+  "cost_usd": 0.00081025,
+  "created_at": "2026-10-29T11:30:08+00:00",
+  "duration_api_ms": 8422,
+  "input_hash": "1a25899d7045e182",
+  "key": "92d5c542dbce69e6dbd8154c",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing data. The AOP's Setup input `alert_channel` was empty, and the Agent posted anyway.\n\n**Where it went wrong:** Step 2 of the AOP, \"Post an alert to the store's channel: the Setup input `alert_channel`.\" At transcript turn [1] the Agent read `alert_channel = \"\"`. It did not stop or ask for the value. At turn [2] it sent `slack.post` with `\"channel\": \"#\"`, a placeholder derived from the empty string.\n\n**Evidence:**\n- Transcript [1]: `Setup inputs: alert_channel = \"\".`\n- Transcript [2]: `slack.post {\"channel\": \"#\", \"text\": \"SKU 40221 out of stock at CZ-018\"}`\n- Transcript [3]: `{\"ok\": false, \"error\": \"channel_not_found\"}`\n\nThe Slack error is the end of the chain, not its origin. Slack correctly rejected a channel name that was never set.\n\n**Fix:** Set the Setup input `alert_channel` to the store team's Slack channel (for example `#cz-018-store`) and re-run. This is a Setup change, not an AOP change.\n\n**Ruled out:**\n- **Connection failure:** You said the Slack Connection posts fine from other Agents, so the Connection is not the cause.\n- **Platform / infra failure:** The error reproduces from a known input problem and has a clear upstream cause.\n\n**Caveat to check before re-running:** Step 2 reads the channel from one Setup input, but the run input carries the store, so every store's alert would go to the same channel. If this Agent serves more than one store, a single `alert_channel` will not reach each store team. In that case the channel needs to be looked up per store, for example from a store-to-channel mapping in a File. That is a design change, and I can hand it to `aop-writer` if it applies.\n\n**Also worth noting:** The AOP has no branch for an empty or missing `alert_channel`, and it has no terminal action (`complete_case` / `fail_case`) on that path. Adding a guard such as \"if `alert_channel` is empty, `fail_case` with reason 'alert_channel not configured'\" would make this failure visible in the Queue instead of silently posting garbage. I'd treat that as a follow-up rather than part of the main fix.\n\n**Next step:** Set `alert_channel` in Setup and re-run `run_s01`'s equivalent input. If you want the empty-input guard added to the AOP, I can hand this Build (`bld_s01`) to `aop-writer` with that change request.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8205,
+    "input_tokens": 2,
+    "output_tokens": 1456,
+    "thinking_tokens": 571
+  },
+  "variant": "main",
+  "wall_ms": 10037
+}

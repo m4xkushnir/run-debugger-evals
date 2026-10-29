@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "W01",
+  "cost_usd": 0.0322918,
+  "created_at": "2026-10-29T11:36:01+00:00",
+  "duration_api_ms": 11514,
+  "input_hash": "e862250e1e95dcb7",
+  "key": "56f8fef676da285571df8efa",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nWrong decomposition. One Agent is doing the work of two. Steps 1–5 are a real-time task: read the claim, look it up, and send the email. Steps 6–14 cover a multi-day wait and the follow-up cycle. A single Run can't stay alive across a 3- to 7-day wait, so the Run sat idle until the platform stopped it.\n\n**Where it went wrong**\nTurn [1] is where the Agent reaches AOP Step 6 (\"Wait for the supplier's reply\"). The work before that point succeeded: the claim was sent. At turns [2]–[4] the Agent polls Gmail, finds nothing, and decides to \"keep checking.\" The Run has no way to wait days for the reply, so it hits the idle timeout at [5].\n\nThe timeout is the symptom. The root cause is that the AOP puts a wait and reminder cycle inside one Run. Steps 7, 8 and 9–14 could never have run in this Run. The 3-day reminder and 7-day escalation are effectively dead code.\n\nThis is not a platform failure. The idle timeout behaved as intended, and no retry would get past Step 6.\n\n**Evidence**\n- AOP: \"6. Wait for the supplier's reply.\" / \"7. If no reply after 3 days, send a reminder.\"\n- Transcript: \"[4] Agent: No reply yet. I'll keep checking.\" → \"[5] System: Run stopped after idle timeout.\"\n\n**Fix**\nSplit the AOP at Step 6 into two Agents:\n- **Agent A (Send claim):** Steps 1–5. It ends after sending the email and hands the claim off, with the supplier, the SAP delivery reference and the Gmail thread, by queuing a case for Agent B or via `request_handover`.\n- **Agent B (Follow up claim):** works one claim case per Run. Each Run checks the thread once and then does one of three things:\n  - Reply found: Steps 9–14, then `complete_case`.\n  - No reply and the case is 3 or more days old: send the reminder, then `postpone_case`.\n  - No reply and the case is 7 or more days old: escalate to the category manager, then `request_handover` or `fail_case`.\n\n  Every branch must end in a terminal action.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_w01` and this change request: \"Split this AOP at Step 6 into two Agents. One sends the supplier claim (Steps 1–5) and queues a follow-up case. The other handles one claim case per Run: check for a reply, then remind at 3 days, escalate at 7 days, or process the credit (Steps 9–14), with a terminal action on every branch.\" It would work in `aops/<agent-id>.md`.\n\nBefore then, note that the claim to Mlékárna Polná has already gone out. Someone needs to watch for the reply manually until Agent B exists.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1032,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1128,
+    "thinking_tokens": 138
+  },
+  "variant": "main",
+  "wall_ms": 12722
+}

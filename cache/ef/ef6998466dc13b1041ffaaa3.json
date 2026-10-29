@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "T03",
+  "cost_usd": 0.00091565,
+  "created_at": "2026-10-29T11:25:07+00:00",
+  "duration_api_ms": 8940,
+  "input_hash": "d0dabf96580dd687",
+  "key": "ef6998466dc13b1041ffaaa3",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing terminal closure\n\n**Where it went wrong:** Step 2's fallback branch. When Packeta returned the 422 at transcript [4], the AOP's only instruction was to post to Slack. It named no terminal action. The Agent posted at [5], wrote a summary at [7], and ended the Run without calling `complete_case`, `fail_case`, `postpone_case`, or `request_handover`. Step 3 (email) was skipped, and step 4 (`complete_case`) was never reached. The Run ended cleanly, so the platform auto-completed the case and left the outcome to evaluation, where it is stuck.\n\n**Evidence:**\n- [4] `ERROR 422: \"Return service not available for destination SK.\"`\n- [7] `Agent: Label could not be created; I alerted #returns-ops.`\n- Case state: `Completed — reason: auto-completed on clean run end; evaluation: stuck in evaluating`\n\nThe 422 is a real carrier limitation for Slovakia, so it is not a Connection or auth problem. The Slack alert is a reasonable human handoff, but nothing in the platform records that the case needs a human. The case looks completed in the Queue while the customer has no label and no email.\n\n**Fix:** In Step 2's fallback, after the Slack post, add a terminal action: \"Then call `request_handover` with the reason 'no return label for destination [country]' so the case is assigned to a human.\" This is one change to one branch of the AOP. It also gives the customer-facing gap an owner.\n\n**Next step:** Hand Build `bld_t03` and this change request to `aop-writer`, working in `aops/<agent-id>.md`, to add the terminal action to the Step 2 fallback. I haven't edited the AOP. You may also want to check case `case_t03` manually, since its outcome is still stuck in evaluation.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8345,
+    "input_tokens": 2,
+    "output_tokens": 1664,
+    "thinking_tokens": 1009
+  },
+  "variant": "main",
+  "wall_ms": 11937
+}

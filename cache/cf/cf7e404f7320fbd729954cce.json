@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0098966,
+  "created_at": "2026-10-29T11:23:56+00:00",
+  "duration_api_ms": 11526,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "cf7e404f7320fbd729954cce",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed with no technical error. It produced the wrong outcome because Step 3 has no concrete threshold.\n\n**Where it went wrong**\nStep 3 of the AOP: \"Flag any line where the charge seems too high compared with the rate card.\" The Agent had no rule for what counts as too high, so it judged each line ad hoc. At transcript turns [1] and [2] it applied inconsistent logic: it flagged a +1.9% variance and excused a +9.0% variance with an unsupported rationale about fuel surcharges.\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"Seems too high, flagging.\" (40 CZK, +1.9%)\n- Transcript [2]: \"Fuel surcharges vary, this seems reasonably close, not flagging.\" (2,600 CZK, +9.0%)\n\nThe model's wording (\"seems too high\", \"seems reasonably close\") mirrors the AOP's \"seems too high\". It is guessing, not applying a rule. The sheet write at [3]-[4] succeeded (`\"status\": \"ok\"`), so the Connection is not at fault. It just recorded the wrong flags.\n\n**Fix**\nReplace Step 3 of the AOP with an explicit rule built on a concrete threshold. For example: \"For each line, compute charged minus rate card amount. If the difference is greater than X% of the rate or greater than Y CZK, flag it. Otherwise don't flag. Do not discount differences for fuel surcharges unless the rate card lists a surcharge for that lane.\" The thresholds X and Y are business decisions I can't infer from this transcript. The user needs to choose them, and should also say whether fuel surcharges are legitimately allowed on top of the rate card.\n\n**Next step**\nChoose X and Y (and the fuel surcharge policy), then I can invoke `aop-writer` with Build `bld_f02` and the change request \"rewrite Step 3 to flag lines using an explicit percentage and/or absolute CZK threshold, with no discretionary exceptions\". The AOP file to edit is `aops/<agent-id>.md`. I don't have the agent id in this paste, so that path needs filling in.\n\nCaveats: this is based only on the pasted AOP and transcript. I haven't seen the rate card contents, so I can't verify whether the 2,100 and 29,000 CZK rates or any surcharge entries are correct. Step 4 also writes only a `flags` list, so passing non-flagged lines is not covered by this diagnosis.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8326,
+    "input_tokens": 2,
+    "output_tokens": 906,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 13970
+}

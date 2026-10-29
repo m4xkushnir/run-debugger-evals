@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G04",
+  "cost_usd": 0.0382078,
+  "created_at": "2026-10-29T11:37:23+00:00",
+  "duration_api_ms": 14149,
+  "input_hash": "be50b127cb1a76d8",
+  "key": "707319e3ddd7de118f3362de",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Missing terminal closure. The Gmail 503 is the trigger, but the damage came from the AOP having no failure branch after a step that can't safely be repeated.\n\n**Where it went wrong**\n- **Transcript [5]–[7]:** The NetSuite bill posted successfully at [4]. Then `gmail.send_message` returned a transient 503. At [7] the Agent only noted the error and the Run ended. It never called `fail_case`, `postpone_case` or `request_handover`.\n- **AOP Steps 3–4:** Step 3 has no \"if the email fails\" branch, and Step 4 (`complete_case`) is the only terminal action. Because the AOP never closed the case, the platform did: it settled it as Failed with no reason.\n- **The real cost:** A bare \"Failed\" case gave no sign that the bill was already posted. The AP team reasonably re-ran it, and Step 2 posted a duplicate bill.\n\n**Evidence**\n- AOP: \"3. Email the supplier the payment date via **Gmail**. 4. Call `complete_case`.\"\n- Transcript: \"[4] Tool result ← netsuite.post_bill: {\"status\": \"posted\"}\" … \"[6] … ERROR 503 Service Unavailable: backend error, try again later\" … \"[7] Agent: Email failed with a temporary Gmail error.\"\n\n**Why this isn't a Connection or platform problem**\n- A 503 \"try again later\" is a temporary error from Google's side, not an expired or under-scoped Gmail Connection. Nothing in your Connection Setup needs to change.\n- It's a single upstream error from Gmail, not a repeating Duvo error, so there's nothing to escalate to Duvo.\n- The thing to fix is that the AOP left the case in a state that invited a duplicate posting.\n\n**Fix**\nAdd a failure branch to Step 3 of the AOP:\n\n> *If the Gmail send fails, call `fail_case` with the reason \"Vendor bill for [invoice] already posted in NetSuite; supplier email NOT sent — send the email manually, do not re-run.\"*\n\nThis way the case records the partial completion, and nobody re-runs it blind.\n\nI deliberately didn't suggest `postpone_case` here. A retry would run Step 2 again and post another duplicate, unless Step 2 were first changed to check for an existing bill. That would be a second, separate change.\n\n**Next step**\n- I can hand this to `aop-writer` to rewrite Step 3, working from Build `bld_g04` in `aops/<agent-id>.md`.\n- Separately, the AP team should void the duplicate vendor bill for INV-5512 in NetSuite and email the supplier manually.\n\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 979,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1445,
+    "thinking_tokens": 510
+  },
+  "variant": "main",
+  "wall_ms": 15339
+}

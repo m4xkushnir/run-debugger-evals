@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00081612,
+  "created_at": "2026-10-29T11:39:24+00:00",
+  "duration_api_ms": 11746,
+  "input_hash": "086079e1976a5bd5",
+  "key": "6be628b57c21cdd5888c0856",
+  "model": "haiku",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "**Failure mode:** Not a failure. The Run is paused on a pending Human-in-the-loop request. Its status is `waiting`, not failed.\n\n**Where it went wrong:** Nothing went wrong in the AOP. Step 2 fired as written. The amount, EUR 1,850, exceeds the EUR 1,000 threshold, so the Agent requested approval at [2] and the request is still open. The Run has been blocked since then, which matches \"stuck since yesterday\": no one has answered the question.\n\n**Evidence:**\n> [2] Tool call → human_in_the_loop.request {\"question\": \"Approve credit note EUR 1,850 for Hotel Praha? (yes/no)\"}\n> [3] Tool result ← human_in_the_loop.request: {\"status\": \"pending\"}\n\n**Fix:** No change to the AOP, Connections, or Setup is needed. Someone with approval authority needs to answer the pending question for Hotel Praha's EUR 1,850 credit note. Check the credit request before answering, because a \"yes\" makes Step 3 issue the credit note in NetSuite and email the customer.\n\n**Next step:**\n- Confirm that the approver is actually seeing the request. If the request was routed to someone who isn't watching for it, or no one in the team has it, the Agent will keep waiting. Fix the routing or the approver assignment.\n- If the request is visible to the right person and the Run still doesn't advance after they answer, the cause is more likely a platform issue. That would be a new diagnosis, so send me the Run's status after the answer. I can't see live Run state from here, so I'm relying on the `waiting` status and transcript you provided.",
+  "usage": {
+    "cache_creation_input_tokens": 886,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 1134,
+    "thinking_tokens": 590
+  },
+  "variant": "no_json",
+  "wall_ms": 12900
+}

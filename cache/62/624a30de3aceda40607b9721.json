@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D02",
+  "cost_usd": 0.013557900000000001,
+  "created_at": "2026-10-29T11:26:49+00:00",
+  "duration_api_ms": 7464,
+  "input_hash": "e0eafeaadf9b2ea5",
+  "key": "624a30de3aceda40607b9721",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Missing data. The AOP's Step 2 depends on the Setup input `safety_stock_days`, which was not set. The Run status is \"completed\", so this is a wrong outcome, not a technical failure.\n\n**Where it went wrong** — Transcript turn [3]: the Agent found `safety_stock_days` unset and silently defaulted it to 0. That removed the safety buffer from the Step 2 formula, so the order covered exactly one week of demand against zero margin. The AOP has no instruction for an empty input, so the Agent improvised and carried on.\n\n**Evidence**\n- Transcript [3]: `\"Setup inputs: safety_stock_days = (not set). Treating it as 0.\"`\n- Transcript [4]: `\"SKU-1101: 294 + 0 - 260 = 34 units.\"`\n- AOP Step 2: `\"Order quantity = forecast weekly demand + (daily demand × Setup input safety_stock_days) − current stock.\"`\n\nWith 42 units/day of demand and 260 in stock, the store had about 6 days of cover. Any delay or demand uptick left no buffer, which is consistent with the Thursday stock-out. A non-zero buffer (even 3 days = 126 units) would have produced a much larger order.\n\nOne caveat: the transcript shows the weekly demand figure (294) but not how it was derived. Step 1 reads 28-day sales, while the query result returns only `daily_demand`, so 294 appears to be 42 × 7. I can't tell from this transcript whether the order would have covered Thursday even with a buffer, since lead time and delivery timing aren't shown.\n\n**Fix** — Add a guard to Step 2 of the AOP so a missing `safety_stock_days` stops the Run rather than defaulting silently, e.g.: *\"If Setup input `safety_stock_days` is empty, do not calculate or submit an order. Use **Human in the loop** to ask for the value, or end the case with `fail_case` stating the input is missing.\"* Separately, the owner should set a real value for `safety_stock_days` in Setup, since the guard only prevents recurrence of the silent default.\n\n**Next step** — Set `safety_stock_days` in the Agent's Setup now so the next weekly order includes a buffer. I can then invoke `aop-writer` with Build `bld_d02` and the Step 2 change request above, to edit the AOP in `aops/<agent-id>.md`. Also check other stores' recent orders from this Agent, since any Run that used the unset input will have under-ordered the same way.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"setup_or_file\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 1000,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 882,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9741
+}

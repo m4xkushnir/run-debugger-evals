@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A01",
+  "cost_usd": 0.0105222,
+  "created_at": "2026-10-29T11:23:42+00:00",
+  "duration_api_ms": 8395,
+  "input_hash": "6abe2a8871b4c0de",
+  "key": "53097d7d17f5a115ba64a60b",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nAOP ambiguity. The Run itself completed cleanly, but the outcome was wrong because the AOP left the refund decision to the Agent's judgment.\n\n**Where it went wrong**\nTranscript turn [3], at AOP Step 2 (\"Look at the customer's photos\"). The Agent had to choose between a full and a partial refund, and the AOP gave no threshold, no percentage and no definition of \"significant\" or \"cosmetic\". The Agent filled that gap with its own reading, and Steps 3 and 4 then carried out the wrong amount (turns [4] and [6]) without any error.\n\n**Evidence**\n- AOP Step 2: \"If the damage looks significant, use your judgment on whether to refund in full or offer a partial refund.\"\n- Transcript [3]: \"The photos show a 3 cm surface scratch on one leg. It looks significant enough to the customer, so I'll refund in full.\"\n\nThe Agent's own wording shows it judged \"significant\" from the customer's point of view, not from a policy. The 15% cosmetic-damage rule from your report appears nowhere in the AOP, so the Agent had no way to apply it.\n\nTwo secondary observations, which I'm not treating as separate root causes:\n- Step 3 has no cap or HITL gate on the refund amount. The Stripe refund of EUR 480.00 went through unreviewed. That would limit the damage if a threshold were ever misapplied, but the missing threshold is what caused this failure.\n- The transcript shows no photo-viewing tool call between [2] and [3], so I can't confirm from this excerpt how the Agent saw the photos. Don't read this as evidence about the cause. I only have the excerpt you pasted.\n\n**Fix**\nReplace the judgment call in Step 2 with explicit rules. For example:\n- *If the damage is cosmetic only (surface scratch, scuff, no structural or functional impact): refund 15% of the item price.*\n- *If the damage is structural or makes the item unusable: refund in full.*\n- *If it is unclear which applies: use **Human in the loop** before issuing the refund.*\n\nPlease confirm the policy's exact definition of \"cosmetic\" and what counts as full-refund damage, since I only have the 15% figure from your report.\n\n**Next step**\nI can invoke `aop-writer` to rewrite Step 2 (and add the HITL branch), working from Build `bld_a01` in `aops/<agent-id>.md`. The change request would be: \"Replace the 'use your judgment' refund decision in Step 2 with a 15%-for-cosmetic-damage rule, full refund for structural damage, and a HITL checkpoint when unclear.\" Separately, you may want to review the EUR 480 refund already issued on order #88213 with the customer, since this diagnosis does not reverse it.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8382,
+    "input_tokens": 2,
+    "output_tokens": 968,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10883
+}

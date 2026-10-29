@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S03",
+  "cost_usd": 0.0008793799999999999,
+  "created_at": "2026-10-29T11:30:37+00:00",
+  "duration_api_ms": 9085,
+  "input_hash": "bc70aa6a537384b5",
+  "key": "af8b428d9722f3c4d234be8a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP asks the Agent to reconcile the whole batch of unmatched lines in one Run. The Agent did what the wording said: it started matching all 611 lines against NetSuite in a single Run (transcript [3]). It had matched 230 when the 30-minute limit stopped it (transcript [4]–[5]). Step 3, the Slack summary, never ran.\n\n**Evidence:**\n- AOP Step 2: \"Reconcile **all unmatched lines** in the statement against open invoices in **NetSuite**.\"\n- Transcript [3]: \"611 unmatched lines. Matching each against NetSuite.\"\n- Transcript [4]: \"Matched 230 of 611.\"\n\nThe rate is roughly 230 lines per 30 minutes, so the full batch would need about 80 minutes. That's an estimate from the partial count, but it's enough to show the Run could never finish within the limit. Raising the limit would only delay the failure. The platform didn't break; the AOP asked for work that doesn't fit in one Run.\n\n**Fix:** Rewrite Step 2 so each Run handles one statement line, with the platform iterating across lines. For example: \"Match the single statement line you were given against open NetSuite invoices by amount and reference. If exactly one invoice matches, record the match. If none or several match, route the line to Human in the loop.\" The Slack summary is a separate concern. Because it aggregates across lines, it needs its own home, such as a separate step or a separate Agent that reads the results once the per-line Runs finish. That split is a design decision for you, not something I'd decide here.\n\n**Next step:** I can hand this to `aop-writer` with the Build `bld_s03` and the change request above, so it rewrites Step 2 in the Agent's AOP file. Tell me the Agent ID or file path if you want it edited in place. Let me know too whether you want the summary step moved to its own Agent.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8218,
+    "input_tokens": 2,
+    "output_tokens": 1594,
+    "thinking_tokens": 899
+  },
+  "variant": "main",
+  "wall_ms": 10663
+}

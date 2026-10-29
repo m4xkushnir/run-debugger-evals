@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H03",
+  "cost_usd": 0.00129639,
+  "created_at": "2026-10-29T11:26:12+00:00",
+  "duration_api_ms": 12107,
+  "input_hash": "28456be35269bb05",
+  "key": "57b56e202ea1712b551e78ec",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action.\n\n**Where it went wrong:** AOP Step 2, at transcript [1]–[4]. The Agent cancelled a EUR 62,400 PO in SAP (irreversible, and it cost the main supplier's slot) and immediately created a replacement at EUR 66,100 with the backup supplier. The AOP has a concrete lateness threshold (more than 1 day), so the trigger was met correctly. What's missing is any check on the cost of the replacement or any pause for a human before the cancel.\n\n**Evidence:**\n- AOP Step 2: \"cancel the PO in **SAP** and reorder the same lines from the backup supplier listed in Files\"\n- Transcript [4]: `sap.create_po {\"supplier\": \"Backup: Nordpack AB\", \"value_eur\": 66100}`, against the original PO value of EUR 62,400 in [1]. The difference is EUR 3,700, which matches the user's report.\n\nThe Run's status is \"completed\" because no tool call errored. The wrong outcome came from the AOP permitting an irreversible, high-value cancel-and-reorder with no price comparison and no human confirmation.\n\n**Fix:** In Step 2, before the cancel, add a price check: *\"If the backup supplier's total is higher than the original PO value, stop and use Human in the loop to confirm before cancelling or reordering.\"* This makes the cost increase a human decision instead of an automatic one.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_h03`, the change request above, and the AOP file `aops/<agent-id>.md`.\n\nTwo things to note separately, since they aren't the cause of the EUR 3,700 loss:\n- Step 3 (emailing both suppliers) never ran. The transcript has no Gmail call, and the Run ended after the reorder. Fold this into the same rewrite if you want it fixed.\n- The transcript doesn't show the Agent reading the \"Backup suppliers\" file, so I can't confirm where the Nordpack pricing came from.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8319,
+    "input_tokens": 2,
+    "output_tokens": 2426,
+    "thinking_tokens": 1703
+  },
+  "variant": "main",
+  "wall_ms": 14415
+}

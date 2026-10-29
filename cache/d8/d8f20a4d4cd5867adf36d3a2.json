@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.029897000000000003,
+  "created_at": "2026-10-29T11:37:17+00:00",
+  "duration_api_ms": 14197,
+  "input_hash": "cec074b757b36bc9",
+  "key": "d8f20a4d4cd5867adf36d3a2",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure: an upstream 5xx from the retailer's portal. This is not a Duvo platform failure. The portal's own load balancer served the 504, and the portal's status page reports \"degraded performance\" today. Other Agents on other portals ran normally, so the outage is on the Tesco Partner Toolkit side.\n\n**Where it went wrong**\nThe Run failed at AOP Step 1 (\"open 'New ASN'\"), transcript turns [1]–[4]. The Agent retried the same call once with no wait, got the same 504, and stopped at [5] without a defined outcome.\n\nThe outage itself isn't something you can fix. The underlying problem is that the AOP has no branch for \"portal unavailable.\" Step 1 assumes the portal is reachable, so the Agent improvised a retry and then ended the Run as a generic failure. The AOP should define how long to wait, how many times to retry, and how to end the Run with a clear reason.\n\n**Evidence**\n- Transcript [2] and [4]: `ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- AOP Step 1: `Use **Enterprise Browser** with the Login **Tesco Partner Toolkit** to open \"New ASN\".` It has no instruction for when the portal doesn't respond.\n\n**Fix**\nAdd a fallback branch to AOP Step 1: *If the portal returns a timeout or 5xx error, wait 5 minutes and retry, up to 3 attempts. If it still fails, stop and end the Run as failed with the reason \"Supplier portal unavailable (5xx), ASN not submitted,\" including the error text.* Unattended Runs during portal outages will then retry sensibly and fail with a clear, actionable reason instead of a bare 504.\n\nA side note, not part of this fix: the Agent called `browser.open` with `\"url\": \"New ASN\"`, a page name rather than an address. The request still reached the portal, so this didn't cause the failure. If future Runs mis-navigate, consider giving Step 1 the portal's real address.\n\n**Next step**\n1. **Now:** start the Run again (Start Work) once the portal's status page clears. No change to the Build, Login, or Setup is needed for this ASN to go through.\n2. **To prevent recurrence:** I can hand this to `aop-writer` with Build `bld_g03` and the request \"add a timeout/5xx retry-then-fail branch to Step 1,\" working in `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"aop_change\", \"confidence\": 0.7}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8245,
+    "input_tokens": 2,
+    "output_tokens": 1412,
+    "thinking_tokens": 552
+  },
+  "variant": "main",
+  "wall_ms": 15339
+}

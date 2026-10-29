@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.0221256,
+  "created_at": "2026-10-29T11:35:46+00:00",
+  "duration_api_ms": 11230,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "bd294e91a693bd62a8c04708",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "The Run didn't error, but it produced the wrong outcome. It posted INV-7731 to NetSuite with a placeholder cost center, `\"TBD\"`, then closed the case as a success.\n\n**Failure mode**\nMissing data. The AOP assumes every case carries a `cost_center` and has no branch for when it's absent. The Agent filled the gap with a placeholder and carried on.\n\n**Where it went wrong**\n- The decision point is transcript turn [3], right after `claim_case` returned at [2].\n- The case payload had `invoice`, `amount_eur` and `supplier`, but no `cost_center`.\n- AOP Step 2 has no instruction for that situation, so the Agent improvised.\n- The improvisation went through at [4]–[5], and Step 3's `complete_case` at [6] marked a bad posting as Completed.\n- The Agent did close the case itself, so this isn't missing terminal closure. The closure was simply the wrong one for this branch.\n\n**Evidence**\n- AOP Step 1: *\"Call `claim_case` to get the invoice; it carries amount, supplier, and `cost_center`.\"*\n- Transcript [3]: *\"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"*\n\n**Fix**\nChange AOP Step 2 to handle the empty case explicitly:\n\n> *If the case has no `cost_center`, do not post to NetSuite. Call `fail_case` with the reason \"missing cost_center\".*\n\nUse `postpone_case` instead if cost centers are expected to arrive later. Either way, the Agent never posts to the ledger with a placeholder value.\n\n**Next step**\nI can hand this to `aop-writer` with three things:\n- the Build `bld_d03`\n- the change request: \"rewrite Step 2 to stop and `fail_case` when the case has no `cost_center`, instead of posting\"\n- the AOP file to edit, `aops/<agent-id>.md`\n\nSeparately, INV-7731 is already posted in NetSuite against cost center `TBD` and needs a manual correction there. It's also worth checking whatever feeds this queue, since this case arrived without a field the AOP treats as guaranteed.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8288,
+    "input_tokens": 2,
+    "output_tokens": 1023,
+    "thinking_tokens": 262
+  },
+  "variant": "main",
+  "wall_ms": 12344
+}

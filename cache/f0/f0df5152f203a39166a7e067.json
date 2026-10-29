@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S04",
+  "cost_usd": 0.007854,
+  "created_at": "2026-10-29T11:31:04+00:00",
+  "duration_api_ms": 10280,
+  "input_hash": "f214809918538af8",
+  "key": "f0df5152f203a39166a7e067",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode**\nBatch / iteration leak (taxonomy #6). The 429 from Shopify is only the symptom.\n\n**Where it went wrong**\nStep 2 of the AOP told the Agent to walk the whole catalogue instead of looking up the requested products. At transcript turn [1] the Agent took that literally (\"Checking the catalogue: 2,300 SKUs\") and started iterating. By turn [5] it had made about 180 sequential `get_inventory` calls for a request covering 3 products. That exceeded Shopify's limit of 2 calls per second, and the Run died at turn [6]. The Agent also never gets to Step 3, so no reply was sent to the customer.\n\n**Evidence**\n- AOP Step 2: \"For each SKU in the catalogue, check stock in **Shopify** and include it in the quote if it matches the request.\"\n- Transcript [1]: \"Checking the catalogue: 2,300 SKUs.\"\n- Transcript [6]: \"ERROR 429 Too Many Requests: Exceeded 2 calls per second for api client. Retry-After: 30\"\n- Your context: the customer asked about 3 products.\n\n**Fix**\nRewrite AOP Step 2 so it checks stock only for the SKUs identified in Step 1, for example: \"For each product requested in the email (resolve to its SKU), check stock in Shopify. Do not enumerate the rest of the catalogue.\" This removes the cause of the rate limit, since 3 lookups will not approach 2 calls per second. Adding retry/backoff logic would only hide the problem, because a 2,300-call scan would still take about 20 minutes at the limit.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s04`, the change request above (\"rewrite Step 2 to check only the SKUs requested in the email, not every SKU in the catalogue\"), and the target file `aops/<agent-id>.md`. I don't have the Agent ID in what you pasted, so I haven't filled in that path.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8300,
+    "input_tokens": 2,
+    "output_tokens": 702,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 12164
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0352598,
+  "created_at": "2026-10-29T11:36:44+00:00",
+  "duration_api_ms": 11944,
+  "input_hash": "8cdd082843487845",
+  "key": "7d3957e803e16f2f7ef581e4",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "# Run Debugger: run_s06\n\n**Failure mode**\n\n**AOP ambiguity.** The AOP told the Agent to fail the case \"if unsure\" but gave it no concrete rule for deciding a supplier match. The Agent guessed from the names alone. This Run counts as a failure because the case closed as Failed when it should have been matched and routed.\n\n**Where it went wrong**\n\n- **Decision point:** transcript turn [5], right after the SAP lookup in [4] returned a single candidate.\n- **AOP step:** Step 2, *\"Find the supplier in SAP. If unsure about the supplier match, call `fail_case`.\"*\n- **What happened:**\n  - SAP returned one vendor, `100311`, with VAT `DE811145120`.\n  - Per your context, the invoice carries that same VAT.\n  - The AOP never said VAT is the matching key, so the Agent compared legal names (\"BAUHAUS Gesellschaft für Bau- und Hausbedarf mbH\" vs \"Bauhaus GmbH\").\n  - The names differed, so it fell into the \"unsure\" branch and failed the case.\n- **Pattern:** The same vague rule hits every supplier whose SAP name is a short form of the invoice's legal name. That fits the 31% of this week's cases that failed the same way.\n\n**Evidence**\n\n- AOP Step 2: *\"If unsure about the supplier match, call `fail_case`.\"*\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`\n- Transcript [5]: *\"The names differ, so I'm not sure this is the same supplier.\"*\n\n**Fix**\n\nRewrite **AOP Step 2** with a concrete matching rule:\n\n> Read the VAT ID from the invoice and search SAP.\n> - If exactly one SAP vendor has the same VAT ID, treat it as a match, even if the names differ.\n> - If no vendor matches the VAT ID, or more than one does, call `fail_case` with the reason.\n> - Use the name only as a fallback when the invoice has no VAT ID.\n\nOne caveat: the `claim_case` result in [2] shows only `supplier_on_invoice`, not the invoice's VAT. The rewrite must tell the Agent where to read the invoice VAT from. If the VAT isn't in the case payload at all, it has to be added to the case data before this fix can work.\n\n**Next step**\n\nI can invoke `aop-writer` with:\n- Build `bld_s06`\n- the change request: *\"rewrite Step 2 to match suppliers on VAT ID, with name matching only as a fallback\"*\n- the file `aops/<agent-id>.md`\n\nAfter the fix lands, re-run this week's failed \"unable to match supplier\" cases. Cases like `case_s06`, where the VAT matches exactly, should then route correctly.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 1053,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1268,
+    "thinking_tokens": 277
+  },
+  "variant": "main",
+  "wall_ms": 13555
+}

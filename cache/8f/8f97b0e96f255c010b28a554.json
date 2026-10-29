@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "X01",
+  "cost_usd": 0.0007187900000000001,
+  "created_at": "2026-10-29T11:31:38+00:00",
+  "duration_api_ms": 5174,
+  "input_hash": "95d351598029029b",
+  "key": "8f97b0e96f255c010b28a554",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode:** Connection failure (expired Login session)\n\n**Where it went wrong:** Step 1, at the first `browser.open` call ([1]-[2]). The Enterprise Browser was redirected to Okta before it reached the reports page, so the run never got past sign-in. The Agent stopped at [3] and did not complete the download in Step 2.\n\n**Evidence:**\n- [2] `Redirected to Okta: \"Your session has expired. Sign in again.\"`\n- Login 'Coop portal (Okta)' was last re-authenticated 94 days ago, and the portal enforces 90-day sessions.\n\nThe session lapsed because the Login is past the portal's 90-day limit. The Agent did nothing wrong with the AOP itself.\n\n**Fix:** Re-authenticate the Login **Coop portal (Okta)** in Setup. Once it's refreshed, Start Work again. Nothing in the AOP needs to change for this run to succeed.\n\n**Optional follow-up (not required to unblock):** Step 1 has no branch for an authentication redirect, so the Agent can only stop and report it. If you expect this to recur every 90 days, I can hand the AOP to `aop-writer` to add a clear failure path for an Okta redirect, so the run ends with an explicit message saying the Login needs re-authentication. You could also set a reminder to re-authenticate before the 90-day mark.\n\n**Next step:** Re-authenticate \"Coop portal (Okta)\" in Setup, then re-run.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 876,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 940,
+    "thinking_tokens": 406
+  },
+  "variant": "main",
+  "wall_ms": 7404
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "C03",
+  "cost_usd": 0.0336998,
+  "created_at": "2026-10-29T11:34:58+00:00",
+  "duration_api_ms": 12885,
+  "input_hash": "993fb5d0e197b78d",
+  "key": "6ea8e65d79e4c0deff668bce",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "## Run debug: run_c03 (Build bld_51e)\n\n**Failure mode**\nConnection failure (Login authorised for the wrong market). Sign-in succeeded, but the Login **Alpenfrisch portal** is the CZ service account, and it has no permission for market AT. The account works. It is scoped to the wrong market for this Run's input.\n\n**Where it went wrong**\n- **Transcript [3]:** the sign-in returned the CZ account (`svc-replen-cz`).\n- **Transcript [4]–[5]:** at Step 3 (\"choose the store's market\"), selecting AT was refused.\n- **AOP Step 2** is where this starts. It hard-wires one Login for every Run, while Step 1 accepts any market from the Run input. Nothing in the Build ties the market to a Login that is allowed to order for it. Any non-CZ store will hit the same wall.\n\n**Evidence**\n- Transcript [5]: `\"Access denied: this account is not authorised for market AT.\"`\n- Transcript [3]: `Signed in as svc-replen-cz@retailco.eu`\n- AOP Step 2: \"sign in to the Alpenfrisch portal with the Login **Alpenfrisch portal**.\"\n\n**Fix**\nGive the Agent a Login that is authorised for market AT. Either:\n- have Alpenfrisch grant `svc-replen-cz` access to market AT, or\n- add a separate **Alpenfrisch portal AT** Login in Setup.\n\nIf you take the second route, Step 2 of the AOP also has to choose the Login by market. That is a small follow-on edit for `aop-writer`.\n\n**Next step**\nCheck with whoever administers your Alpenfrisch portal accounts whether there is an AT service account or whether the CZ account can be extended to AT. Then update the Login in Setup and re-run Start Work for store AT-114. If you add a per-market Login, I can hand Build bld_51e to `aop-writer` with the request \"Step 2: pick the Login matching the store's market; if no Login exists for that market, fail the Run with a clear reason.\"\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.6}",
+  "usage": {
+    "cache_creation_input_tokens": 1018,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1204,
+    "thinking_tokens": 476
+  },
+  "variant": "main",
+  "wall_ms": 15927
+}

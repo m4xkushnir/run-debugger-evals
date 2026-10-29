@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "X03",
+  "cost_usd": 0.0156526,
+  "created_at": "2026-10-29T11:32:31+00:00",
+  "duration_api_ms": 13632,
+  "input_hash": "81884e18921f1d60",
+  "key": "14350a7ac0a66dfb6074bf1a",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode**\nConnection failure (missing scope). The Connection was re-authenticated, but it still doesn't have a send scope.\n\n**Where it went wrong**\nAt transcript turn [1]-[2], AOP Step 2 (\"Send the RFQ via **Gmail**\") calls `gmail.send_message`, and Gmail rejects it. The 403 is a symptom. The cause is upstream: the Gmail Connection only holds `gmail.readonly`, so it can read mail but can never send. Re-authenticating didn't help because the re-auth granted the same read-only scope again. The cause is not the AOP (Step 2 is clear) or the case data (the recipient was set).\n\n**Evidence**\n- Transcript [2]: `gmail.send_message: ERROR 403: Request had insufficient authentication scopes.`\n- Your context: \"Connection granted scopes after re-authentication: gmail.readonly.\"\n- AOP Step 2: \"Send the RFQ via **Gmail**.\"\n\n**Fix**\nChange the Gmail Connection so it is granted a send scope (`gmail.send`). Remove and re-add the Connection rather than just refreshing the token, and on Google's consent screen make sure the permission to send email is ticked. Also check that this Connection was not created as a read-only Gmail Connection, since a refresh would keep reproducing the same read-only grant.\n\nI can't tell from this data whether the read-only grant came from the consent screen or from how the Connection was set up. If a fresh Connection with send explicitly approved still comes back as `gmail.readonly`, that would point to a platform problem rather than your configuration. In that case, raise it with Duvo support with Run `run_x03`, Build `bld_x03`, the 403 string and the granted-scope result.\n\nA secondary gap, not the root cause: the AOP has no failure branch, so the Agent just wrote \"Sending failed.\" (turn [3]). Once the scope is fixed, a follow-up AOP edit could tell it to hand over or fail explicitly on a send error.\n\n**Next step**\nReconnect the Gmail Connection in Setup with send permission, then start a new Run and confirm that `gmail.send_message` succeeds. I can invoke `aop-writer` afterwards to add the send-failure branch if you want it.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8186,
+    "input_tokens": 2,
+    "output_tokens": 1483,
+    "thinking_tokens": 689
+  },
+  "variant": "main",
+  "wall_ms": 15485
+}

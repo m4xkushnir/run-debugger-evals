@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.0254132,
+  "created_at": "2026-10-29T11:39:41+00:00",
+  "duration_api_ms": 17629,
+  "input_hash": "82cebd8c79c09140",
+  "key": "ffbf0bac4169ab515e59bc00",
+  "model": "sonnet",
+  "prompt_version": "08e08d7181944dc5",
+  "repeat": 0,
+  "text": "## Failure mode\n\n**Missing terminal closure**, triggered by a transient DPD rate limit (a Connection 4xx). The 429 is the symptom. The root cause is that the AOP has no branch for \"DPD can't answer right now\", so the Agent stopped without closing the case.\n\n## Where it went wrong\n\nThe decision point is transcript turn [5], right after the 429 in turn [4]. The AOP's Step 2 (\"Get the latest status from the **DPD** Connection\") only covers the success path. Step 3 is the only place a terminal action appears (`complete_case`), and it is reachable only on success.\n\nWith no instruction for an error, the Agent ended the Run with a plain-text message and called none of `complete_case`, `fail_case`, `postpone_case` or `request_handover`. The platform then settled the case itself as **Failed (no reason)**, because the Run errored mid-work.\n\n## Evidence\n\n- Transcript [4]: `ERROR 429 Too Many Requests. Retry-After: 600`\n- Transcript [5]: `DPD is rate limiting. I can't get the status.`\n- AOP Step 2 has no error handling, and the only terminal action is in Step 3: `Call update_case with the status, then complete_case.`\n- Case state: `Failed (no reason)`, which is a platform settlement, not an Agent decision.\n\n## Fix\n\nAdd a rate-limit branch to **AOP Step 2**:\n\n> If the DPD Connection returns 429 (rate limited), call `postpone_case` so the case is retried after the `Retry-After` window (600 seconds). Do not call `fail_case` for a 429.\n\nThis is the right fix for your situation. A 429 during Black Friday week is transient and affects roughly 30% of Runs, so these cases should be retried later, not failed. A failed case with no reason is also hard to triage across 1,900 cases.\n\nIf a case is postponed repeatedly, the AOP may also need a retry limit that ends in `fail_case` with a stated reason. Include that in the same Step 2 rewrite only if you want a cap.\n\nOne side observation, which I don't think caused this failure. In turn [2] the tracking number was `0953 4412 8890`, but in turn [3] the Agent sent `09534412 8890`, with the spacing changed. A 429 is a rate limit and is independent of that input. But the Agent is rewriting the identifier, so a retry could hit a different problem. I can't tell from this transcript whether DPD accepts both formats.\n\n## Next step\n\nI can invoke `aop-writer` with:\n\n1. Build `bld_g02`, the AOP in effect for this Run.\n2. The change request: \"In Step 2, add a branch for a 429 from DPD that calls `postpone_case` to retry after the 600-second `Retry-After`, and never `fail_case` on a 429.\"\n3. The file to edit in place: `aops/<agent-id>.md`.\n\nThe 429s will still happen under load, but the affected cases will wait and retry instead of ending as Failed with no reason. Check the Agent's current queue concurrency too, since that is what drives the rate-limit volume. That is a tuning decision for you, not part of this diagnosis.",
+  "usage": {
+    "cache_creation_input_tokens": 913,
+    "cache_read_input_tokens": 7172,
+    "input_tokens": 2,
+    "output_tokens": 2104,
+    "thinking_tokens": 1059
+  },
+  "variant": "no_json",
+  "wall_ms": 18493
+}

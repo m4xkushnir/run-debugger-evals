@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "N01",
+  "cost_usd": 0.00080879,
+  "created_at": "2026-10-29T11:32:24+00:00",
+  "duration_api_ms": 6364,
+  "input_hash": "086079e1976a5bd5",
+  "key": "5d6fba07d4a66d4b124d0160",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Not a failure. The Run is paused, not broken. Its status is `waiting`, and it's blocked on a pending Human-in-the-loop approval.\n\n**Where it went wrong:** Nothing went wrong in the Agent's logic. At step 2 the amount (EUR 1,850) exceeded the EUR 1,000 threshold, so the Agent correctly requested approval (transcript [2]) and the request is still pending (transcript [3]). The Run stopped there and never reached step 3, so no credit note was issued and no email was sent. It has been waiting since yesterday because no one has answered the approval request.\n\n**Evidence:**\n- AOP step 2: \"If the amount exceeds EUR 1,000: use **Human in the loop** to get approval before issuing.\"\n- Transcript [3]: `{\"status\": \"pending\"}`\n\n**Fix:** None needed in the AOP. The gate is working as designed. The open item is the approval itself, not a configuration change.\n\n**Next step:** Find the approver for \"Approve credit note EUR 1,850 for Hotel Praha?\" and have them answer yes or no in the Human-in-the-loop request. A \"yes\" resumes the Run at step 3, which issues the note in NetSuite and emails the customer. A \"no\" should stop the Run before anything is issued. If the approver says they never received the request, check who the approval was routed to. I can't see that routing from what you've shared, so I can't say whether it's the cause.\n\n{\"failure_mode\": \"not_a_failure\", \"fix_target\": \"none\", \"confidence\": 0.9}",
+  "usage": {
+    "cache_creation_input_tokens": 886,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1116,
+    "thinking_tokens": 598
+  },
+  "variant": "main",
+  "wall_ms": 7911
+}

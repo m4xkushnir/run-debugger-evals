@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "B01",
+  "cost_usd": 0.0085413,
+  "created_at": "2026-10-29T11:27:34+00:00",
+  "duration_api_ms": 8767,
+  "input_hash": "e7515c22c8b6da38",
+  "key": "cf75fb3985fb0ba84a9dd880",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode** — Batch / iteration leak (taxonomy 6). The Run was queue-driven (case `case_b01`, titled \"Invoice from Brenntag CZ\"), but the AOP told the Agent to process every pending invoice in the inbox instead of the one claimed case.\n\n**Where it went wrong** — Step 2 of the AOP, at transcript turns [3]–[5]. After `claim_case` returned a single-invoice case, the Agent ran an inbox-wide search and took on all 47 unread messages in one Run. It created 19 vendor bills before the 30-minute limit stopped the Run. Because `complete_case` in Step 3 was never reached, the case ended Failed. The duration error is the symptom; the root cause is the batch scope in Step 2.\n\n**Evidence**\n- AOP Step 2: \"Use **Gmail** to process all pending supplier invoices in the AP inbox\"\n- Transcript [5]: \"47 pending invoices. Processing them one by one.\"\n- Transcript [2] shows the case was for one invoice: `{\"title\": \"Invoice from Brenntag CZ\"}`\n\n**Fix** — Rewrite AOP Step 2 to handle only the claimed case's invoice: find the email for this case, extract its fields, and create one vendor bill in **NetSuite**. Remove \"all pending\" and the inbox-wide `is:unread label:ap` sweep, and let the queue create one case per invoice so the platform does the iterating.\n\nOne more thing to check: bills 1–19 were already created in NetSuite, and this Run never made clear which invoices they covered. Those emails may still be unread, so the next Runs could create duplicate vendor bills. Check this before re-running. The AOP rewrite should also include a duplicate check (for example on vendor and invoice number) before creating a bill.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_b01`, the file `aops/<agent-id>.md`, and the request: \"Rewrite Step 2 to process only the invoice tied to the claimed case, with no inbox-wide search, and add a duplicate check before creating the NetSuite vendor bill.\" Separately, review the 19 bills already created in NetSuite.\n\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 771,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 10275
+}

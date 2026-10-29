@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "G03",
+  "cost_usd": 0.019817900000000003,
+  "created_at": "2026-10-29T11:33:53+00:00",
+  "duration_api_ms": 16006,
+  "input_hash": "cec074b757b36bc9",
+  "key": "47f10b9ae497289cfa956046",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode**\nNamed pattern: **external target-system outage (the portal's 5xx), with no AOP handling for it.** This is not Duvo platform/infra failure, because the error came from the retailer portal's load balancer. It is not a Connection failure either: the Run never got far enough to use the Login, and an expired token or missing scope would return 401/403, not a gateway timeout.\n\n**Where it went wrong**\n- Transcript [1]–[4]: the Agent called `browser.open` twice back to back, and both attempts got the same 504.\n- AOP Step 1 (\"Use **Enterprise Browser** with the Login **Tesco Partner Toolkit** to open 'New ASN'\") assumes the portal is up. It has no branch for the portal being unavailable: no wait-and-retry, no stop condition, and no defined outcome.\n- At [5] the Agent gave up with a bare statement, which is why the Run ended as failed with only the raw error.\n\n**Evidence**\n- `[2] Tool result ← browser.open: ERROR 504 Gateway Timeout (served by the portal's load balancer)`\n- `[5] Agent: The portal keeps timing out.`\n- Your context: the portal's status page reports \"degraded performance\" today, while Agents on other portals run normally.\n\nThe trigger was the portal outage. The part you can fix is that the AOP gives the Agent nothing to do when the portal is unavailable. I can't confirm from what you pasted whether this Run was queue-driven. If it was, check that the case reached a deliberate terminal state (for example `postpone_case` or `request_handover`) rather than a platform settlement.\n\n**Fix**\nAdd an explicit outage branch to AOP Step 1, for example: *\"If the portal returns a 5xx error or times out when opening 'New ASN', wait and retry up to 3 times at increasing intervals. If it still fails, stop and use **Human in the loop** to report that the portal is unavailable. Do not submit partial data.\"* If this is a queue-driven Agent, make the final action `postpone_case` instead, so the work is retried later.\n\n**Next step**\n1. Re-run once the portal's status page shows recovery. Nothing in your Agent's configuration caused this failure, so a re-run needs no edit.\n2. To make future outages graceful, I can invoke `aop-writer` with Build `bld_g03`, the change request above (add a 5xx retry and fallback branch to Step 1), and the AOP file `aops/<agent-id>.md`. I don't have the Agent ID from what you shared, so I need it to point `aop-writer` at the right file.\n\n{\"failure_mode\": \"named_pattern\", \"fix_target\": \"aop_change\", \"confidence\": 0.62}",
+  "usage": {
+    "cache_creation_input_tokens": 910,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1544,
+    "thinking_tokens": 646
+  },
+  "variant": "main",
+  "wall_ms": 17480
+}

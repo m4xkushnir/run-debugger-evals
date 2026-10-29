@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.0103066,
+  "created_at": "2026-10-29T11:24:04+00:00",
+  "duration_api_ms": 11365,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "4ba3669c16254e52f1c35071",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode**\nAOP ambiguity. The Run completed with no error, but the outcome was wrong. Step 3 gives the Agent no threshold for what counts as \"too high\".\n\n**Where it went wrong**\nStep 3 of the AOP: \"Flag any line where the charge seems too high compared with the rate card.\" The Agent had no numeric rule, so it made up its own judgment on each line. Both decision points are in the transcript, turns [1] and [2]. The result was inverted. The +1.9% line (about 40 CZK) was flagged, and the +9.0% line (2,600 CZK) was excused with a reason the AOP never gave.\n\n**Evidence**\n- AOP Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n- Transcript [1]: \"charged 2,140 CZK vs rate 2,100 CZK (+1.9%). Seems too high, flagging.\"\n- Transcript [2]: \"+9.0%. Fuel surcharges vary, this seems reasonably close, not flagging.\"\n\nThe Agent paraphrases the AOP's vague wording (\"seems too high\") at the decision point, and the two calls are inconsistent with each other. The \"fuel surcharges vary\" rationale came from the Agent, not from the AOP or the rate card, so I can't tell from the transcript whether the invoice's surcharge was legitimate. Either way, the AOP should define that, not the model's guess.\n\nThe Sheets write succeeded (`{\"status\": \"ok\"}`), so the Connection is not the cause. The Run also has no case, so terminal closure doesn't apply.\n\n**Fix**\nRewrite Step 3 of the AOP to replace \"seems too high\" with a concrete rule that sets the threshold and says how surcharges are handled. For example: *\"Flag a line if charge − rate card rate > max(2% of the rate, 500 CZK). Treat fuel surcharges as part of the charge unless the rate card lists a separate surcharge schedule; if a line is over the threshold, flag it and note the amount and percentage difference.\"* The exact numbers (and whether to use an absolute amount, a percentage, or both) are your call. The rule just needs to be explicit. Under that example rule, line 1 (+40 CZK, +1.9%) would not be flagged and line 2 (+2,600 CZK, +9.0%) would be.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_f02`, the AOP file `aops/<agent-id>.md`, and the change request: \"Rewrite Step 3 to replace 'seems too high' with an explicit threshold (percentage and/or absolute CZK) and an explicit rule for fuel surcharges.\" Please confirm the threshold values you want first.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8326,
+    "input_tokens": 2,
+    "output_tokens": 947,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 13945
+}

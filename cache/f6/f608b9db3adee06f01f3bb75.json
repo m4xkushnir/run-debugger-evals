@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "B03",
+  "cost_usd": 0.0009570900000000001,
+  "created_at": "2026-10-29T11:27:53+00:00",
+  "duration_api_ms": 8019,
+  "input_hash": "7410c4f89da8ab71",
+  "key": "f608b9db3adee06f01f3bb75",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Batch / iteration leak\n\n**Where it went wrong:** Step 2 of the AOP, at the query in transcript [3]. The AOP tells the Agent to check \"every store's stock level,\" so when the Run started, the Agent ignored the store it had just claimed in [2] (`CZ-007`) and queried all 60 stores. It then submitted the reorder for all 412 below-minimum lines in [6]. The platform is meant to iterate over cases, one store per case, but the AOP asked the Agent to iterate over the whole fleet itself.\n\n**Evidence:**\n- AOP Step 2: \"Use **Snowflake** to check every store's stock level and reorder anything below minimum\"\n- Transcript [2]: `claim_case` returned `{\"store\": \"CZ-007\"}`\n- Transcript [3]: `snowflake.query {\"scope\": \"all stores\"}`\n- Transcript [7]: `replenishment.submit` returned `{\"orders\": 60}`\n\nBecause all 60 cases ran the same unscoped AOP, each one placed orders for all 60 stores. That is 60 duplicate batches, not one correct batch per store. The Run reports `completed` and the case shows \"Completed by Agent,\" so the platform saw a clean finish. That is why this looks like a success in the Queue.\n\n**Fix:** Rewrite Step 2 to scope to the claimed case only. For example: \"Use the `store` returned by `claim_case`. Query Snowflake for that store's stock levels only, and reorder any line below minimum in the Replenishment portal for that store.\" Do not query other stores.\n\n**Next step:**\n1. **Urgent, before any fix:** pause this Agent so no more cases run on the unscoped AOP. Then review the orders placed today in the Replenishment portal. Each store has likely received about 60 orders that should not exist. Cancelling or correcting them is a human decision and needs to happen in the portal, not through this diagnosis.\n2. Hand this to `aop-writer` with Build `bld_b03` and the AOP file for this Agent (`aops/<agent-id>.md`). Ask it to rewrite Step 2 as a single-store scope, as described above.\n\n```json\n{\"failure_mode\": \"batch_leak\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 990,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1371,
+    "thinking_tokens": 606
+  },
+  "variant": "main",
+  "wall_ms": 10499
+}

@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "G02",
+  "cost_usd": 0.0013744299999999998,
+  "created_at": "2026-10-29T11:33:23+00:00",
+  "duration_api_ms": 12767,
+  "input_hash": "82cebd8c79c09140",
+  "key": "72b1ff8ccfe5c206b73f3d30",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing terminal closure. The trigger was a rate limit from the DPD Connection, which is upstream, but the AOP has no branch for that error. The Agent stopped without calling a terminal action, so the platform settled the case as Failed with no reason.\n\n**Where it went wrong:** Step 2 of the AOP (\"Get the latest status from the **DPD** Connection\") has no error path. At [4] the call returned 429 with `Retry-After: 600`, and at [5] the Agent stopped with a plain statement instead of calling `postpone_case` or `fail_case`. Step 3 only covers the success path (`update_case`, then `complete_case`).\n\n**Evidence:**\n- [4] `dpd.track: ERROR 429 Too Many Requests. Retry-After: 600`\n- [5] `Agent: DPD is rate limiting. I can't get the status.`\n- Case state: `Failed (no reason)`\n\nA 429 with a Retry-After is a transient condition, so the right outcome is to postpone the case until DPD allows requests again, not to fail it. With no terminal action on that branch, the case was left for the platform to settle.\n\n**Fix:** Add a branch to Step 2 of the AOP: *If `dpd.track` returns 429, call `postpone_case` and cite the Retry-After value (600 seconds) in the reason. Do not call `fail_case`.* This is a single change to the AOP.\n\n**Next step:** I can hand this to `aop-writer` with Build `bld_g02`, asking it to add the 429 branch to Step 2 in the Agent's AOP file (`aops/<agent-id>.md`). Please send the Agent ID if you want the file path confirmed.\n\nTwo things to keep in view:\n- **Black Friday load:** About 30% of today's Runs hitting 429 suggests DPD is throttling the whole account, not just this case. The postpone branch makes these cases wait and retry instead of failing, but if the rate stays this high, you may also need to lower the queue's concurrency or raise the limit with DPD. That is a capacity question, not part of this AOP fix.\n- **Tracking number format:** At [2] the number was `0953 4412 8890`, and at [3] it was sent as `09534412 8890`. The digits match, but the spacing changed. The 429 is the error DPD returned, so this did not cause this failure. It is still worth having the AOP say to pass the tracking number exactly as claimed, in case DPD rejects other formats.\n\n```json\n{\"failure_mode\": \"missing_terminal_closure\", \"fix_target\": \"aop_change\", \"confidence\": 0.75}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8273,
+    "input_tokens": 2,
+    "output_tokens": 2583,
+    "thinking_tokens": 1715
+  },
+  "variant": "main",
+  "wall_ms": 13943
+}

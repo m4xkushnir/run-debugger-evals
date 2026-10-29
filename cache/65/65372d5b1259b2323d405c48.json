@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S06",
+  "cost_usd": 0.0012633699999999998,
+  "created_at": "2026-10-29T11:31:31+00:00",
+  "duration_api_ms": 12200,
+  "input_hash": "8cdd082843487845",
+  "key": "65372d5b1259b2323d405c48",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** AOP ambiguity. The AOP left the supplier-match decision to the Agent's judgment (\"If unsure…\") and gave no concrete rule for resolving it.\n\n**Where it went wrong:** Step 2 and transcript turns [4]–[6]. SAP returned vendor 100311 with a name that differs from the invoice's, which is the point where the Agent had to decide whether it was a match. It judged the names as different and called `fail_case`.\n\n**Evidence:**\n- AOP, Step 2: \"If unsure about the supplier match, call `fail_case`.\"\n- Transcript [5]: \"The names differ, so I'm not sure this is the same supplier.\"\n- Transcript [4]: `{\"vendor\": \"100311\", \"name\": \"Bauhaus GmbH\", \"vat\": \"DE811145120\"}`, and the invoice carries the same VAT, DE811145120.\n\nThe Agent had a deterministic identifier that matched and never used it. Legal names vary in format (the invoice says \"BAUHAUS Gesellschaft für Bau- und Hausbedarf mbH\", SAP says \"Bauhaus GmbH\"), so a name comparison is the weak signal here. The AOP tells the Agent to escalate on uncertainty but never says which identifier decides a match.\n\nOne dependency to check: the `claim_case` result in [2] returns only `supplier_on_invoice`, not the invoice's VAT. Before the rule below can work, the Agent needs the VAT field. If `claim_case` doesn't expose it, that's a data gap, and the Agent would need that field added to what it receives.\n\n**Fix:** Rewrite Step 2 so VAT ID is the primary match rule:\n\n> 2. Find the supplier in **SAP**. Read the VAT ID from the invoice. Search SAP by the supplier's full legal name. If a vendor's VAT ID equals the invoice's VAT ID, treat it as the same supplier and continue to Step 3, even if the names differ. Call `fail_case` only if no vendor's VAT ID matches and no vendor name is a clear match.\n\n**Next step:** Confirm that `claim_case` returns the invoice's VAT ID. If it doesn't, add that field first. Then I can hand this change to `aop-writer` with Build `bld_s06` and the Agent's AOP file at `aops/<agent-id>.md`; I'd need the Agent ID to point it at the right file.\n\nSince 31% of this week's cases fail the same way, the rule is likely to recover a meaningful share of them. It would also be worth checking whether the other failed cases have matching VAT IDs, which would confirm they share this cause. That is a workflow-level check and I haven't run it here.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.8}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8417,
+    "input_tokens": 2,
+    "output_tokens": 2358,
+    "thinking_tokens": 1423
+  },
+  "variant": "main",
+  "wall_ms": 13601
+}

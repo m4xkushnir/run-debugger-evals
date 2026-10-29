@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.0089595,
+  "created_at": "2026-10-29T11:31:15+00:00",
+  "duration_api_ms": 7458,
+  "input_hash": "80480c72868f94f9",
+  "key": "246ea2a5ca68173cac0e48b3",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nMissing data (case field `unit_price` absent), compounded by AOP ambiguity and missing HITL. The primary root cause is missing data, with the AOP giving no instruction for the empty case.\n\n**Where it went wrong**\nTranscript turn [3], right after `claim_case` returned without `unit_price`. AOP Step 1 asserts the case \"carries PO number, supplier, quantity and `unit_price`\", and Step 2 emails the \"unit price, total\" with no branch for the field being absent. The Agent filled the gap itself by pulling a price from a supplier email signature, then sent it (turn [4]) and closed the case (turn [6]) without any check.\n\n**Evidence**\n- Transcript [2]: `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}` (no `unit_price`)\n- Transcript [3]: \"No unit_price on the case. The supplier's last email signature lists \"Standard price 4.10 EUR/pc\", using that.\"\n- AOP Step 1: \"the case carries PO number, supplier, quantity and `unit_price`\" (an unverified assumption)\n\nThe symptom is the wrong price (4.10 vs. contract 3.65, a 4,920 EUR total instead of 4,380 EUR). The cause is that the AOP gave the Agent no rule for a missing price, so it substituted an unauthoritative source (a signature line, not a contract price).\n\nI can't see from the pasted data why `unit_price` was empty on this case (an upstream queue/intake issue is plausible), so that part is unverified.\n\n**Fix**\nOne change to the AOP: add an explicit guard to Step 1/2, e.g. *\"If `unit_price` is missing or empty on the case, do not infer a price from emails or any other source. Use **Human in the loop** to request the price (or call `fail_case` with the reason 'missing unit_price') and do not email the supplier.\"* This also gates the externally-visible, hard-to-reverse send on validated data.\n\n**Next step**\nI can invoke `aop-writer` with Build `bld_s05`, working in `aops/<agent-id>.md`, with the change request above. Separately, you will want to correct the PO with the supplier (3.65 EUR, total 4,380 EUR) and check why the case was created without `unit_price` upstream.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.82}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8355,
+    "input_tokens": 2,
+    "output_tokens": 812,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9143
+}

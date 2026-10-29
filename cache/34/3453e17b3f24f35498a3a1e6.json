@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "S05",
+  "cost_usd": 0.00110196,
+  "created_at": "2026-10-29T11:31:08+00:00",
+  "duration_api_ms": 10552,
+  "input_hash": "80480c72868f94f9",
+  "key": "3453e17b3f24f35498a3a1e6",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode:** Missing data. The case had no `unit_price`, and the AOP had no instruction for that case. The Agent substituted a price from an unrelated source and sent it.\n\n**Where it went wrong:** Transcript [1]–[3], at AOP Step 1 (the case should carry `unit_price`) and Step 2 (email the unit price). The AOP names `unit_price` as a case field but says nothing about what to do when it's absent. At [3] the Agent improvised a fallback.\n\n**Evidence:**\n- [2] `claim_case` returned `{\"po\": \"PO-88120\", \"supplier\": \"Sklárny Kavalier\", \"qty\": 1200}`. There is no `unit_price`.\n- [3] \"No unit_price on the case. The supplier's last email signature lists 'Standard price 4.10 EUR/pc', using that.\"\n\nThe email signature is not the contract price, and the AOP never authorised it as a source. The arithmetic in [4] is correct (1200 × 4.10 = 4,920), so the error is in the input, not the calculation. The contract price of 3.65 EUR is not in anything the Agent could see in this transcript, so the Agent had no way to find it.\n\n**Fix:** One change to the AOP. Add a gate to Step 2: *\"If the case has no `unit_price`, do not send. Call `request_handover` with the PO number and reason 'unit_price missing from case'. Never take a price from an email, signature, or other source.\"* This turns a silent guess into a visible stop.\n\nTwo points I'd note but not bundle into the fix:\n- The send was an external, money-bearing email with no Human-in-the-loop step. Gating Step 2 behind HITL would also have prevented this, so it's worth considering as an alternative or a second layer.\n- The logged message body shows only the quantity, price and total. The AOP asks for the PO number too. The transcript may be truncating the body, so check the sent email.\n\n**Next step:**\n1. Invoke `aop-writer` on Build `bld_s05`, with the change above, targeting `aops/<agent-id>.md`. I'll need the Agent ID to point it at the right file.\n2. Send the supplier a correction for PO-88120 at the contract price. The email has already gone out, and this diagnosis can't recall it. The case is marked Completed, so someone should also review its outcome.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8376,
+    "input_tokens": 2,
+    "output_tokens": 2036,
+    "thinking_tokens": 1230
+  },
+  "variant": "main",
+  "wall_ms": 12331
+}

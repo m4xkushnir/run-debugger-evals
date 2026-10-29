@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "P01",
+  "cost_usd": 0.0116699,
+  "created_at": "2026-10-29T11:29:20+00:00",
+  "duration_api_ms": 7829,
+  "input_hash": "a422d48d55a66c92",
+  "key": "f15228cc3b82af6db4911335",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode** — Platform / infra failure. The sandbox never started, so the Run died before any Agent turn and the AOP never executed.\n\n**Where it went wrong** — At transcript line [2], before step 1 of the AOP (the Snowflake query). There is no decision point in the Agent's behaviour to place: no model turn, no tool call, no Connection use occurred.\n\n**Evidence**\n- Transcript [2]: `ERROR: sandbox failed to start: container image pull timed out after 120s (attempt 3/3).`\n- Your note: the last 3 Runs of this Agent, on different days, \"failed with the identical sandbox error before any Agent turn.\"\n\nThis is not a Connection failure (neither Snowflake nor Slack was reached), not AOP ambiguity (the two-step AOP is concrete and was never read by the Agent), and not a data issue. The error is a container image pull timeout in the platform's own infrastructure, reproducing identically across Runs on different days and independent of case data. Nothing in the AOP, Setup, Connections, or Files would have prevented it.\n\n**Fix** — There is no change to make in your artifacts. The fix is on Duvo's side (the sandbox image pull is timing out). Please don't edit the AOP or Connections in response to this; it would not change the outcome, and I'd be guessing at a cause the transcript doesn't show.\n\n**Next step** — Raise this with Duvo support from the Duvo web app, and include this diagnosis:\n- Run ID: `run_p01`, Build ID: `bld_p01`\n- Exact error: `sandbox failed to start: container image pull timed out after 120s (attempt 3/3)`\n- Pattern: the last 3 earlier Runs of this Agent, on different days, failed identically before any Agent turn\n- Ruled out: AOP content, Snowflake and Slack Connections (never reached), and case data (no Agent turn happened)\n\nI don't have a support-escalation tool in this session, so nothing has been reported yet. You'll need to send it. Once Duvo resolves the sandbox issue, the AOP as written should be runnable as-is. If it then fails after the sandbox starts, send me the new Run and I'll diagnose that.\n\n{\"failure_mode\": \"platform_infra\", \"fix_target\": \"escalate_to_duvo\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 798,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 774,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9745
+}

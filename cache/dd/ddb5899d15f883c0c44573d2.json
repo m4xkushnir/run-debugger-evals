@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "C01",
+  "cost_usd": 0.00058562,
+  "created_at": "2026-10-29T11:22:37+00:00",
+  "duration_api_ms": 5853,
+  "input_hash": "904fcbb04475a734",
+  "key": "ddb5899d15f883c0c44573d2",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\nConnection failure: the Gmail Connection 'AP inbox' has an expired or revoked token.\n\n**Where it went wrong**\nStep 1, the first tool call. `gmail.search_messages` at transcript [1] returned a 401 at [2]. The Agent then stopped at [3], which is correct behaviour for an unreachable inbox. The failure starts at the Connection, not in the AOP.\n\n**Evidence**\n- `ERROR 401: {\"error\": \"invalid_grant\", \"error_description\": \"Token has been expired or revoked.\"}`\n- \"Gmail Connection 'AP inbox' last authorised 2026-07-30 (91 days before this Run).\"\n\nThe Run ran against bld_7a1, and the AOP has no defect that caused this. Nothing in Steps 2–4 was reached, so there is no evidence of a bad extraction or registration.\n\n**Fix**\nReauthorise the Gmail Connection 'AP inbox' in Setup. Confirm the account that grants access still has access to the AP inbox. \"Revoked\" can also mean the grant was removed on the Google side, for example after a password change or a removed app permission, so reauthorising from that account is the step that fixes it. Then start a new Run. No AOP change is needed.\n\n**Next step**\nReauthorise 'AP inbox' and re-run. If the Connection fails again straight after a successful reauthorisation, this is no longer a Connection problem on your side. It would be a platform fault, so send me the new Run ID and I'll write up the escalation for Duvo support.\n\n{\"failure_mode\": \"connection_failure\", \"fix_target\": \"connection_change\", \"confidence\": 0.95}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8342,
+    "input_tokens": 2,
+    "output_tokens": 1004,
+    "thinking_tokens": 452
+  },
+  "variant": "main",
+  "wall_ms": 10168
+}

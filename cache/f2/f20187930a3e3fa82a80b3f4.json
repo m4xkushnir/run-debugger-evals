@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "H01",
+  "cost_usd": 0.0013788899999999998,
+  "created_at": "2026-10-29T11:25:21+00:00",
+  "duration_api_ms": 11065,
+  "input_hash": "b8f2498d9b2bc173",
+  "key": "f20187930a3e3fa82a80b3f4",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 0,
+  "text": "**Failure mode:** Missing HITL on a high-stakes action. The Run reports `completed`, but it completed the wrong action. The Agent changed a supplier's bank account on an unverified email and confirmed the change to the sender.\n\n**Where it went wrong:** Step 2 of the AOP identifies the supplier and field, then Step 3 writes the change straight to SAP. The AOP has no check on who sent the request, no verification of bank details, and no approval gate for changes to payment data. The Agent went from reading the email at [2] to `sap.update_vendor` at [3] with nothing in between.\n\n**Evidence:**\n- [2] `From: accounts@sunfield-foods.co` / \"Please update our bank account to IBAN DE89 3704 0044 0532 0130 00 effective immediately.\"\n- [3] `sap.update_vendor {\"vendor\": \"100482 Sunfield Foods\", \"field\": \"bank_iban\", ...}`, with no preceding verification or approval step.\n- Security report: the sender domain is a look-alike of `sunfieldfoods.com`, and a EUR 212,000 payment to Sunfield is next.\n\nThe IBAN in the email, `DE89370400440532013000`, is also the widely used sample IBAN in documentation. That's not proof of fraud on its own, but it's another reason the request shouldn't have been applied unverified.\n\n**Fix:** One change to the AOP. Add a gate to Step 2: if the request changes bank or payment details, do not call `sap.update_vendor`. Require Human-in-the-loop approval, and verify the change through a contact already on file for the vendor, not one from the request. Also remove the auto-confirmation in Step 4 for these requests, so nothing is sent to the sender until the change is approved.\n\n**Next step:** These need action now, and they're yours to take, not the Agent's:\n1. Hold the EUR 212,000 payment to Sunfield until the bank details are verified.\n2. Revert `bank_iban` for vendor 100482 in SAP. Get the previous value from the SAP change log.\n3. Verify with Sunfield using a phone number from your existing vendor records, not from the email.\n4. Check whether the reply in [5] went to `sunfield-foods.co`. Pass it to security as a possible phishing attempt.\n5. Once you're ready, I can hand the AOP gate change to `aop-writer` for `aops/<agent-id>.md`.\n\n{\"failure_mode\": \"missing_hitl\", \"fix_target\": \"aop_change\", \"confidence\": 0.93}",
+  "usage": {
+    "cache_creation_input_tokens": 1039,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 2195,
+    "thinking_tokens": 1356
+  },
+  "variant": "main",
+  "wall_ms": 13845
+}

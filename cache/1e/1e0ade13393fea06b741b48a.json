@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "A02",
+  "cost_usd": 0.00094067,
+  "created_at": "2026-10-29T11:23:50+00:00",
+  "duration_api_ms": 8903,
+  "input_hash": "6022d5b4e25ed398",
+  "key": "1e0ade13393fea06b741b48a",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 3,
+  "text": "**Failure mode:** AOP ambiguity. The Run completed normally, but its judgment on Step 3 was wrong.\n\n**Where it went wrong:** Step 3 of the AOP, at transcript turn [2]. Step 3 says \"flag any line where the charge seems too high,\" with no threshold. On Line 2 the Agent judged a 9.0% overcharge \"reasonably close\" and invented a fuel-surcharge explanation the AOP never mentions. On Line 1 it flagged a 1.9% variance. The two decisions are inconsistent because the AOP gives no line for \"too high.\"\n\n**Evidence:**\n- Turn [2]: \"Line 2 Prague-Vienna FTL: charged 31,600 CZK vs rate 29,000 CZK (+9.0%). Fuel surcharges vary, this seems reasonably close, not flagging.\"\n- Step 3: \"Flag any line where the charge seems too high compared with the rate card.\"\n\n**Fix:** In Step 3 of the AOP, replace the subjective test with a concrete rule, for example: \"Flag any line where the charged amount exceeds the rate-card rate by more than [X]%, or by more than [Y] CZK, whichever is lower. Do not exclude a line for fuel surcharges unless the rate card lists a specific fuel allowance; if it does, subtract that allowance first and state the adjusted rate in the flag.\" You need to choose X and Y. Line 2 would be flagged under any threshold below 9%, and Line 1 under any threshold below 1.9%.\n\n**Next step:** Hand off to `aop-writer` with build `bld_f02` and the change request \"rewrite Step 3 with the threshold rule above,\" editing the Agent's AOP file in place. If you give me the Agent ID and your threshold, I can phrase the request exactly.\n\nTwo things I could not verify from what you pasted:\n- The transcript never shows the Agent opening the rate card in Files (Step 2), yet it quotes rates of 2,100 and 29,000 CZK. The rate card may have been read earlier and omitted from the excerpt. Check whether it lists a fuel surcharge; that determines whether the fuel explanation had any basis.\n- The Run is marked \"completed,\" so the platform did not treat this as a failure. Only a review of the flags would have caught the miss.\n\n{\"failure_mode\": \"aop_ambiguity\", \"fix_target\": \"aop_change\", \"confidence\": 0.87}",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8347,
+    "input_tokens": 2,
+    "output_tokens": 1714,
+    "thinking_tokens": 905
+  },
+  "variant": "main",
+  "wall_ms": 12410
+}

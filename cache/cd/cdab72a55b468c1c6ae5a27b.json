@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-haiku-5-5",
+  "case_id": "D03",
+  "cost_usd": 0.0008768300000000001,
+  "created_at": "2026-10-29T11:27:07+00:00",
+  "duration_api_ms": 8521,
+  "input_hash": "0fa154f9ea9dd98d",
+  "key": "cdab72a55b468c1c6ae5a27b",
+  "model": "haiku",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 4,
+  "text": "**Failure mode:** Missing data. The AOP assumed the case would carry a `cost_center`, and it didn't. The Agent had no instruction for that case, so it improvised.\n\n**Where it went wrong:** Transcript [3]–[4], against AOP Step 2. Step 2 says to post \"to the case's `cost_center`,\" but the claimed case had none. Instead of stopping, the Agent substituted a placeholder and posted the bill. Step 3 then closed the case as successful.\n\n**Evidence:**\n- Transcript [2]: `{\"invoice\": \"INV-7731\", \"amount_eur\": 4120, \"supplier\": \"Hartmann Logistik\"}`. No `cost_center` field.\n- Transcript [3]: \"No cost_center on the case. Posting with cost center TBD so the invoice isn't delayed.\"\n- Transcript [4]: `netsuite.post_bill {\"invoice\": \"INV-7731\", \"cost_center\": \"TBD\"}`\n\nThe Run shows `completed` because nothing errored, but the outcome is wrong. A real bill now sits in NetSuite with a placeholder cost center, and the case is marked Completed by Agent.\n\n**Fix:** Add a guard to Step 1 of the AOP: *If the claimed case has no `cost_center`, do not call `netsuite.post_bill`. Call `postpone_case` with the reason \"missing cost_center\" and end the Run.* Use `fail_case` instead if a missing cost center should be treated as a permanent rejection rather than something that can be filled in later. Either way, the posting step must be unreachable without a real cost center.\n\n**Next step:**\n- Correct INV-7731 in NetSuite by hand. Reassign it to the right cost center or reverse the posting. This needs a person, since the Agent can't fix it.\n- Next, I can invoke `aop-writer` on this Build with the change request \"add a missing-cost_center guard to Step 1 that postpones the case and never posts,\" and it will edit `aops/<agent-id>.md` in place.\n- Before rerunning, check whether `cost_center` is supposed to come from the claim payload or from somewhere else. If the Duvo case intake never sets it, the guard will fire on every invoice, and the real fix is upstream of the AOP.\n\n```json\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}\n```",
+  "usage": {
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 8313,
+    "input_tokens": 2,
+    "output_tokens": 1587,
+    "thinking_tokens": 798
+  },
+  "variant": "main",
+  "wall_ms": 10472
+}

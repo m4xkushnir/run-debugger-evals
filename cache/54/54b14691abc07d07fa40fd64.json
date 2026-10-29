@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-opus-5-5",
+  "case_id": "W02",
+  "cost_usd": 0.0423318,
+  "created_at": "2026-10-29T11:36:10+00:00",
+  "duration_api_ms": 15281,
+  "input_hash": "bed0d6e5a606b553",
+  "key": "54b14691abc07d07fa40fd64",
+  "model": "opus",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 1,
+  "text": "**Failure mode**\n\nWrong decomposition. One Agent is doing several Agents' worth of work, and the Run ran out of browser session time partway through.\n\nThe \"session expired\" error is the symptom. The cause is that the AOP packs these into a single Run:\n\n- a scorecard build (Snowflake → Google Sheets)\n- a per-supplier portal sweep across 17 suppliers (Enterprise Browser)\n- outreach (Gmail)\n- a \"next week\" follow-up cycle\n- downstream updates (Slack, SAP, archive)\n\nThat's 11 top-level steps across six Connection domains and two time horizons. A sequential walk through 17 portal Logins can't fit inside one browser session.\n\n**Where it went wrong**\n\nThe decision point is AOP Step 3, at transcript turns [5]–[7]. Steps 1–2 completed cleanly ([2], [4]). The Agent then started looping through the 17 underperformers inside the same Run, and at portal 9 of 17 the session hit its lifetime. Steps 4–11 never ran.\n\nThe Login itself didn't fail. Nothing in the transcript suggests an expired Login or a portal-side problem. The session simply outlived its window because the Run was too long by design.\n\nThe same AOP has a second sign of the same problem: Step 6 (\"Next week, check replies…\") can't happen inside one Run at all.\n\n**Evidence**\n\n- AOP Step 3: \"For each supplier under 90%, sign in to their portal with **Enterprise Browser** and download open-order status.\"\n- AOP Step 6: \"Next week, check replies and update the scorecard.\"\n- Transcript [5]: \"Signing in to portal 9 of 17 (Agrofert).\"\n- Transcript [7]: \"ERROR: browser session expired after 55 minutes\"\n\n**Fix**\n\nSplit the AOP after Step 2 into two Agents connected by a queue:\n\n1. **Scorecard Agent** (Steps 1–2, plus the summary in Step 7). It builds the W43 tab and puts one case per supplier under 90% onto a queue.\n2. **Supplier-chase Agent**. It handles one supplier per case: portal sign-in and download, draft and send the email, then `postpone_case` until next week to check replies. After that it escalates repeat offenders, updates the SAP rating, and closes with `complete_case`.\n\nEach Run then needs only one portal session, well inside the 55-minute window. The \"next week\" step becomes a postponed case instead of something one Run can't do. Archiving and creating next week's tab (Steps 10–11) belong with the Scorecard Agent's weekly Run.\n\n**Next step**\n\nI can hand this to `aop-writer` with:\n\n- Build `bld_w02` as the source\n- the change request: \"split the AOP after Step 2 into a scorecard Agent that queues one case per supplier under 90%, and a supplier-chase Agent that handles one supplier per case, using `postpone_case` for the next-week reply check\"\n- the target file `aops/<agent-id>.md`\n\nSeparately, check whether suppliers 1–8 already had portal data pulled this week before re-running, so the W43 tab isn't duplicated.\n\n{\"failure_mode\": \"wrong_decomposition\", \"fix_target\": \"decomposition\", \"confidence\": 0.72}",
+  "usage": {
+    "cache_creation_input_tokens": 1087,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 1608,
+    "thinking_tokens": 522
+  },
+  "variant": "main",
+  "wall_ms": 16204
+}

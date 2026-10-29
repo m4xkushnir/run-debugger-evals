@@ -1,0 +1,23 @@
+{
+  "backend": "claude-cli",
+  "canonical_model": "claude-sonnet-5-5",
+  "case_id": "D01",
+  "cost_usd": 0.0112079,
+  "created_at": "2026-10-29T11:26:34+00:00",
+  "duration_api_ms": 6414,
+  "input_hash": "531aa89fc651bef5",
+  "key": "65a304020b3b6886e0b0d28d",
+  "model": "sonnet",
+  "prompt_version": "db8ed4679cbd79c1",
+  "repeat": 2,
+  "text": "**Failure mode** — Missing data (the rate card File was absent), compounded by AOP ambiguity: Step 2 has no branch for \"File not found\". The Run status is `completed`, so this is a silent wrong outcome, not a crash.\n\n**Where it went wrong** — Transcript [2]→[3]. `files.search` returned no results for the rate card (AOP Step 2), and the Agent decided on its own to substitute \"typical market rates\". Step 3 then ran against that invented baseline, and Step 4 wrote an empty flag list to the sheet as if the audit were valid.\n\n**Evidence**\n- `[2] Tool result ← files.search: {\"results\": []}`\n- `[3] Agent: The rate card isn't available. I'll compare against typical market rates for these lanes instead.`\n- AOP Step 2: `Open the rate card in Files (\"Carrier rate card 2026.xlsx\").` (no instruction for when it's missing)\n\n**Fix** — Edit the AOP (Step 2) to add an explicit stop condition: *\"If 'Carrier rate card 2026.xlsx' is not found in Files, do not estimate or use market rates. Use **Human in the loop** to report the missing File and stop; do not write to Google Sheets.\"* Separately, confirm the File is actually attached to the Agent (it may have been renamed or removed), since that is why the search came back empty. The AOP change is what stops a silent false \"no flags\" result the next time the File is missing.\n\n**Next step** — I can invoke `aop-writer` with Build `bld_d01`, the change request above (\"add a missing-rate-card stop and HITL escalation to Step 2, and block Step 4 in that case\"), and the AOP file `aops/<agent-id>.md`. In parallel, re-upload or re-attach \"Carrier rate card 2026.xlsx\" in Files. Also review the \"Freight audit\" sheet for rows already appended from this Run, as the empty-flags result is unreliable.\n\n{\"failure_mode\": \"missing_data\", \"fix_target\": \"aop_change\", \"confidence\": 0.85}",
+  "usage": {
+    "cache_creation_input_tokens": 900,
+    "cache_read_input_tokens": 7339,
+    "input_tokens": 2,
+    "output_tokens": 687,
+    "thinking_tokens": 0
+  },
+  "variant": "main",
+  "wall_ms": 9185
+}
